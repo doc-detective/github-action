@@ -10,17 +10,14 @@ inputs:
     required: true
     default: 'runTests'
   config: # id of the input
-    description: 'Path to the configuration file. Default is ".doc-detective.json".'
-    required: true
-    default: '.doc-detective.json'
+    description: 'Path to the configuration file.'
+    required: false
   input: # id of the input
-    description: 'Path to the input file or directory. Default is ".".'
-    required: true
-    default: '.'
+    description: 'Path to the input file or directory. Overrides the "input" field in the config file.'
+    required: false
   output: # id of the input
-    description: 'Path to the output directory. Default is ".".'
-    required: true
-    default: '.'
+    description: 'Path to the output directory. Overrides the "output" field in the config file.'
+    required: false
 outputs:
   results: # if of the output
     description: 'JSON-formatted results of the command.'
