@@ -1,0 +1,23 @@
+{
+  "name": "doc-detective-action",
+  "version": "1.0.0",
+  "description": "Treat doc content as testable assertions to validate doc accuracy and product UX.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doc-detective/doc-detective-action.git"
+  },
+  "author": "Manny Silva",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/doc-detective/doc-detective-action/issues"
+  },
+  "homepage": "https://github.com/doc-detective/doc-detective-action#readme",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0"
+  }
+}
