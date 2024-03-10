@@ -1,0 +1,29 @@
+name: 'Doc Detective'
+description: 'Treat doc content as testable assertions to validate doc accuracy and product UX.'
+inputs:
+  version: # id of the input
+    description: 'Version of Doc Detective to use. Default is "latest". Must match a version published to NPM.'
+    required: true
+    default: 'latest'
+  command: # id of the input
+    description: 'Command to run. Default is "runTests".'
+    required: true
+    default: 'runTests'
+  config: # id of the input
+    description: 'Path to the configuration file. Default is ".doc-detective.json".'
+    required: true
+    default: '.doc-detective.json'
+  input: # id of the input
+    description: 'Path to the input file or directory. Default is ".".'
+    required: true
+    default: '.'
+  output: # id of the input
+    description: 'Path to the output directory. Default is ".".'
+    required: true
+    default: '.'
+outputs:
+  results: # if of the output
+    description: 'JSON-formatted results of the command.'
+runs:
+  using: 'node20' # Specifies the node version
+  main: 'index.js' # Path to the JavaScript file that will be executed
