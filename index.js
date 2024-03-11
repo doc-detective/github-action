@@ -10,7 +10,7 @@ try {
     const input = core.getInput('input');
     const output = core.getInput('output');
 
-    let compiledCommand = `${dd} ${command}`;
+    let compiledCommand = `npx doc-detective ${command}`;
     if (config) {
         compiledCommand += ` --config ${config}`;
     }
@@ -20,6 +20,19 @@ try {
     if (output) {
         compiledCommand += ` --output ${output}`;
     }
+
+    // Install Doc Detective
+    core.info(`Installing Doc Detective with command: npm install -g ${dd}`);
+    const installOutput = execSync(`npm install -g ${dd}`, { stdio: 'inherit' });
+    const installStdout = installOutput.toString();
+
+    // Run Doc Detective
+    core.info(`Running Doc Detective with command: ${compiledCommand}`);
+    const runOutput = execSync(compiledCommand, { stdio: 'inherit' });
+    const runStdout = runOutput.toString();
+
+    // Your logic here, using the stdout of the commands
+    core.setOutput('results', '');
 
     // Run Doc Detective
     core.info(`Running Doc Detective with command: ${compiledCommand}`);
