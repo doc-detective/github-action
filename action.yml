@@ -23,4 +23,4 @@ outputs:
     description: 'JSON-formatted results of the command.'
 runs:
   using: 'node20' # Specifies the node version
-  main: 'index.js' # Path to the JavaScript file that will be executed
+  main: 'dist/index.js' # Path to the JavaScript file that will be executed
