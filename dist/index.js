@@ -30827,14 +30827,6 @@ function parseParams (str) {
 module.exports = parseParams
 
 
-/***/ }),
-
-/***/ 9876:
-/***/ ((module) => {
-
-"use strict";
-module.exports = JSON.parse('{"dependencies":{"inquirer":"^9.2.22"}}');
-
 /***/ })
 
 /******/ 	});
@@ -30882,31 +30874,6 @@ const core = __nccwpck_require__(2186);
 const github = __nccwpck_require__(5438);
 const { execSync } = __nccwpck_require__(2081);
 
-function setMeta() {
-    const platformMap = {
-      win32: "windows",
-      darwin: "mac",
-      linux: "linux",
-    };
-  
-    // Set meta
-    const meta =
-      process.env["DOC_DETECTIVE_META"] !== undefined
-        ? JSON.parse(process.env["DOC_DETECTIVE_META"])
-        : {};
-    const package = __nccwpck_require__(9876);
-    meta.distribution = meta.distribution || "doc-detective";
-    meta.dist_version = meta.dist_version || package.version;
-    meta.dist_platform = meta.dist_platform || platformMap[os.platform()] || os.platform();
-    meta.dist_platform_version = meta.dist_platform_version || os.release();
-    meta.dist_platform_arch = meta.dist_platform_arch || os.arch();
-    meta.dist_deployment = meta.dist_deployment || "gh-action";
-    meta.dist_deployment_version =
-      meta.dist_deployment_version || process.version;
-    meta.dist_interface = meta.dist_interface || "cli";
-    process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-  }
-
 try {
     const version = core.getInput('version');
     const dd = `doc-detective@${version}`;
@@ -30927,24 +30894,16 @@ try {
     }
 
     // Install Doc Detective
-    core.info(`Installing Doc Detective with command: npm install -g ${dd}`);
-    const installOutput = execSync(`npm install -g ${dd}`, { stdio: 'inherit' });
-    const installStdout = installOutput.toString();
+    core.info(`Installing Doc Detective: npm install ${dd}`);
+    const installOutput = execSync(`npm install ${dd}`, { encoding: 'utf-8' });
 
     // Run Doc Detective
-    core.info(`Running Doc Detective with command: ${compiledCommand}`);
-    const runOutput = execSync(compiledCommand, { stdio: 'inherit' });
-    const runStdout = runOutput.toString();
+    core.info(`Running Doc Detective: ${compiledCommand}`);
+    const commandOutput = execSync(compiledCommand, { encoding: 'utf-8', stdio: 'inherit'});
 
-    // Your logic here, using the stdout of the commands
-    core.setOutput('results', '');
+    // Set outputs
+    core.setOutput('results', commandOutput);
 
-    // Run Doc Detective
-    core.info(`Running Doc Detective with command: ${compiledCommand}`);
-    execSync(`npx ${dd}`, { stdio: 'inherit' });
-
-    // Your logic here, using your globally installable NPM package
-    core.setOutput('results', '');
 } catch (error) {
     core.setFailed(error.message);
 }

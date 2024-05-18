@@ -22,24 +22,16 @@ try {
     }
 
     // Install Doc Detective
-    core.info(`Installing Doc Detective with command: npm install -g ${dd}`);
-    const installOutput = execSync(`npm install -g ${dd}`, { stdio: 'inherit' });
-    const installStdout = installOutput.toString();
+    core.info(`Installing Doc Detective: npm install ${dd}`);
+    const installOutput = execSync(`npm install ${dd}`, { encoding: 'utf-8' });
 
     // Run Doc Detective
-    core.info(`Running Doc Detective with command: ${compiledCommand}`);
-    const runOutput = execSync(compiledCommand, { stdio: 'inherit' });
-    const runStdout = runOutput.toString();
+    core.info(`Running Doc Detective: ${compiledCommand}`);
+    const commandOutput = execSync(compiledCommand, { encoding: 'utf-8', stdio: 'inherit'});
 
-    // Your logic here, using the stdout of the commands
-    core.setOutput('results', '');
+    // Set outputs
+    core.setOutput('results', commandOutput);
 
-    // Run Doc Detective
-    core.info(`Running Doc Detective with command: ${compiledCommand}`);
-    execSync(`npx ${dd}`, { stdio: 'inherit' });
-
-    // Your logic here, using your globally installable NPM package
-    core.setOutput('results', '');
 } catch (error) {
     core.setFailed(error.message);
 }
