@@ -10,7 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Doc Detective
+      - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
         id: hello
         with:
@@ -19,7 +19,6 @@ jobs:
           input: './artifacts/doc-content-inline-tests.md'
           output: './artifacts'
 
-      # Use the output from the `hello` step
       - name: Output results
         run: echo "${{ steps.hello.outputs.results }}"
       - run: ls

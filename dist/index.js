@@ -32361,14 +32361,15 @@ async function main() {
         commandOutputData += data.toString();
       },
     };
-    const commandOutput = await exec(compiledCommand, [], options);
-    console.log("Command output:"); 
-    console.log(commandOutput);
-    console.log("\nCommand output data:");
-    console.log(commandOutputData);
+    await exec(compiledCommand, [], options);
+    // Capture content between RESULTS and the next blank line
+    const resultsStart = commandOutputData.indexOf("RESULTS");
+    const resultsEnd = commandOutputData.indexOf("\n\n", resultsStart);
+    const resultsString = commandOutputData.substring(resultsStart, resultsEnd).trim();
+    const results = JSON.parse(resultsString);
 
     // Set outputs
-    core.setOutput("results", commandOutputData);
+    core.setOutput("results", results);
   } catch (error) {
     core.setFailed(error.message);
   }
