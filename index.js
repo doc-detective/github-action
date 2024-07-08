@@ -30,14 +30,10 @@ async function main() {
         core.info(data.toString());
         commandOutputData += data.toString();
       },
-      stderr: (data) => {
-        // core.info(data.toString());
-        commandOutputData += data.toString();
-      },
     };
     await exec(compiledCommand, [], options);
     // Capture content between RESULTS and the next blank line
-    const resultsStart = commandOutputData.indexOf("RESULTS");
+    const resultsStart = commandOutputData.indexOf("{\n  \"summary");
     const resultsEnd = commandOutputData.indexOf("\n\n", resultsStart);
     const resultsString = commandOutputData.substring(resultsStart, resultsEnd).trim();
     const results = JSON.parse(resultsString);
