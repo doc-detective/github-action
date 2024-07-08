@@ -31,7 +31,7 @@ async function main() {
         commandOutputData += data.toString();
       },
       stderr: (data) => {
-        core.error(data.toString());
+        core.info(data.toString());
         commandOutputData += data.toString();
       },
     };
