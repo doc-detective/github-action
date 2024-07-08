@@ -33,22 +33,22 @@ try {
   // Run Doc Detective
   core.info(`Running Doc Detective: ${compiledCommand}`);
   const commandOutput = exec(compiledCommand);
-  let commandOutputData = "";
-  commandOutput.stdout.on("data", (data) => {
-    commandOutputData += data.toString();
-    // Monitor stdout here and perform any necessary actions
-    core.info(data.toString());
-  });
-  commandOutput.stderr.on("data", (data) => {
-    // Handle stderr data if needed
-    core.error(data.toString());
-  });
-  commandOutput.on("error", (error) => {
-    // Handle error if needed
-  });
-  commandOutput.on("exit", (code) => {
-    // Handle exit code if needed
-  });
+//   let commandOutputData = "";
+//   commandOutput.stdout.on("data", (data) => {
+//     commandOutputData += data.toString();
+//     // Monitor stdout here and perform any necessary actions
+//     core.info(data.toString());
+//   });
+//   commandOutput.stderr.on("data", (data) => {
+//     // Handle stderr data if needed
+//     core.error(data.toString());
+//   });
+//   commandOutput.on("error", (error) => {
+//     // Handle error if needed
+//   });
+//   commandOutput.on("exit", (code) => {
+//     // Handle exit code if needed
+//   });
 
   // Set outputs
   core.setOutput("results", commandOutput);
