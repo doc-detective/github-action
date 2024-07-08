@@ -32353,20 +32353,13 @@ async function main() {
     const options = {};   // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts#L5
     options.listeners = {
       stdout: (data) => {
+        core.info(data.toString());
         commandOutputData += data.toString();
       },
-      // stdline: (data) => {
-      //   commandOutputData += data.toString();
-      // },
       stderr: (data) => {
+        core.error(data.toString());
         commandOutputData += data.toString();
       },
-      // errline: (data) => {
-      //   commandOutputData += data.toString();
-      // },
-      // debug: (data) => {
-      //   commandOutputData += data.toString();
-      // },
     };
     const commandOutput = await exec(compiledCommand, [], options);
     console.log("Command output:");
