@@ -32325,7 +32325,7 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
 const core = __nccwpck_require__(2186);
-const {exec} = __nccwpck_require__(1514);
+const { exec } = __nccwpck_require__(1514);
 const github = __nccwpck_require__(5438);
 
 try {
@@ -32347,34 +32347,43 @@ try {
   if (output) compiledCommand += ` --output ${output}`;
 
   // Install Doc Detective
-//   core.info(`Installing Doc Detective: ${installCommand}`);
-//   const installOutput = exec(installCommand);
-//   installOutput.catch((error) => {
-//     core.setFailed(`Failed to install Doc Detective: ${error.message}`);
-//   });
-//   installOutput.then(() => {
-//     core.info(`Doc Detective installed successfully`);
-//   });
+  //   core.info(`Installing Doc Detective: ${installCommand}`);
+  //   const installOutput = exec(installCommand);
+  //   installOutput.catch((error) => {
+  //     core.setFailed(`Failed to install Doc Detective: ${error.message}`);
+  //   });
+  //   installOutput.then(() => {
+  //     core.info(`Doc Detective installed successfully`);
+  //   });
 
   // Run Doc Detective
   core.info(`Running Doc Detective: ${compiledCommand}`);
+  const execOptions = {
+    listeners: {
+      stdout: (data) => {
+        core.info(data.toString());
+      },
+      stderr: (data) => {
+        core.error(data.toString());
+      },
+    },
+  };
   const commandOutput = exec(compiledCommand);
   let commandOutputData = "";
   commandOutput.stdout.on("data", (data) => {
     commandOutputData += data.toString();
   });
-//   commandOutput.stderr.on("data", (data) => {
-//     // Handle stderr data if needed
-//     core.error(data.toString());
-//   });
-//   commandOutput.on("error", (error) => {
-//     // Handle error if needed
-//   });
-//   commandOutput.on("exit", (code) => {
-//     // Handle exit code if needed
-//   });
-  
-    
+  //   commandOutput.stderr.on("data", (data) => {
+  //     // Handle stderr data if needed
+  //     core.error(data.toString());
+  //   });
+  //   commandOutput.on("error", (error) => {
+  //     // Handle error if needed
+  //   });
+  //   commandOutput.on("exit", (code) => {
+  //     // Handle exit code if needed
+  //   });
+
   // Set outputs
   core.setOutput("results", commandOutputData);
 } catch (error) {
