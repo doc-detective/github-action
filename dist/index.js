@@ -32355,18 +32355,18 @@ async function main() {
       stdout: (data) => {
         commandOutputData += data.toString();
       },
-      stdline: (data) => {
-        commandOutputData += data.toString();
-      },
+      // stdline: (data) => {
+      //   commandOutputData += data.toString();
+      // },
       stderr: (data) => {
         commandOutputData += data.toString();
       },
-      errline: (data) => {
-        commandOutputData += data.toString();
-      },
-      debug: (data) => {
-        commandOutputData += data.toString();
-      },
+      // errline: (data) => {
+      //   commandOutputData += data.toString();
+      // },
+      // debug: (data) => {
+      //   commandOutputData += data.toString();
+      // },
     };
     const commandOutput = await exec(compiledCommand, [], options);
     console.log("Command output:");
