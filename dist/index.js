@@ -32368,7 +32368,7 @@ async function main() {
         commandOutputData += data.toString();
       },
     };
-    const commandOutput = await exec(compiledCommand, options);
+    const commandOutput = await exec(compiledCommand, [], options);
     console.log("Command output:");
     console.log(commandOutput);
     console.log("\nCommand output data:");
