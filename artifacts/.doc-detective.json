@@ -17,9 +17,9 @@
     "contexts": [
       {
         "app": {
-          "name": "chrome",
+          "name": "firefox",
           "options": {
-            "headless": false
+            "headless": true
           }
         },
         "platforms": ["windows", "mac", "linux"]

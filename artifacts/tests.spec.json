@@ -3,7 +3,10 @@
   "contexts": [
     {
       "app": {
-        "name": "firefox"
+        "name": "firefox",
+        "options": {
+          "headless": true
+        }
       },
       "platforms": ["windows", "mac", "linux"]
     }
