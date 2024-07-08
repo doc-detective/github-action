@@ -1,12 +1,12 @@
 {
   "name": "doc-detective-action",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Validate doc content by treating docs as testable assertions for a product.",
   "main": "index.js",
   "scripts": {
     "build": "ncc build index.js --license licenses.txt",
     "watch": "nodemon --exec \"npm run build\" --ext js --ignore dist/",
-    "test": "act -P ubuntu-latest=self-hosted"
+    "test": "act"
   },
   "repository": {
     "type": "git",
