@@ -8,7 +8,10 @@ main();
 async function main() {
   try {
     // Get the inputs
-    const version = core.getInput("version");
+    // DEBUG
+    // const version = core.getInput("version");
+    const version = "dev";
+    // END DEBUG
     const dd = `doc-detective@${version}`;
     const command = core.getInput("command");
     const config = core.getInput("config");
