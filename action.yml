@@ -15,6 +15,10 @@ inputs:
   input: 
     description: 'Path to the input file or directory. Overrides the "input" field in the config file.'
     required: false
+  exitOnFail: 
+    description: 'Exit with a non-zero code if one or more tests fails. Default is "false". Only valid for the "runTests" command.'
+    required: false
+    default: "false"
   createIssueOnFail:
     description: 'Create a GitHub issue if one or more tests fails. Default is "false". Only valid for the "runTests" command.'
     required: false

@@ -1,9 +1,9 @@
 on: [push]
 
 jobs:
-  hello_world_job:
+  doc-detective:
     runs-on: ubuntu-latest
-    name: foobar
+    name: Run tests, exit on fail
     steps:
       # To use this repository's private action,
       # you must check out the repository
@@ -12,12 +12,12 @@ jobs:
 
       - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
-        id: hello
+        id: dd
         with:
           command: 'runTests'
           config: './artifacts/.doc-detective.json'
-          input: './artifacts/doc-content-inline-tests.md'
-          output: './artifacts'
-
+          input: './artifacts/doc-content-inline-tests-fail.md'
+          exitOnFail: true
+          
       - name: Output results
-        run: echo ${{ steps.hello.outputs.results }}
+        run: echo ${{ steps.dd.outputs.results }}
