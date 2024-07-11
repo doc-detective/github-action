@@ -3,7 +3,7 @@ on: [push]
 jobs:
   doc-detective:
     runs-on: ubuntu-latest
-    name: Run tests, exit on fail
+    name: Run tests, create issue on fail
     steps:
       # To use this repository's private action,
       # you must check out the repository
@@ -17,8 +17,13 @@ jobs:
           command: 'runTests'
           config: './artifacts/.doc-detective.json'
           input: './artifacts/doc-content-inline-tests-fail.md'
-          exitOnFail: true
+          createIssueOnFail: true
           
       - name: Output results
-        if: failure()
         run: echo ${{ steps.dd.outputs.results }}
+
+      - name: Delete issue
+        run: gh issue delete $ISSUE
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ steps.dd.outputs.issueURL }}
