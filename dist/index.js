@@ -32339,13 +32339,12 @@ async function main() {
     const command = core.getInput("command");
     const config = core.getInput("config");
     const input = core.getInput("input");
-    const output = core.getInput("output");
 
     // Compile command
     let compiledCommand = `npx ${dd} ${command}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
-    if (output) compiledCommand += ` --output ${output}`;
+    compiledCommand += ` --output /tmp/doc-detective-output.json`;
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
@@ -32358,11 +32357,13 @@ async function main() {
       },
     };
     await exec(compiledCommand, [], options);
-    // Capture content between RESULTS and the next blank line
-    const resultsStart = commandOutputData.indexOf("{\n  \"summary");
-    const resultsEnd = commandOutputData.indexOf("\n\n", resultsStart);
-    const resultsString = commandOutputData.substring(resultsStart, resultsEnd).trim();
-    const results = JSON.parse(resultsString);
+    const outputFiles = commandOutputData.split("See results at ");
+    const outputFile = outputFiles[outputFiles.length - 1].trim();
+    // If output file is not found, throw an error 
+    if (!outputFile) {
+      throw new Error(`Output file not found.\nOutput file: ${outputFile}\nCWD: ${process.cwd()}\nstdout: ${coverateResults.stdout}`);
+    }
+    const results = require(outputFile);
 
     // Set outputs
     core.setOutput("results", results);
