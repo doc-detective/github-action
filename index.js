@@ -42,7 +42,7 @@ async function main() {
     const results = require(outputFile);
 
     // Set outputs
-    core.setOutput("results", JSON.stringify(results));
+    core.setOutput("results", results);
   } catch (error) {
     core.setFailed(error.message);
   }
