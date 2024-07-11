@@ -2,7 +2,8 @@ const core = require("@actions/core");
 const { exec } = require("@actions/exec");
 const github = require("@actions/github");
 
-process.env["DOC_DETECTIVE_META"] = JSON.stringify({dist_interface: "github-actions"});
+const meta = {dist_interface: "github-actions"}
+process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 main();
 
 async function main() {
@@ -41,9 +42,35 @@ async function main() {
     }
     const results = require(outputFile);
 
+    if (command === "runTests" && core.getInput("createIssueOnFailure") && results.summary.specs.fail > 0) {
+      await createIssue(results);
+    }
+
     // Set outputs
     core.setOutput("results", results);
   } catch (error) {
     core.setFailed(error.message);
   }
+}
+
+async function createIssue(results) {
+  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
+  const token = core.getInput("token") || process.env.GITHUB_TOKEN;
+  const octokit = github.getOctokit(token);
+
+  const title = "Failure in Doc Detective run"
+  const body = `Doc Detective run failed with the following results:\n${results}`;
+  const labels = "doc-detective";
+  const assignees = "";
+
+  const issue = await octokit.issues.create({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    title,
+    body,
+    labels: labels.split(","),
+    assignees: assignees.split(","),
+  });
+
+  core.info(`Issue created: ${issue.data.html_url}`);
 }

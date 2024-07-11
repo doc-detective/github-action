@@ -20,5 +20,4 @@ jobs:
           output: './artifacts'
 
       - name: Output results
-        run: echo "${{ steps.hello.outputs.results }}"
-      - run: ls
+        run: echo ${{ steps.hello.outputs.results }}

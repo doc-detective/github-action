@@ -77,6 +77,6 @@
   "integrations": {},
   "telemetry": {
     "send": true,
-    "userId": "Doc Detective Samples"
+    "userId": "Doc Detective GitHub Action development"
   }
 }

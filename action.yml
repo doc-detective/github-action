@@ -1,22 +1,26 @@
 name: 'Doc Detective'
 description: 'Treat doc content as testable assertions to validate doc accuracy and product UX.'
 inputs:
-  version: # id of the input
-    description: 'Version of Doc Detective to use. Default is "latest". Must match a version published to NPM.'
+  version: 
+    description: 'Version of Doc Detective to use. Default is "latest". Must match a version or tag published to NPM.'
     required: true
     default: 'latest'
-  command: # id of the input
+  command: 
     description: 'Command to run. Default is "runTests".'
     required: true
     default: 'runTests'
-  config: # id of the input
+  config: 
     description: 'Path to the configuration file.'
     required: false
-  input: # id of the input
+  input: 
     description: 'Path to the input file or directory. Overrides the "input" field in the config file.'
     required: false
-  output: # id of the input
-    description: 'Path to the output directory. Overrides the "output" field in the config file.'
+  createIssueOnFail:
+    description: 'Create a GitHub issue if one or more tests fails. Default is "false". Only valid for the "runTests" command.'
+    required: false
+    default: "false"
+  token:
+    description: 'GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.'
     required: false
 outputs:
   results: # if of the output
