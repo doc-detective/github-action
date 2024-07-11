@@ -29,7 +29,6 @@ async function main() {
     const options = {};   // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts#L5
     options.listeners = {
       stdout: (data) => {
-        core.info(data.toString());
         commandOutputData += data.toString();
       },
     };
@@ -42,12 +41,8 @@ async function main() {
     }
     const results = require(outputFile);
 
-    // DEBUG
-    core.info(`Results: ${JSON.stringify(results, null, 2)}`);
-    // END DEBUG
-
     // Set outputs
-    // core.setOutput("results", results);
+    core.setOutput("results", JSON.stringify(results));
   } catch (error) {
     core.setFailed(error.message);
   }
