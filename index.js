@@ -42,8 +42,12 @@ async function main() {
     }
     const results = require(outputFile);
 
+    // DEBUG
+    core.info(`Results: ${JSON.stringify(results, null, 2)}`);
+    // END DEBUG
+
     // Set outputs
-    core.setOutput("results", results);
+    // core.setOutput("results", results);
   } catch (error) {
     core.setFailed(error.message);
   }
