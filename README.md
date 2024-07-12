@@ -1,6 +1,11 @@
 # Doc Detective as a GitHub Action
 
-> :octocat: The official GitHub Action for [Doc Detective](https://github.com/doc-detective/doc-detective). Keep your docs accurate with ease.
+:octocat: The official GitHub Action for [Doc Detective](https://github.com/doc-detective/doc-detective). Keep your docs accurate with ease.
+
+> ⚠️ This action is still in development.
+> - It's only been tested on Ubuntu.
+> - It only works with an in-development version of Doc Detective. The `version` input must be set to `dev`.
+> - It only supports Firefox and Chrome contexts with `headless` set to `true`. It's incompatible with Safari, Edge, and Doc Detective's `startRecording` action.
 
 ## Usage
 
