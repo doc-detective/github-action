@@ -32375,7 +32375,12 @@ async function main() {
     if (command === "runTests" && results.summary.specs.fail > 0) {
       if (core.getInput("createIssueOnFailure") == "true") {
         // Create an issue if there are failing tests
-        await createIssue(results);
+        try {
+          const issue = await createIssue(results);
+          core.info(`Issue: ${JSON.stringify(issue)}`)
+        } catch (error) {
+          core.error(`Error creating issue: ${error.message}`);
+        }
       }
       if (core.getInput("exitOnFail") == "true") {
         // Fail the action if there are failing tests
@@ -32408,6 +32413,7 @@ async function createIssue(results) {
 
   core.info(`Issue created: ${issue.data.html_url}`);
   core.setOutput("issueUrl", issue.data.html_url);
+  return issue;
 }
 
 })();
