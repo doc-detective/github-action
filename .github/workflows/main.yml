@@ -62,10 +62,10 @@ jobs:
           createIssueOnFail: true
           
       - name: Output results
-        run: echo ${{ steps.dd.outputs.results }}
+        run: echo ${{ steps.dd.outputs.issueUrl }}
 
       - name: Delete issue
         run: gh issue delete $ISSUE
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE: ${{ steps.dd.outputs.issueURL }}
+          ISSUE: ${{ steps.dd.outputs.issueUrl }}
