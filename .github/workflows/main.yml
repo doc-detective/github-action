@@ -69,7 +69,7 @@ jobs:
         run: echo ${{ steps.dd.outputs.issueUrl }}
 
       - name: Delete issue
-        run: gh issue delete $ISSUE
+        run: gh issue close $ISSUE
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE: ${{ steps.dd.outputs.issueUrl }}
