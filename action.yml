@@ -1,5 +1,5 @@
-name: "Doc Detective"
-description: "Treat doc content as testable assertions to validate doc accuracy and product UX."
+name: Doc Detective
+description: Treat doc content as testable assertions to validate doc accuracy and product UX.
 inputs:
   version:
     description: Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
