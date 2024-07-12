@@ -8,6 +8,10 @@ process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 main();
 
 async function main() {
+  // DEBUG
+  createIssue({});
+  return;
+  // END DEBUG
   try {
     // Get the inputs
     const version = core.getInput("version");
