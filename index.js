@@ -50,7 +50,7 @@ async function main() {
       if (core.getInput("createIssueOnFail") == "true") {
         // Create an issue if there are failing tests
         try {
-          const issue = await createIssue(results);
+          const issue = await createIssue(JSON.stringify(results, null, 2));
           core.info(`Issue: ${JSON.stringify(issue)}`)
         } catch (error) {
           core.error(`Error creating issue: ${error.message}`);
