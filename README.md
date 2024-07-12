@@ -1,6 +1,6 @@
 # Doc Detective as a GitHub Action
 
-> :octocat: The official GitHub Action for [Doc Detective](https://github.com/doc-detective/doc-detective). Keep your docs accuate with ease.
+> :octocat: The official GitHub Action for [Doc Detective](https://github.com/doc-detective/doc-detective). Keep your docs accurate with ease.
 
 ## Usage
 
