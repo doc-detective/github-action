@@ -9,9 +9,7 @@ jobs:
 
       - name: Run issue creation script
         run: |
-          echo $GH_TOKEN
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo $GITHUB_TOKEN
 
       # - name: Delete issue
       #   run: gh issue delete $ISSUE
