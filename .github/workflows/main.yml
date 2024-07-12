@@ -7,34 +7,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run issue creation script
-        run: |
-          echo $GITHUB_TOKEN
+  pass-tests:
+    runs-on: ubuntu-latest
+    name: Run tests successfully
+    steps:
+      # To use this repository's private action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # - name: Delete issue
-      #   run: gh issue delete $ISSUE
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     ISSUE: ${{ steps.dd.outputs.issueUrl }}
-  # pass-tests:
-  #   runs-on: ubuntu-latest
-  #   name: Run tests successfully
-  #   steps:
-  #     # To use this repository's private action,
-  #     # you must check out the repository
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-
-  #     - name: Run Doc Detective
-  #       uses: ./ # Uses an action in the root directory
-  #       id: dd
-  #       with:
-  #         command: 'runTests'
-  #         config: './artifacts/.doc-detective.json'
-  #         input: './artifacts/doc-content-inline-tests.md'
+      - name: Run Doc Detective
+        uses: ./ # Uses an action in the root directory
+        id: dd
+        with:
+          command: 'runTests'
+          config: './artifacts/.doc-detective.json'
+          input: './artifacts/doc-content-inline-tests.md'
           
-  #     - name: Output results
-  #       run: echo ${{ steps.dd.outputs.results }}
+      # - name: Output results
+      #   run: echo ${{ steps.dd.outputs.results }}
 
   # fail-and-exit:
   #   runs-on: ubuntu-latest
