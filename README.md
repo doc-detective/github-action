@@ -20,12 +20,11 @@ jobs:
 
 ## File structure
 
-This action runs in the current working directory of the workflow. If you want to change the directory, you can do so by adding a `cd` command in a step before the `doc-detective-action` step:
+This action runs in the current working directory of the workflow. If you want to change the directory, you can do so by adding a `working-directory` key to the `doc-detective-action` step:
 
 ```yaml
-- name: Change directory
-  run: cd path/to/your/directory
 - uses: doc-detective/doc-detective-action
+  working-directory: path/to/your/directory
 ```
 
 Just like the main project, this action looks for a `.doc-detective.json` file in the current directory for the configuration if it isn't specified in the `config` input.
