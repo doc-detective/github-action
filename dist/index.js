@@ -32402,7 +32402,7 @@ async function createIssue(results) {
   const labels = "doc-detective";
   const assignees = "";
 
-  const issue = await octokit.issues.create({
+  const issue = await octokit.rest.issues.create({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     title,
