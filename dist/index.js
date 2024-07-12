@@ -32330,12 +32330,7 @@ const github = __nccwpck_require__(5438);
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-
-console.log(process.env["GITHUB_TOKEN"]);
-
-// main();
-
-
+main();
 
 async function main() {
   try {

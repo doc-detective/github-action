@@ -4,12 +4,7 @@ const github = require("@actions/github");
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-
-console.log(process.env["GITHUB_TOKEN"]);
-
-// main();
-
-
+main();
 
 async function main() {
   try {

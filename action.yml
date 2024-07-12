@@ -1,21 +1,21 @@
-name: 'Doc Detective'
-description: 'Treat doc content as testable assertions to validate doc accuracy and product UX.'
+name: "Doc Detective"
+description: "Treat doc content as testable assertions to validate doc accuracy and product UX."
 inputs:
-  version: 
+  version:
     description: 'Version of Doc Detective to use. Default is "dev". Must match a version or tag published to NPM.'
     required: true
-    default: 'dev'
-  command: 
+    default: "dev"
+  command:
     description: 'Command to run. Default is "runTests".'
     required: true
-    default: 'runTests'
-  config: 
-    description: 'Path to the configuration file.'
+    default: "runTests"
+  config:
+    description: "Path to the configuration file."
     required: false
-  input: 
+  input:
     description: 'Path to the input file or directory. Overrides the "input" field in the config file.'
     required: false
-  exitOnFail: 
+  exitOnFail:
     description: 'Exit with a non-zero code if one or more tests fails. Default is "false". Only valid for the "runTests" command.'
     required: false
     default: "false"
@@ -24,11 +24,12 @@ inputs:
     required: false
     default: "false"
   token:
-    description: 'GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.'
+    description: "GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token."
     required: false
+    default: ${{ github.token }}
 outputs:
   results: # if of the output
-    description: 'JSON-formatted results of the command.'
+    description: "JSON-formatted results of the command."
 runs:
-  using: 'node20' # Specifies the node version
-  main: 'dist/index.js' # Path to the JavaScript file that will be executed
+  using: "node20" # Specifies the node version
+  main: "dist/index.js" # Path to the JavaScript file that will be executed
