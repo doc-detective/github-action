@@ -1,6 +1,7 @@
 const core = require("@actions/core");
 const { exec } = require("@actions/exec");
 const github = require("@actions/github");
+const axios = require("axios");
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -51,7 +52,7 @@ async function main() {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(results);
-          core.info(`Issue: ${JSON.stringify(issue)}`)
+          core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
           core.error(`Error creating issue: ${error.message}`);
         }
@@ -66,26 +67,33 @@ async function main() {
   }
 }
 
-async function createIssue(results) {
-  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
-  const token = core.getInput("token") || process.env.GITHUB_TOKEN;
-  const octokit = github.getOctokit(token);
-
+const createIssue = async (results) => {
+  const token = core.getInput("token");
   const title = "Failure in Doc Detective run";
   const body = `Doc Detective run failed with the following results:\n${results}`;
   const labels = "doc-detective";
   const assignees = "";
 
-  const issue = await octokit.rest.issues.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
+  const issueUrl = `https://api.github.com/repos/${github.context.repo.owner}/${github.context.repo.repo}/issues`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+  const data = {
     title,
     body,
     labels: labels.split(","),
     assignees: assignees.split(","),
-  });
+  };
 
-  core.info(`Issue created: ${issue.data.html_url}`);
-  core.setOutput("issueUrl", issue.data.html_url);
-  return issue;
-}
+  try {
+    const response = await axios.post(issueUrl, data, { headers });
+    const issue = response.data;
+    core.info(`Issue created: ${issue.html_url}`);
+    core.setOutput("issueUrl", issue.html_url);
+    return issue;
+  } catch (error) {
+    core.error(`Error creating issue: ${error.message}`);
+    throw error;
+  }
+};
