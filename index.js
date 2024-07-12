@@ -47,7 +47,7 @@ async function main() {
     core.setOutput("results", results);
 
     if (command === "runTests" && results.summary.specs.fail > 0) {
-      if (core.getInput("createIssueOnFailure") == "true") {
+      if (core.getInput("createIssueOnFail") == "true") {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(results);
