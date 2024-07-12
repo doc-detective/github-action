@@ -17,10 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Run tests, exit on fail
     steps:
-      # To use this repository's private action,
-      # you must check out the repository
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
@@ -39,22 +36,16 @@ jobs:
       contents: read
       issues: write
     steps:
-      # To use this repository's private action,
-      # you must check out the repository
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
         id: dd
         with:
-          command: "runTests"
-          config: "./artifacts/.doc-detective.json"
-          input: "./artifacts/doc-content-inline-tests-fail.md"
+          version: dev
+          config: ./artifacts/.doc-detective.json
+          input: ./artifacts/doc-content-inline-tests-fail.md
           createIssueOnFail: true
-
-      - name: Output results
-        run: echo ${{ steps.dd.outputs.issueUrl }}
 
       - name: Delete issue
         run: gh issue close $ISSUE
