@@ -9,10 +9,7 @@ main();
 async function main() {
   try {
     // Get the inputs
-    // DEBUG
-    // const version = core.getInput("version");
-    const version = "dev";
-    // END DEBUG
+    const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
     const command = core.getInput("command");
     const config = core.getInput("config");
@@ -50,10 +47,12 @@ async function main() {
     core.setOutput("results", results);
 
     if (command === "runTests" && results.summary.specs.fail > 0) {
-      if (core.getInput("createIssueOnFailure")) {
+      if (core.getInput("createIssueOnFailure") == "true") {
+        // Create an issue if there are failing tests
         await createIssue(results);
       }
-      if (core.getInput("exitOnFail")) {
+      if (core.getInput("exitOnFail") == "true") {
+        // Fail the action if there are failing tests
         core.setFailed("Doc Detective found failing tests.");
       }
     }
