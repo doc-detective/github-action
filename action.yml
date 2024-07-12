@@ -1,5 +1,6 @@
 name: Doc Detective
 description: Treat doc content as testable assertions to validate doc accuracy and product UX.
+author: Doc Detective
 inputs:
   version:
     description: Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
@@ -35,3 +36,6 @@ outputs:
 runs:
   using: node20 # Specifies the node version
   main: dist/index.js # Path to the JavaScript file that will be executed
+branding:
+  icon: search # The icon to display in the GitHub Marketplace
+  color: green # The color of the branding
