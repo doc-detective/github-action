@@ -19,7 +19,7 @@ async function main() {
     let compiledCommand = `npx ${dd} ${command}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
-    compiledCommand += ` --output /tmp/doc-detective-output.json`;
+    compiledCommand += ` --output /${os.tmpdir}/doc-detective-output.json`;
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
