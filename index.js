@@ -1,6 +1,7 @@
 const core = require("@actions/core");
 const { exec } = require("@actions/exec");
 const github = require("@actions/github");
+const os = require("os");
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
