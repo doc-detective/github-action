@@ -32328,6 +32328,7 @@ const core = __nccwpck_require__(2186);
 const { exec } = __nccwpck_require__(1514);
 const github = __nccwpck_require__(5438);
 const os = __nccwpck_require__(2037);
+const path = __nccwpck_require__(1017);
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -32346,7 +32347,8 @@ async function main() {
     let compiledCommand = `npx ${dd} ${command}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
-    compiledCommand += ` --output /${os.tmpdir}/doc-detective-output.json`;
+    const outputPath = path.resolve(process.env.RUNNER_TEMP,"doc-detective-output.json");
+    compiledCommand += ` --output ${outputPath}`;
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
