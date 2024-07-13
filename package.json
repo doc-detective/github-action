@@ -1,6 +1,6 @@
 {
   "name": "doc-detective-action",
-  "version": "0.0.1-beta.0",
+  "version": "0.0.1-beta.1",
   "description": "Validate doc content by treating docs as testable assertions for a product.",
   "main": "index.js",
   "scripts": {
