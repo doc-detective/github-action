@@ -1,5 +1,5 @@
 {
-  "name": "doc-detective-action",
+  "name": "doc-detective-github-action",
   "version": "0.0.1-beta.1",
   "description": "Validate doc content by treating docs as testable assertions for a product.",
   "main": "index.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/doc-detective/doc-detective-action.git"
+    "url": "git+https://github.com/doc-detective/github-action.git"
   },
   "author": "Manny Silva",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/doc-detective/doc-detective-action/issues"
+    "url": "https://github.com/doc-detective/github-action/issues"
   },
-  "homepage": "https://github.com/doc-detective/doc-detective-action#readme",
+  "homepage": "https://github.com/doc-detective/github-action#readme",
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@actions/exec": "^1.1.1",
