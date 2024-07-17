@@ -72,12 +72,12 @@ async function main() {
 async function createIssue(results) {
   // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
-  const octokit = github.getOctokit(token);
+  const title = core.getInput("issueTitle");
+  const body = core.getInput("issueBody").replace("$RESULTS", JSON.stringify(results, null, 2));
+  const labels = core.getInput("issueLabels");
+  const assignees = core.getInput("issueAssignees");
 
-  const title = "Failure in Doc Detective run";
-  const body = `Doc Detective run failed with the following results:\n${results}`;
-  const labels = "doc-detective";
-  const assignees = "";
+  const octokit = github.getOctokit(token);
 
   const issue = await octokit.rest.issues.create({
     owner: github.context.repo.owner,

@@ -22,6 +22,8 @@ jobs:
       - uses: doc-detective/github-action
 ```
 
+The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
+
 ## File structure
 
 This action runs in the current working directory of the workflow. If you want to change the directory, you can do so by adding a `working-directory` key to the `github-action` step:
@@ -124,6 +126,54 @@ jobs:
       - uses: doc-detective/github-action
         with:
           createIssueOnFail: true
+```
+
+### `issueTitle` (default: `Doc Detective Failure`)
+
+The title of the created GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action
+  with:
+    createIssueOnFail: true
+    issueTitle: Doc Detective found issues in the documentation
+```
+
+### `issueBody` (default: `Doc Detective run failed with the following results:\n$RESULTS`)
+
+he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `createIssueOnFail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action
+  with:
+    createIssueOnFail: true
+    issueBody: |
+      Doc Detective found issues in the documentation. Review and fix the issues.
+
+      Results:
+      $RESULTS
+```
+
+### `issueLabels` (default: `doc-detective`)
+
+Comma-separated list of labels to apply to the GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action
+  with:
+    createIssueOnFail: true
+    issueLabels: doc-detective,documentation
+```
+
+### `issueAssignees`
+
+Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+  
+```yaml
+- uses: doc-detective/github-action
+  with:
+    createIssueOnFail: true
+    issueAssignees: octocat,monalisa
 ```
 
 ### `token` (default: `${{ github.token }}`)

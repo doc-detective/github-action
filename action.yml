@@ -26,6 +26,22 @@ inputs:
     description: Create a GitHub issue if one or more tests fails. Default is "false". Only valid for the "runTests" command.
     required: false
     default: "false"
+  issueTitle:
+    description: The title of the created GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+    required: false
+    default: "Doc Detective Failure"
+  issueBody:
+    description: The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if "createIssueOnFail" is set to "true".
+    required: false
+    default: "Doc Detective run failed with the following results:\n$RESULTS"
+  issueLabels:
+    description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+    required: false
+    default: "doc-detective"
+  issueAssignees:
+    description: Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+    required: false
+    default: ""
   token:
     description: The GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.
     required: false
