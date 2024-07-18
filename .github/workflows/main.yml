@@ -51,6 +51,7 @@ jobs:
         with:
           cache: 'npm'
           node-version: 20
+      - run: npm i -g doc-detective@${{ github.event.inputs.version }}
       - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
         id: dd
