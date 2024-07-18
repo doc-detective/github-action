@@ -13,9 +13,11 @@ async function main() {
     // Set up environment
     // If linux, install xvfb, start xvfb, and set display
     if (os.platform() === "linux") {
+      console.log("Setting up xvfb.");
       await exec("sudo apt-get install -y xvfb");
       await exec("Xvfb :99 -ac -screen 0 1920x1080x8 &");
       process.env.DISPLAY = ":99";
+      console.log("Virutal display set up on :99.");
     }
 
     // Get the inputs
