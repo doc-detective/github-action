@@ -37,14 +37,6 @@ on:
         description: issueBody
         required: false
         default: 'Doc Detective run failed with the following results:\n$RESULTS'
-      issueLabels:
-        description: issueLabels
-        required: false
-        default: 'doc-detective'
-      issueAssignees:
-        description: issueAssignees
-        required: false
-        default: ''
 
 
 jobs:
