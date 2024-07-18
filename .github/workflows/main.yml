@@ -44,9 +44,13 @@ jobs:
   run:
     runs-on: ${{ github.event.inputs.runner }}
 
-    name: Pass tests
+    name: Run the action
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'npm'
+          node-version: 20
       - name: Run Doc Detective
         uses: ./ # Uses an action in the root directory
         id: dd
@@ -59,5 +63,3 @@ jobs:
           createIssueOnFail: ${{ github.event.inputs.createIssueOnFail }}
           issueTitle: ${{ github.event.inputs.issueTitle }}
           issueBody: ${{ github.event.inputs.issueBody }}
-          issueLabels: ${{ github.event.inputs.issueLabels }}
-          issueAssignees: ${{ github.event.inputs.issueAssignees }}
