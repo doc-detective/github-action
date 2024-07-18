@@ -10,6 +10,14 @@ main();
 
 async function main() {
   try {
+    // Set up environment
+    // If linux, install xvfb, start xvfb, and set display
+    if (os.platform() === "linux") {
+      await exec("sudo apt-get install -y xvfb");
+      await exec("Xvfb :99 -ac -screen 0 1920x1080x8 &");
+      process.env.DISPLAY = ":99";
+    }
+
     // Get the inputs
     const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
