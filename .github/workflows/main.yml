@@ -1,12 +1,56 @@
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: runner
+        required: true
+        default: ubuntu-latest
+      version:
+        description: version
+        required: false
+        default: latest
+      command:
+        description: command
+        required: false
+        default: runTests
+      config:
+        description: config
+        required: false
+        default: ./artifacts/.doc-detective.json
+      input:
+        description: input
+        required: false
+        default: ./artifacts/doc-content-inline-tests.md
+      exitOnFail:
+        description: exitOnFail
+        required: false
+        default: 'false'
+      createIssueOnFail:
+        description: createIssueOnFail
+        required: false
+        default: 'false'
+      issueTitle:
+        description: issueTitle
+        required: false
+        default: 'Doc Detective Failure'
+      issueBody:
+        description: issueBody
+        required: false
+        default: 'Doc Detective run failed with the following results:\n$RESULTS'
+      issueLabels:
+        description: issueLabels
+        required: false
+        default: 'doc-detective'
+      issueAssignees:
+        description: issueAssignees
+        required: false
+        default: ''
+
 
 jobs:
   
-  pass-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  run:
+    runs-on: ${{ github.event.inputs.runner }}
 
     name: Pass tests
     steps:
@@ -15,28 +59,13 @@ jobs:
         uses: ./ # Uses an action in the root directory
         id: dd
         with:
-          version: dev
-          config: ./artifacts/.doc-detective.json
-          input: ./artifacts/doc-content-inline-tests.md
-
-  fail-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    name: Fail tests
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Doc Detective
-        uses: ./ # Uses an action in the root directory
-        id: dd
-        continue-on-error: true
-        with:
-          version: dev
-          config: ./artifacts/.doc-detective.json
-          input: ./artifacts/doc-content-inline-tests-fail.md
-          exitOnFail: true
+          version: ${{ github.event.inputs.version }}
+          command: ${{ github.event.inputs.command }}
+          config: ${{ github.event.inputs.config }}
+          input: ${{ github.event.inputs.input }}
+          exitOnFail: ${{ github.event.inputs.exitOnFail }}
+          createIssueOnFail: ${{ github.event.inputs.createIssueOnFail }}
+          issueTitle: ${{ github.event.inputs.issueTitle }}
+          issueBody: ${{ github.event.inputs.issueBody }}
+          issueLabels: ${{ github.event.inputs.issueLabels }}
+          issueAssignees: ${{ github.event.inputs.issueAssignees }}
