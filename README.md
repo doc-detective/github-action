@@ -2,10 +2,6 @@
 
 :octocat: The official GitHub Action for [Doc Detective](https://github.com/doc-detective/doc-detective). Keep your docs accurate with ease.
 
-> ⚠️ This action is still in development.
-> - It only works with an in-development version of Doc Detective. `version` must be set to `dev`.
-> - On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
-
 ## Usage
 
 Create a YAML file in your `.github/workflows` directory with the following content:
@@ -23,6 +19,8 @@ jobs:
 ```
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
+
+**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
 
 ## File structure
 
