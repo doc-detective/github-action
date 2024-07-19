@@ -1,10 +1,6 @@
 on:
   workflow_dispatch:
     inputs:
-      action_version:
-        description: action_version
-        required: true
-        default: latest
       runner:
         description: runner
         required: true
