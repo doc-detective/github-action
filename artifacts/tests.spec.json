@@ -48,6 +48,9 @@
           "url": "https://www.google.com"
         },
         {
+          "action": "startRecording"
+        },
+        {
           "action": "find",
           "selector": "[title=Search]",
           "timeout": 10000,
@@ -59,6 +62,9 @@
         },
         {
           "action": "wait"
+        },
+        {
+          "action": "stopRecording"
         },
         {
           "action": "saveScreenshot",
