@@ -1,16 +1,4 @@
 {
-  "id": "Do all the things! - Spec",
-  "contexts": [
-    {
-      "app": {
-        "name": "firefox",
-        "options": {
-          "headless": true
-        }
-      },
-      "platforms": ["windows", "mac", "linux"]
-    }
-  ],
   "tests": [
     {
       "id": "Do all the things! - Test",
