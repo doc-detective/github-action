@@ -1,6 +1,10 @@
 on:
   workflow_dispatch:
     inputs:
+      action_version:
+        description: action_version
+        required: true
+        default: latest
       runner:
         description: runner
         required: true
@@ -48,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Doc Detective
-        uses: doc-detective/github-action
+        uses: doc-detective/github-action@${{ github.event.inputs.action_version }}
         id: dd
         with:
           version: ${{ github.event.inputs.version }}
