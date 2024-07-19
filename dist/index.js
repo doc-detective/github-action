@@ -32336,6 +32336,13 @@ main();
 
 async function main() {
   try {
+    // Post warning if running on Linux
+    if (os.platform() === "linux") {
+      core.warning(
+        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows runners."
+      );
+    }
+
     // Get the inputs
     const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
@@ -32347,7 +32354,10 @@ async function main() {
     let compiledCommand = `npx ${dd} ${command}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
-    const outputPath = path.resolve(process.env.RUNNER_TEMP,"doc-detective-output.json");
+    const outputPath = path.resolve(
+      process.env.RUNNER_TEMP,
+      "doc-detective-output.json"
+    );
     compiledCommand += ` --output ${outputPath}`;
 
     // Run Doc Detective
@@ -32380,7 +32390,7 @@ async function main() {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(JSON.stringify(results, null, 2));
-          core.info(`Issue: ${JSON.stringify(issue)}`)
+          core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
           core.error(`Error creating issue: ${error.message}`);
         }
@@ -32398,12 +32408,14 @@ async function main() {
 async function createIssue(results) {
   // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
-  const octokit = github.getOctokit(token);
+  const title = core.getInput("issueTitle");
+  const body = core
+    .getInput("issueBody")
+    .replace("$RESULTS", JSON.stringify(results, null, 2));
+  const labels = core.getInput("issueLabels");
+  const assignees = core.getInput("issueAssignees");
 
-  const title = "Failure in Doc Detective run";
-  const body = `Doc Detective run failed with the following results:\n${results}`;
-  const labels = "doc-detective";
-  const assignees = "";
+  const octokit = github.getOctokit(token);
 
   const issue = await octokit.rest.issues.create({
     owner: github.context.repo.owner,
