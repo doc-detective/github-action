@@ -4,7 +4,7 @@
 
 > ⚠️ This action is still in development.
 > - It only works with an in-development version of Doc Detective. `version` must be set to `dev`.
-> - On Ubuntu, it only supports Firefox and Chrome contexts with `headless` set to `true`. Windows and macOS support all browsers whether `headless` is set to `true` or `false`.
+> - On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
 
 ## Usage
 
