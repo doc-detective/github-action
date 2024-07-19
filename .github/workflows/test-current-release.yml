@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Doc Detective
-        uses: doc-detective/github-action@${{ github.event.inputs.action_version }}
+        uses: doc-detective/github-action@v0.0.1-beta.1
         id: dd
         with:
           version: ${{ github.event.inputs.version }}
