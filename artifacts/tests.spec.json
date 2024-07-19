@@ -52,14 +52,14 @@
           "action": "wait"
         },
         {
-          "action": "stopRecording"
-        },
-        {
           "action": "saveScreenshot",
           "path": "screenshot.png",
           "directory": "samples",
           "maxVariation": 5,
           "overwrite": "byVariation"
+        },
+        {
+          "action": "stopRecording"
         }
       ]
     }
