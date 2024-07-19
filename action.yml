@@ -18,28 +18,28 @@ inputs:
     description: Path to the input file or directory. Overrides the "input" field in the config file.
     required: false
     default: "."
-  exitOnFail:
+  exit_on_fail:
     description: Exit with a non-zero code if one or more tests fails. Default is "false". Only valid for the "runTests" command.
     required: false
     default: "false"
-  createIssueOnFail:
+  create_issue_on_fail:
     description: Create a GitHub issue if one or more tests fails. Default is "false". Only valid for the "runTests" command.
     required: false
     default: "false"
-  issueTitle:
-    description: The title of the created GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+  issue_title:
+    description: The title of the created GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: "Doc Detective Failure"
-  issueBody:
-    description: The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if "createIssueOnFail" is set to "true".
+  issue_body:
+    description: The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: "Doc Detective run failed with the following results:\n$RESULTS"
-  issueLabels:
-    description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+  issue_labels:
+    description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: "doc-detective"
-  issueAssignees:
-    description: Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if "createIssueOnFail" is set to "true".
+  issue_assignees:
+    description: Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: ""
   token:

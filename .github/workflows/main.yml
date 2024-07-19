@@ -21,20 +21,20 @@ on:
         description: input
         required: false
         default: ./artifacts/doc-content-inline-tests.md
-      exitOnFail:
-        description: exitOnFail
+      exit_on_fail:
+        description: exit_on_fail
         required: false
         default: 'false'
-      createIssueOnFail:
-        description: createIssueOnFail
+      create_issue_on_fail:
+        description: create_issue_on_fail
         required: false
         default: 'false'
-      issueTitle:
-        description: issueTitle
+      issue_title:
+        description: issue_title
         required: false
         default: 'Doc Detective Failure'
-      issueBody:
-        description: issueBody
+      issue_body:
+        description: issue_body
         required: false
         default: 'Doc Detective run failed with the following results:\n$RESULTS'
 
@@ -59,7 +59,7 @@ jobs:
           command: ${{ github.event.inputs.command }}
           config: ${{ github.event.inputs.config }}
           input: ${{ github.event.inputs.input }}
-          exitOnFail: ${{ github.event.inputs.exitOnFail }}
-          createIssueOnFail: ${{ github.event.inputs.createIssueOnFail }}
-          issueTitle: ${{ github.event.inputs.issueTitle }}
-          issueBody: ${{ github.event.inputs.issueBody }}
+          exit_on_fail: ${{ github.event.inputs.exit_on_fail }}
+          create_issue_on_fail: ${{ github.event.inputs.create_issue_on_fail }}
+          issue_title: ${{ github.event.inputs.issue_title }}
+          issue_body: ${{ github.event.inputs.issue_body }}

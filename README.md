@@ -89,24 +89,24 @@ Path to the input file or directory. Overrides the "input" field in the config f
     input: path/to/your/tests
 ```
 
-### `exitOnFail` (default: `false`)
+### `exit_on_fail` (default: `false`)
 
 Exit with a non-zero code if one or more tests fails. Only valid if `command` is "runTests".
 
 ```yaml
 - uses: doc-detective/github-action
   with:
-    exitOnFail: true
+    exit_on_fail: true
 ```
 
-### `createIssueOnFail` (default: `false`)
+### `create_issue_on_fail` (default: `false`)
 
 Create a GitHub issue if one or more tests fails. Only valid if `command` is "runTests".
 
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
+    create_issue_on_fail: true
 ```
 
 This input requires the workflow or job to have `write` access for the `issues` scope. You can set the necessary permissions in the workflow file like this:
@@ -125,55 +125,55 @@ jobs:
       - uses: actions/checkout@v4
       - uses: doc-detective/github-action
         with:
-          createIssueOnFail: true
+          create_issue_on_fail: true
 ```
 
-### `issueTitle` (default: `Doc Detective Failure`)
+### `issue_title` (default: `Doc Detective Failure`)
 
-The title of the created GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+The title of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
-    issueTitle: Doc Detective found issues in the documentation
+    create_issue_on_fail: true
+    issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issueBody` (default: `Doc Detective run failed with the following results:\n$RESULTS`)
+### `issue_body` (default: `Doc Detective run failed with the following results:\n$RESULTS`)
 
-he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `createIssueOnFail` is set to `true`.
+he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
-    issueBody: |
+    create_issue_on_fail: true
+    issue_body: |
       Doc Detective found issues in the documentation. Review and fix the issues.
 
       Results:
       $RESULTS
 ```
 
-### `issueLabels` (default: `doc-detective`)
+### `issue_labels` (default: `doc-detective`)
 
-Comma-separated list of labels to apply to the GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+Comma-separated list of labels to apply to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
-    issueLabels: doc-detective,documentation
+    create_issue_on_fail: true
+    issue_labels: doc-detective,documentation
 ```
 
-### `issueAssignees`
+### `issue_assignees`
 
-Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if `createIssueOnFail` is set to `true`.
+Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
   
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
-    issueAssignees: octocat,monalisa
+    create_issue_on_fail: true
+    issue_assignees: octocat,monalisa
 ```
 
 ### `token` (default: `${{ github.token }}`)
@@ -183,7 +183,7 @@ The GitHub token to use for creating issues. Defaults to the token already avail
 ```yaml
 - uses: doc-detective/github-action
   with:
-    createIssueOnFail: true
+    create_issue_on_fail: true
     token: ${{ secrets.MY_GITHUB_TOKEN }}
 ```
 

@@ -60,7 +60,7 @@ async function main() {
     core.setOutput("results", results);
 
     if (command === "runTests" && results.summary.specs.fail > 0) {
-      if (core.getInput("createIssueOnFail") == "true") {
+      if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(JSON.stringify(results, null, 2));
@@ -69,7 +69,7 @@ async function main() {
           core.error(`Error creating issue: ${error.message}`);
         }
       }
-      if (core.getInput("exitOnFail") == "true") {
+      if (core.getInput("exit_on_fail") == "true") {
         // Fail the action if there are failing tests
         core.setFailed("Doc Detective found failing tests.");
       }
@@ -82,12 +82,12 @@ async function main() {
 async function createIssue(results) {
   // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
-  const title = core.getInput("issueTitle");
+  const title = core.getInput("issue_title");
   const body = core
-    .getInput("issueBody")
+    .getInput("issue_body")
     .replace("$RESULTS", JSON.stringify(results, null, 2));
-  const labels = core.getInput("issueLabels");
-  const assignees = core.getInput("issueAssignees");
+  const labels = core.getInput("issue_labels");
+  const assignees = core.getInput("issue_assignees");
 
   const octokit = github.getOctokit(token);
 

@@ -45,4 +45,4 @@ jobs:
           version: dev
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests-fail.md
-          exitOnFail: true
+          exit_on_fail: true
