@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: doc-detective/github-action
+      - uses: doc-detective/github-action@v0.0.1-beta.2
 ```
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
@@ -29,7 +29,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 This action runs in the current working directory of the workflow. If you want to change the directory, you can do so by adding a `working-directory` key to the `github-action` step:
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   working-directory: path/to/your/directory
 ```
 
@@ -44,7 +44,7 @@ You can customize the action with the following optional inputs:
 To add an input, edit your workflow file to include the `with` key to the `uses` block. For example:
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     version: latest
 ```
@@ -54,7 +54,7 @@ To add an input, edit your workflow file to include the `with` key to the `uses`
 Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     version: 2.15.0
 ```
@@ -64,7 +64,7 @@ Specify the version of Doc Detective to use. This can be a specific version numb
 The command to run. Valid values are "runTests" and "runCoverage".
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     command: runCoverage
 ```
@@ -74,7 +74,7 @@ The command to run. Valid values are "runTests" and "runCoverage".
 The path to the configuration file.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     config: path/to/your/config.json
 ```
@@ -84,7 +84,7 @@ The path to the configuration file.
 Path to the input file or directory. Overrides the "input" field in the config file.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     input: path/to/your/tests
 ```
@@ -94,7 +94,7 @@ Path to the input file or directory. Overrides the "input" field in the config f
 Exit with a non-zero code if one or more tests fails. Only valid if `command` is "runTests".
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     exit_on_fail: true
 ```
@@ -104,7 +104,7 @@ Exit with a non-zero code if one or more tests fails. Only valid if `command` is
 Create a GitHub issue if one or more tests fails. Only valid if `command` is "runTests".
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
 ```
@@ -123,7 +123,7 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: doc-detective/github-action
+      - uses: doc-detective/github-action@v0.0.1-beta.2
         with:
           create_issue_on_fail: true
 ```
@@ -133,7 +133,7 @@ jobs:
 The title of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
     issue_title: Doc Detective found issues in the documentation
@@ -144,7 +144,7 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
 he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
     issue_body: |
@@ -159,7 +159,7 @@ he body of the created GitHub issue. Use the `$RESULTS` variable to insert the r
 Comma-separated list of labels to apply to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
     issue_labels: doc-detective,documentation
@@ -170,7 +170,7 @@ Comma-separated list of labels to apply to the GitHub issue. Only valid if `crea
 Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
   
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
     issue_assignees: octocat,monalisa
@@ -181,7 +181,7 @@ Comma-separated list of GitHub usernames to assign to the GitHub issue. Only val
 The GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   with:
     create_issue_on_fail: true
     token: ${{ secrets.MY_GITHUB_TOKEN }}
@@ -196,7 +196,7 @@ The action sets the following outputs:
 JSON-formatted results of the command. This can be used in subsequent steps in the same job.
 
 ```yaml
-- uses: doc-detective/github-action
+- uses: doc-detective/github-action@v0.0.1-beta.2
   id: doc-detective
 - run: echo "${{ steps.doc-detective.outputs.results }}"
 ```
