@@ -9,6 +9,7 @@ jobs:
   manage-releases:
     # Read the semver version from the release tag, get the major version, delete the releases matching major version and the latest tag,create a tag and release for the major version and the latest tag
     runs-on: ubuntu-latest
+    if: github.event.release.prerelease == false
     permissions:
       contents: write
     steps:
@@ -67,34 +68,34 @@ jobs:
               draft: false,
               prerelease: false
             });
-      - name: Create latest tag
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = 'refs/tags/latest';
-            try {
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: tag.replace('refs/', '')
-              });
-            } catch (error) {}
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: tag,
-              sha: context.sha
-            });
-      - name: Create latest release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: 'latest',
-              name: 'latest',
-              body: 'Latest release. See specific version release notes for details.',
-              draft: false,
-              prerelease: false
-            });
+      # - name: Create latest tag
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const tag = 'refs/tags/latest';
+      #       try {
+      #         await github.rest.git.deleteRef({
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           ref: tag.replace('refs/', '')
+      #         });
+      #       } catch (error) {}
+      #       await github.rest.git.createRef({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         ref: tag,
+      #         sha: context.sha
+      #       });
+      # - name: Create latest release
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const release = await github.rest.repos.createRelease({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         tag_name: 'latest',
+      #         name: 'latest',
+      #         body: 'Latest release. See specific version release notes for details.',
+      #         draft: false,
+      #         prerelease: false
+      #       });
