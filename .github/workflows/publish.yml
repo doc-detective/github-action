@@ -65,9 +65,9 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${majorVersion}`,
-              name: `v${majorVersion}`,
-              body: 'Latest v${majorVersion} release. See specific version release notes for details.',
+              tag_name: `${majorVersion}`,
+              name: `${majorVersion}`,
+              body: `Latest v${majorVersion} release. See specific version release notes for details.`,
               draft: false,
               prerelease: false
             });
