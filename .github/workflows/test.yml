@@ -21,7 +21,6 @@ jobs:
         uses: ./ # Uses an action in the root directory
         id: dd
         with:
-          version: dev
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests.md
 
@@ -42,7 +41,6 @@ jobs:
         id: dd
         continue-on-error: true
         with:
-          version: dev
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
