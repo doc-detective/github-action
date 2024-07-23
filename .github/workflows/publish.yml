@@ -9,6 +9,8 @@ jobs:
   assign-tags:
     # Read the semver version from the release tag, get the major version, and assign tags to the commit
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Get the version
