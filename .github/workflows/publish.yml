@@ -63,7 +63,7 @@ jobs:
               repo: context.repo.repo,
               tag_name: `${majorVersion}`,
               name: `${majorVersion}`,
-              body: `Latest v${majorVersion} release. See specific version release notes for details.`,
+              body: `Latest ${majorVersion} release. See specific version release notes for details.`,
               draft: false,
               prerelease: false
             });
