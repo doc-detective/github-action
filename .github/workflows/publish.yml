@@ -1,0 +1,38 @@
+name: Publish GitHub Action
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  assign-tags:
+    # Read the semver version from the release tag, get the major version, and assign tags to the commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the version
+        id: version
+        run: |
+          MAJOR_VERSION=$(echo "${GITHUB_REF#refs/*/}" | cut -d'.' -f1)
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_OUTPUT
+      - name: Create major tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ steps.version.outputs.MAJOR_VERSION }}',
+              sha: context.sha
+            })
+      - name: Create latest tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/latest',
+              sha: context.sha
+            })              
