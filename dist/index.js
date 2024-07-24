@@ -32413,7 +32413,7 @@ async function createIssue(results) {
   const labels = core.getInput("issue_labels");
   const assignees = core.getInput("issue_assignees");
   const formattedResults = JSON.stringify(results, null, 2);
-  const body = bodyTemplate.replace("$RESULTS", `\`\`\`json\n${formattedResults}\n\`\`\``);
+  const body = bodyTemplate.replace("$RESULTS", `\n\n\`\`\`json\n${formattedResults}\n\`\`\``);
 
   const octokit = github.getOctokit(token);
 
