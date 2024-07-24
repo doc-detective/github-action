@@ -33,7 +33,7 @@ inputs:
   issue_body:
     description: The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if "create_issue_on_fail" is set to "true".
     required: false
-    default: "Doc Detective run failed with the following results:\n$RESULTS"
+    default: "Doc Detective run failed with the following results:$RESULTS"
   issue_labels:
     description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false

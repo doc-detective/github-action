@@ -38,7 +38,7 @@ on:
       issue_body:
         description: issue_body
         required: false
-        default: 'Doc Detective run failed with the following results:\n$RESULTS'
+        default: 'Doc Detective run failed with the following results:$RESULTS'
 
 
 jobs:
