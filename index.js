@@ -57,7 +57,7 @@ async function main() {
 
     // Set outputs
     const results = require(outputFile);
-    core.setOutput("results", results);
+    core.setOutput("results", JSON.parse(results));
 
     if (command === "runTests" && results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
