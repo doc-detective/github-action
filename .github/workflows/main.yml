@@ -45,7 +45,9 @@ jobs:
   
   run:
     runs-on: ${{ github.event.inputs.runner }}
-
+    permissions:
+      contents: read
+      issues: write
     name: Run the action
     steps:
       - uses: actions/checkout@v4
