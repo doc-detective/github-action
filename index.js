@@ -83,11 +83,11 @@ async function createIssue(results) {
   // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
-  const body = core
-    .getInput("issue_body")
-    .replace("$RESULTS", JSON.stringify(results, null, 2));
+  const bodyTemplate = core.getInput("issue_body");
   const labels = core.getInput("issue_labels");
   const assignees = core.getInput("issue_assignees");
+  const formattedResults = JSON.stringify(results, null, 2);
+  const body = bodyTemplate.replace("$RESULTS", `\`\`\`json\n${formattedResults}\n\`\`\``);
 
   const octokit = github.getOctokit(token);
 
