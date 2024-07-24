@@ -1,6 +1,6 @@
 {
   "name": "doc-detective-github-action",
-  "version": "0.0.1-rc.1",
+  "version": "1.0.0",
   "description": "Validate doc content by treating docs as testable assertions for a product.",
   "main": "index.js",
   "scripts": {
