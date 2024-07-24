@@ -1,3 +1,5 @@
+name: Run local action
+
 on:
   workflow_dispatch:
     inputs:
@@ -36,14 +38,16 @@ on:
       issue_body:
         description: issue_body
         required: false
-        default: 'Doc Detective run failed with the following results:\n$RESULTS'
+        default: 'Doc Detective run failed with the following results:$RESULTS'
 
 
 jobs:
   
   run:
     runs-on: ${{ github.event.inputs.runner }}
-
+    permissions:
+      contents: read
+      issues: write
     name: Run the action
     steps:
       - uses: actions/checkout@v4

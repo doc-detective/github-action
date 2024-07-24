@@ -137,7 +137,7 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `Doc Detective run failed with the following results:\n$RESULTS`)
+### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
 
 he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
 

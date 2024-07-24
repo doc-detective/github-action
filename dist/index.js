@@ -32411,7 +32411,7 @@ async function createIssue(results) {
   const title = core.getInput("issue_title");
   const body = core
     .getInput("issue_body")
-    .replace("$RESULTS", JSON.stringify(results, null, 2));
+    .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``);
   const labels = core.getInput("issue_labels");
   const assignees = core.getInput("issue_assignees");
 
