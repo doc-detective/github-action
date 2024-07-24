@@ -1,3 +1,5 @@
+name: Run local action
+
 on:
   workflow_dispatch:
     inputs:
