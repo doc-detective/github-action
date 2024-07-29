@@ -67,7 +67,7 @@ The command to run. Valid values are "runTests" and "runCoverage".
     command: runCoverage
 ```
 
-### `config` (default: `.doc-detective.json`)
+### `config`
 
 The path to the configuration file.
 
@@ -77,7 +77,7 @@ The path to the configuration file.
     config: path/to/your/config.json
 ```
 
-### `input` (default: `.`)
+### `input`
 
 Path to the input file or directory. Overrides the "input" field in the config file.
 

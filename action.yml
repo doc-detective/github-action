@@ -13,11 +13,9 @@ inputs:
   config:
     description: Path to the configuration file.
     required: false
-    default: .doc-detective.json
   input:
     description: Path to the input file or directory. Overrides the "input" field in the config file.
     required: false
-    default: "."
   exit_on_fail:
     description: Exit with a non-zero code if one or more tests fails. Default is "false". Only valid for the "runTests" command.
     required: false
