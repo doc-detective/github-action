@@ -23,6 +23,14 @@ on:
         description: input
         required: false
         default: ./artifacts/doc-content-inline-tests.md
+      create_issue_on_change:
+        description: create_issue_on_change
+        required: false
+        default: 'false'
+      pr_body:
+        description: pr_body
+        required: false
+        default: 'A Doc Detective run ($RUN_URL) updated the following files: $CHANGED_FILES'
       exit_on_fail:
         description: exit_on_fail
         required: false
@@ -31,14 +39,10 @@ on:
         description: create_issue_on_fail
         required: false
         default: 'false'
-      issue_title:
-        description: issue_title
-        required: false
-        default: 'Doc Detective Failure'
       issue_body:
         description: issue_body
         required: false
-        default: 'Doc Detective run failed with the following results:$RESULTS'
+        default: 'A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS'
 
 
 jobs:
