@@ -110,7 +110,6 @@ async function main() {
 }
 
 async function createIssue(results) {
-  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
   const body = core
@@ -137,7 +136,6 @@ async function createIssue(results) {
 }
 
 async function createPullRequest(changedFiles){
-  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
   const body = core

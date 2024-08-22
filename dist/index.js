@@ -32332,6 +32332,13 @@ const path = __nccwpck_require__(1017);
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
+
+const repoOwner = github.context.repo.owner;
+const repoName = github.context.repo.repo;
+const runId = process.env.GITHUB_RUN_ID;
+
+const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId}`;
+
 main();
 
 async function main() {
@@ -32385,6 +32392,29 @@ async function main() {
     const results = require(outputFile);
     core.setOutput("results", results);
 
+
+    // Check if there are new or changed files with git
+    let changedFiles = [];
+    try {
+      const diff = await exec("git diff --name-only");
+      changedFiles = diff.split("\n").filter((f) => f);
+    } catch (error) {
+      core.warning("Error getting changed files with git: " + error.message);
+    }
+    core.setOutput("changedFiles", changedFiles);
+    if (changedFiles.length > 0) {
+      if (core.getInput("create_pr_on_change") == "true") {
+        // Create a pull request if there are changed files
+        try {
+          const pr = await createPullRequest(JSON.stringify(changedFiles, null, 2));
+          core.info(`Pull Request: ${JSON.stringify(pr)}`);
+        } catch (error) {
+          core.error(`Error creating pull request: ${error.message}`);
+        }
+      }
+    }
+
+    // Create an issue if there are failing tests
     if (command === "runTests" && results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
@@ -32406,11 +32436,11 @@ async function main() {
 }
 
 async function createIssue(results) {
-  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
   const body = core
     .getInput("issue_body")
+    .replace("$RUN_URL", runURL)
     .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``);
   const labels = core.getInput("issue_labels");
   const assignees = core.getInput("issue_assignees");
@@ -32431,6 +32461,41 @@ async function createIssue(results) {
   return issue;
 }
 
+async function createPullRequest(changedFiles){
+  const token = core.getInput("token");
+  const title = core.getInput("pr_title");
+  const body = core
+    .getInput("pr_body")
+    .replace("$RUN_URL", runURL)
+    .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${changedFiles}\n\`\`\``);
+  const labels = core.getInput("pr_labels");
+  const assignees = core.getInput("pr_assignees");
+  const base = await exec("git rev-parse --abbrev-ref HEAD");
+  const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
+
+  const octokit = github.getOctokit(token);
+
+  // Create new branch
+  await exec(`git checkout -b ${head}`);
+
+  // Commit changes
+  await exec("git add .");
+  await exec("git commit -m 'Doc Detective results'");
+  await exec(`git push origin ${head}`);
+
+  // Create pull request
+  const pr = await octokit.rest.pulls.create({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    title,
+    body,
+    head,
+    base,
+    labels: labels.split(","),
+    assignees: assignees.split(","),
+  });
+
+}
 })();
 
 module.exports = __webpack_exports__;
