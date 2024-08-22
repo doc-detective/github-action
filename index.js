@@ -71,12 +71,14 @@ async function main() {
     let changedFiles = [];
     try {
       const diff = await exec("git diff --name-only");
+      core.warning("Diff: " + diff); // DEBUG
       changedFiles = diff.split("\n").filter((f) => f);
     } catch (error) {
       core.warning("Error getting changed files with git: " + error.message);
     }
     core.setOutput("changedFiles", changedFiles);
     if (changedFiles.length > 0) {
+      core.info(`Changed files: ${changedFiles.join(", ")}`);
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
