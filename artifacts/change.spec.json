@@ -10,7 +10,7 @@
       "steps": [
         {
           "action": "runShell",
-          "command": "touch $(uuidgen)"
+          "command": "touch $(uuidgen) && git diff --only-name"
         }
       ]
     },
