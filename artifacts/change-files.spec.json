@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "contexts": [
+        {
+          "app": { "name": "chrome" },
+          "platforms": ["linux", "mac"]
+        }
+      ],
+      "steps": [
+        {
+          "action": "runShell",
+          "command": "touch $(uuidgen)"
+        }
+      ]
+    },
+    {
+      "contexts": [
+        {
+          "app": { "name": "chrome" },
+          "platforms": ["windows"]
+        }
+      ],
+      "steps": [
+        {
+          "action": "runShell",
+          "command": "echo.>\"%random%\""
+        }
+      ]
+    }
+  ]
+}
