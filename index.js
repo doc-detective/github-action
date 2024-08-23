@@ -107,6 +107,12 @@ async function main() {
   }
 }
 
+/**
+ * Creates an issue using the provided inputs.
+ * 
+ * @param {string} results - The results to be included in the issue body.
+ * @returns {Promise<object>} - A promise that resolves to the created issue object.
+ */
 async function createIssue(results) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
@@ -133,6 +139,12 @@ async function createIssue(results) {
   return issue;
 }
 
+/**
+ * Creates a pull request with the specified parameters.
+ *
+ * @param {string} gitStatus - The git status information to be included in the pull request body.
+ * @returns {Promise<object>} - A promise that resolves when the pull request is created.
+ */
 async function createPullRequest(gitStatus) {
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
@@ -168,4 +180,6 @@ async function createPullRequest(gitStatus) {
     labels: labels.split(","),
     assignees: assignees.split(","),
   });
+
+  return pr;
 }
