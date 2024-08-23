@@ -10,8 +10,12 @@
       "steps": [
         {
           "action": "runShell",
-          "command": "touch $(uuidgen) && ls && git --version"
-        }
+          "command": "touch $(uuidgen)"
+        },
+        {
+          "action": "runShell",
+          "command": "git status"
+        }        
       ]
     },
     {
