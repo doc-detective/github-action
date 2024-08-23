@@ -32397,7 +32397,10 @@ async function main() {
     let changedFiles = true;
     const statusResponse = execSync("git status");
     const status = statusResponse.toString();
+    console.log(status);
+    console.log(status.indexOf("working tree clean"));
     if (status.indexOf("working tree clean")) changedFiles = false;
+    console.log(changedFiles);
     if (changedFiles) {
       core.info(`Git status: ${status}`);
       if (core.getInput("create_pr_on_change") == "true") {
