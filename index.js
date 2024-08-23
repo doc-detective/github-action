@@ -74,7 +74,12 @@ async function main() {
     if (status.indexOf("working tree clean") >= 0) changedFiles = false;
     if (changedFiles) {
       core.info(`Git status: ${status}`);
+      console.log(core.getInput("runner"));
+      console.log(core.getInput("version"));
+      console.log(core.getInput("command"));
+      console.log(core.getInput("create_issue_on_fail"));
       console.log(core.getInput("create_pr_on_change"));
+      console.log(core.getInput("create_pr_on_change") == "true");
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
