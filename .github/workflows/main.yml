@@ -26,7 +26,7 @@ on:
       create_pr_on_change:
         description: create_pr_on_change
         required: false
-        default: 'true'
+        default: 'false'
       pr_body:
         description: pr_body
         required: false
