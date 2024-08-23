@@ -32337,8 +32337,31 @@ process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
 const runId = process.env.GITHUB_RUN_ID;
-
 const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId}`;
+
+// List all the inputs
+const inputs = {
+  version: core.getInput("version"),
+  command: core.getInput("command"),
+  config: core.getInput("config"),
+  input: core.getInput("input"),
+  create_pr_on_change: core.getInput("create_pr_on_change"),
+  create_issue_on_fail: core.getInput("create_issue_on_fail"),
+  exit_on_fail: core.getInput("exit_on_fail"),
+  token: core.getInput("token"),
+  issue_title: core.getInput("issue_title"),
+  issue_body: core.getInput("issue_body"),
+  issue_labels: core.getInput("issue_labels"),
+  issue_assignees: core.getInput("issue_assignees"),
+  pr_title: core.getInput("pr_title"),
+  pr_body: core.getInput("pr_body"),
+  pr_labels: core.getInput("pr_labels"),
+  pr_assignees: core.getInput("pr_assignees"),
+  pr_branch: core.getInput("pr_branch"),
+};
+console.log(inputs)
+
+process.exit();
 
 main();
 
@@ -32400,12 +32423,6 @@ async function main() {
     if (status.indexOf("working tree clean") >= 0) changedFiles = false;
     if (changedFiles) {
       core.info(`Git status: ${status}`);
-      console.log(core.getInput("runner"));
-      console.log(core.getInput("version"));
-      console.log(core.getInput("command"));
-      console.log(core.getInput("create_issue_on_fail"));
-      console.log(core.getInput("create_pr_on_change"));
-      console.log(core.getInput("create_pr_on_change") == "true");
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
