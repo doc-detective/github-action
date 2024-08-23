@@ -71,7 +71,7 @@ async function main() {
     let status;
     try {
       status = await exec("git status");
-      core.warning("Status: " + JSON.stringify(status, null, 2)); // DEBUG
+      core.warning("Status: " + status); // DEBUG
       if (status.indexOf("working tree clean")) changedFiles = false;
     } catch (error) {
       core.warning("Error getting git status: " + error.message);
