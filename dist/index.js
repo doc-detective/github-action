@@ -32394,14 +32394,9 @@ async function main() {
 
     // Check if there are new or changed files with git
     let changedFiles = true;
-    let status;
-    try {
-      status = await exec("git status");
-      core.warning("Status: " + status); // DEBUG
-      if (status.indexOf("working tree clean")) changedFiles = false;
-    } catch (error) {
-      core.warning("Error getting git status: " + error.message);
-    }
+    let status = await exec("git status");
+    core.warning(status);
+    if (status.indexOf("working tree clean")) changedFiles = false;
     if (changedFiles) {
       core.info(`Git status: ${status}`);
       if (core.getInput("create_pr_on_change") == "true") {
