@@ -3,6 +3,7 @@ const { exec } = require("@actions/exec");
 const github = require("@actions/github");
 const os = require("os");
 const path = require("path");
+const { execSync } = require("child_process");
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -68,7 +69,7 @@ async function main() {
 
     // Check if there are new or changed files with git
     let changedFiles = true;
-    let status = await exec("git status");
+    let status = execSync("git status");
     console.log(status)
     if (status.stdout.indexOf("working tree clean")) changedFiles = false;
     if (changedFiles) {

@@ -32329,6 +32329,7 @@ const { exec } = __nccwpck_require__(1514);
 const github = __nccwpck_require__(5438);
 const os = __nccwpck_require__(2037);
 const path = __nccwpck_require__(1017);
+const { execSync } = __nccwpck_require__(2081);
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -32394,7 +32395,7 @@ async function main() {
 
     // Check if there are new or changed files with git
     let changedFiles = true;
-    let status = await exec("git status");
+    let status = execSync("git status");
     console.log(status)
     if (status.stdout.indexOf("working tree clean")) changedFiles = false;
     if (changedFiles) {
