@@ -70,8 +70,8 @@ async function main() {
     // Check if there are new or changed files with git
     let changedFiles = true;
     let status = execSync("git status");
-    console.log(status)
-    if (status.stdout.indexOf("working tree clean")) changedFiles = false;
+    console.log(status.stdout.toString());
+    if (status.stdout.toString().indexOf("working tree clean")) changedFiles = false;
     if (changedFiles) {
       core.info(`Git status: ${status}`);
       if (core.getInput("create_pr_on_change") == "true") {
