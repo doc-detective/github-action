@@ -66,23 +66,22 @@ async function main() {
     const results = require(outputFile);
     core.setOutput("results", results);
 
-
     // Check if there are new or changed files with git
-    let changedFiles = [];
+    let changedFiles = true;
+    let status;
     try {
-      const diff = await exec("git diff");
-      core.warning("Diff: " + diff); // DEBUG
-      changedFiles = diff.split("\n").filter((f) => f);
+      status = await exec("git status");
+      core.warning("Status: " + JSON.stringify(status, null, 2)); // DEBUG
+      if (status.stdout.indexOf("working tree clean")) changedFiles = false;
     } catch (error) {
-      core.warning("Error getting changed files with git: " + error.message);
+      core.warning("Error getting git status: " + error.message);
     }
-    core.setOutput("changedFiles", changedFiles);
-    if (changedFiles.length > 0) {
-      core.info(`Changed files: ${changedFiles.join(", ")}`);
+    if (changedFiles) {
+      core.info(`Git status: ${status.stdout}`);
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
-          const pr = await createPullRequest(JSON.stringify(changedFiles, null, 2));
+          const pr = await createPullRequest(status.stdout);
           core.info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error) {
           core.error(`Error creating pull request: ${error.message}`);
@@ -137,7 +136,7 @@ async function createIssue(results) {
   return issue;
 }
 
-async function createPullRequest(changedFiles){
+async function createPullRequest(gitStatus) {
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
   const body = core
@@ -170,5 +169,4 @@ async function createPullRequest(changedFiles){
     labels: labels.split(","),
     assignees: assignees.split(","),
   });
-
 }
