@@ -22,7 +22,7 @@ on:
       input:
         description: input
         required: false
-        default: ./artifacts/doc-content-inline-tests.md
+        default: ./artifacts/change.spec.json
       create_issue_on_change:
         description: create_issue_on_change
         required: false
