@@ -70,7 +70,7 @@ async function main() {
     // Check if there are new or changed files with git
     let changedFiles = [];
     try {
-      const diff = await exec("git diff --name-only");
+      const diff = await exec("git diff");
       core.warning("Diff: " + diff); // DEBUG
       changedFiles = diff.split("\n").filter((f) => f);
     } catch (error) {
