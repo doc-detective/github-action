@@ -72,16 +72,16 @@ async function main() {
     try {
       status = await exec("git status");
       core.warning("Status: " + JSON.stringify(status, null, 2)); // DEBUG
-      if (status.stdout.indexOf("working tree clean")) changedFiles = false;
+      if (status.indexOf("working tree clean")) changedFiles = false;
     } catch (error) {
       core.warning("Error getting git status: " + error.message);
     }
     if (changedFiles) {
-      core.info(`Git status: ${status.stdout}`);
+      core.info(`Git status: ${status}`);
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
-          const pr = await createPullRequest(status.stdout);
+          const pr = await createPullRequest(status);
           core.info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error) {
           core.error(`Error creating pull request: ${error.message}`);
