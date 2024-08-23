@@ -71,10 +71,7 @@ async function main() {
     let changedFiles = true;
     const statusResponse = execSync("git status");
     const status = statusResponse.toString();
-    console.log(status);
-    console.log(status.indexOf("working tree clean"));
     if (status.indexOf("working tree clean") >= 0) changedFiles = false;
-    console.log(changedFiles);
     if (changedFiles) {
       core.info(`Git status: ${status}`);
       if (core.getInput("create_pr_on_change") == "true") {
@@ -141,12 +138,14 @@ async function createPullRequest(gitStatus) {
   const body = core
     .getInput("pr_body")
     .replace("$RUN_URL", runURL)
-    .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${changedFiles}\n\`\`\``);
+    .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${gitStatus}\n\`\`\``);
   const labels = core.getInput("pr_labels");
   const assignees = core.getInput("pr_assignees");
   const base = await exec("git rev-parse --abbrev-ref HEAD");
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
+  console.log({ base, head, title, body, labels, assignees });
+  
   const octokit = github.getOctokit(token);
 
   // Create new branch
