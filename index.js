@@ -74,6 +74,7 @@ async function main() {
     if (status.indexOf("working tree clean") >= 0) changedFiles = false;
     if (changedFiles) {
       core.info(`Git status: ${status}`);
+      console.log(core.getInput("create_pr_on_change"));
       if (core.getInput("create_pr_on_change") == "true") {
         // Create a pull request if there are changed files
         try {
@@ -145,7 +146,7 @@ async function createPullRequest(gitStatus) {
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
   console.log({ base, head, title, body, labels, assignees });
-  
+
   const octokit = github.getOctokit(token);
 
   // Create new branch
