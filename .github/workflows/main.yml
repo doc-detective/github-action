@@ -26,7 +26,7 @@ on:
       create_issue_on_change:
         description: create_issue_on_change
         required: false
-        default: 'false'
+        default: 'true'
       pr_body:
         description: pr_body
         required: false
