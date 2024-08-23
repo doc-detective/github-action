@@ -73,7 +73,7 @@ async function main() {
     const status = statusResponse.toString();
     console.log(status);
     console.log(status.indexOf("working tree clean"));
-    if (status.indexOf("working tree clean") === -1) changedFiles = false;
+    if (status.indexOf("working tree clean") >= 0) changedFiles = false;
     console.log(changedFiles);
     if (changedFiles) {
       core.info(`Git status: ${status}`);
