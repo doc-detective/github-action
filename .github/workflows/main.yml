@@ -26,7 +26,7 @@ on:
       create_pr_on_change:
         description: create_pr_on_change
         required: false
-        default: 'false'
+        default: 'true'
       pr_body:
         description: pr_body
         required: false
@@ -50,7 +50,7 @@ jobs:
   run:
     runs-on: ${{ github.event.inputs.runner }}
     permissions:
-      contents: read
+      contents: write
       issues: write
       pull-requests: write
     name: Run the action
