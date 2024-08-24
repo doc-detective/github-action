@@ -32478,7 +32478,7 @@ async function createPullRequest(gitStatus) {
     .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${gitStatus}\n\`\`\``);
   const labels = core.getInput("pr_labels");
   const assignees = core.getInput("pr_assignees");
-  const base = await exec("git rev-parse --abbrev-ref HEAD");
+  const base = execSync("git rev-parse --abbrev-ref HEAD").toString();
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
   console.log({ base, head, title, body, labels, assignees });
@@ -32490,7 +32490,7 @@ async function createPullRequest(gitStatus) {
 
   // Commit changes
   await exec("git add .");
-  await exec("git commit -m 'Doc Detective results'");
+  await exec(`git commit -m "Doc Detective results"`);
   await exec(`git push origin ${head}`);
 
   // Create pull request
