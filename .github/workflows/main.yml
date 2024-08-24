@@ -23,8 +23,8 @@ on:
         description: input
         required: false
         default: ./artifacts/change.spec.json
-      pullrequest:
-        description: pullrequest
+      create_pr_on_change:
+        description: create_pr_on_change
         required: false
         default: 'false'
       pr_body:
@@ -67,6 +67,7 @@ jobs:
           command: ${{ github.event.inputs.command }}
           config: ${{ github.event.inputs.config }}
           input: ${{ github.event.inputs.input }}
+          create_pr_on_change: ${{ github.event.inputs.create_pr_on_change }}
           exit_on_fail: ${{ github.event.inputs.exit_on_fail }}
           create_issue_on_fail: ${{ github.event.inputs.create_issue_on_fail }}
           issue_title: ${{ github.event.inputs.issue_title }}

@@ -13,30 +13,6 @@ const repoName = github.context.repo.repo;
 const runId = process.env.GITHUB_RUN_ID;
 const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId}`;
 
-// List all the inputs
-const inputs = {
-  version: core.getInput("version"),
-  command: core.getInput("command"),
-  config: core.getInput("config"),
-  input: core.getInput("input"),
-  pullrequest: core.getInput("pullrequest"),
-  create_issue_on_fail: core.getInput("create_issue_on_fail"),
-  exit_on_fail: core.getInput("exit_on_fail"),
-  token: core.getInput("token"),
-  issue_title: core.getInput("issue_title"),
-  issue_body: core.getInput("issue_body"),
-  issue_labels: core.getInput("issue_labels"),
-  issue_assignees: core.getInput("issue_assignees"),
-  pr_title: core.getInput("pr_title"),
-  pr_body: core.getInput("pr_body"),
-  pr_labels: core.getInput("pr_labels"),
-  pr_assignees: core.getInput("pr_assignees"),
-  pr_branch: core.getInput("pr_branch"),
-};
-console.log(inputs)
-
-process.exit();
-
 main();
 
 async function main() {
