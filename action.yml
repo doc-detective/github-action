@@ -16,7 +16,7 @@ inputs:
   input:
     description: Path to the input file or directory. Overrides the "input" field in the config file.
     required: false
-  create_pr_on_change:
+  pullrequest:
     description: Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Default is "false". Only valid for the "runTests" command.
     required: false
     default: "false"

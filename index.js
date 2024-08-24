@@ -19,7 +19,7 @@ const inputs = {
   command: core.getInput("command"),
   config: core.getInput("config"),
   input: core.getInput("input"),
-  create_pr_on_change: core.getInput("create_pr_on_change"),
+  pullrequest: core.getInput("pullrequest"),
   create_issue_on_fail: core.getInput("create_issue_on_fail"),
   exit_on_fail: core.getInput("exit_on_fail"),
   token: core.getInput("token"),

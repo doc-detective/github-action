@@ -23,8 +23,8 @@ on:
         description: input
         required: false
         default: ./artifacts/change.spec.json
-      create_pr_on_change:
-        description: create_pr_on_change
+      pullrequest:
+        description: pullrequest
         required: false
         default: 'false'
       pr_body:
