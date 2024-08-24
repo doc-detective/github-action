@@ -37,7 +37,7 @@ All paths are relative to the current working directory.
 
 ## Inputs
 
-You can customize the action with the following optional inputs:
+You can customize the action with the following optional inputs.
 
 To add an input, edit your workflow file to include the `with` key to the `uses` block. For example:
 
@@ -85,6 +85,86 @@ Path to the input file or directory. Overrides the "input" field in the config f
 - uses: doc-detective/github-action@v1
   with:
     input: path/to/your/tests
+```
+
+### `create_pr_on_change` (default: `false`)
+
+Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is "runTests". Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+```
+
+### `pr_branch` (default: `doc-detective-{DATE}`)
+
+The name of the branch to create for the pull request. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_branch: doc-detective-changes
+```
+
+### `pr_title` (default: `Doc Detective Changes`)
+
+The title of the created pull request. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_title: Doc Detective found changes
+```
+
+### `pr_body` (default: `A Doc Detective run ($RUN_URL) found changed files. Git status: $GIT_STATUS`)
+
+The body of the created pull request. `$GIT_STATUS` inserts a list of changed files. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_body: |
+      Doc Detective found changed files. Review and merge the changes.
+
+      Git status:
+      $GIT_STATUS
+```
+
+### `pr_labels` (default: `doc-detective`)
+
+Comma-separated list of labels to apply to the pull request. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_labels: doc-detective,for-review
+```
+
+### `pr_assignees`
+
+Comma-separated list of GitHub usernames to assign to the pull request. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_assignees: octocat,monalisa
+```
+
+### `pr_reviewers`
+
+Comma-separated list of GitHub usernames to request a review from. Only valid if `create_pr_on_change` is "true".
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_pr_on_change: true
+    pr_reviewers: octocat,monalisa
 ```
 
 ### `exit_on_fail` (default: `false`)
