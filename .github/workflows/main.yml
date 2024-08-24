@@ -44,15 +44,15 @@ on:
         required: false
         default: 'A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS'
 
-
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+    
 jobs:
   
   run:
     runs-on: ${{ github.event.inputs.runner }}
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
     name: Run the action
     steps:
       - uses: actions/checkout@v4
