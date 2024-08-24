@@ -32433,7 +32433,7 @@ async function main() {
 
 /**
  * Creates an issue using the provided inputs.
- * 
+ *
  * @param {string} results - The results to be included in the issue body.
  * @returns {Promise<object>} - A promise that resolves to the created issue object.
  */
@@ -32478,12 +32478,20 @@ async function createPullRequest(gitStatus) {
     .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${gitStatus}\n\`\`\``);
   const labels = core.getInput("pr_labels");
   const assignees = core.getInput("pr_assignees");
-  const base = execSync("git rev-parse --abbrev-ref HEAD").toString();
+  const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
   console.log({ base, head, title, body, labels, assignees });
 
   const octokit = github.getOctokit(token);
+
+  // Infer user email and name
+  const userName = process.env.GITHUB_ACTOR;
+  const userEmail = `${userName}@users.noreply.github.com`;
+
+  // Configure git with user email and name
+  await exec(`git config --global user.email "${userEmail}"`);
+  await exec(`git config --global user.name "${userName}"`);
 
   // Create new branch
   await exec(`git checkout -b ${head}`);
