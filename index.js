@@ -140,16 +140,14 @@ async function createIssue(results) {
 /**
  * Creates a pull request with the specified parameters.
  *
- * @param {string} gitStatus - The git status information to be included in the pull request body.
  * @returns {Promise<object>} - A promise that resolves when the pull request is created.
  */
-async function createPullRequest(gitStatus) {
+async function createPullRequest() {
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
   const body = core
     .getInput("pr_body")
     .replace("$RUN_URL", runURL)
-    .replace("$CHANGED_FILES", `\n\n\`\`\`json\n${gitStatus}\n\`\`\``);
   const labels = core.getInput("pr_labels");
   const assignees = core.getInput("pr_assignees");
   const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');

@@ -119,19 +119,15 @@ The title of the created pull request. Only valid if `create_pr_on_change` is "t
     pr_title: Doc Detective found changes
 ```
 
-### `pr_body` (default: `A Doc Detective run ($RUN_URL) found changed files. Git status: $GIT_STATUS`)
+### `pr_body` (default: `A Doc Detective run ($RUN_URL) found changed files.`)
 
-The body of the created pull request. `$GIT_STATUS` inserts a list of changed files. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is "true".
+The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is "true".
 
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
     create_pr_on_change: true
-    pr_body: |
-      Doc Detective found changed files. Review and merge the changes.
-
-      Git status:
-      $GIT_STATUS
+    pr_body: Doc Detective found changed files. Review and merge the changes.
 ```
 
 ### `pr_labels` (default: `doc-detective`)
