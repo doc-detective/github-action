@@ -89,7 +89,7 @@ Path to the input file or directory. Overrides the "input" field in the config f
 
 ### `create_pr_on_change` (default: `false`)
 
-Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is "runTests". Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -97,9 +97,33 @@ Create a pull request if any files in the repo change, such as if screenshots or
     create_pr_on_change: true
 ```
 
+You need to manually allow GitHub Actions to create pull requests for your repo. From your repository, go to **Settings** > **Actions** > **General** and select **Allow GitHub Actions to create and approve pull requests**. Despite the setting name, Doc Detective will never approve pull requests. If your repo belongs to an organization, an organization owner must allow this setting.
+
+This input also requires the workflow or job to have `write` access for the`contents` scope to create a branch and `write` access for the `pull-requests` scope to create a pull request. You can set the necessary permissions in the workflow file like this:
+
+```yaml
+name: doc-detective
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  runTests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: doc-detective/github-action@v1
+        with:
+          create_pr_on_change: true
+```
+
 ### `pr_branch` (default: `doc-detective-{DATE}`)
 
-The name of the branch to create for the pull request. Only valid if `create_pr_on_change` is "true".
+The name of the branch to create for the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -110,7 +134,7 @@ The name of the branch to create for the pull request. Only valid if `create_pr_
 
 ### `pr_title` (default: `Doc Detective Changes`)
 
-The title of the created pull request. Only valid if `create_pr_on_change` is "true".
+The title of the created pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -119,20 +143,23 @@ The title of the created pull request. Only valid if `create_pr_on_change` is "t
     pr_title: Doc Detective found changes
 ```
 
-### `pr_body` (default: `A Doc Detective run ($RUN_URL) found changed files.`)
+### `pr_body` (default: See example)
 
-The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is "true".
+The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
     create_pr_on_change: true
-    pr_body: Doc Detective found changed files. Review and merge the changes.
+    pr_body: |
+      A Doc Detective run ($RUN_URL) updated files.
+~~~~
+      DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed for failed, only that files in the repository changed. Review the changes to make sure they're accurate.
 ```
 
 ### `pr_labels` (default: `doc-detective`)
 
-Comma-separated list of labels to apply to the pull request. Only valid if `create_pr_on_change` is "true".
+Comma-separated list of labels to apply to the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -143,7 +170,7 @@ Comma-separated list of labels to apply to the pull request. Only valid if `crea
 
 ### `pr_assignees`
 
-Comma-separated list of GitHub usernames to assign to the pull request. Only valid if `create_pr_on_change` is "true".
+Comma-separated list of GitHub usernames to assign to the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -154,7 +181,7 @@ Comma-separated list of GitHub usernames to assign to the pull request. Only val
 
 ### `pr_reviewers`
 
-Comma-separated list of GitHub usernames to request a review from. Only valid if `create_pr_on_change` is "true".
+Comma-separated list of GitHub usernames to request a review from. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -165,7 +192,7 @@ Comma-separated list of GitHub usernames to request a review from. Only valid if
 
 ### `exit_on_fail` (default: `false`)
 
-Exit with a non-zero code if one or more tests fails. Only valid if `command` is "runTests".
+Exit with a non-zero code if one or more tests fails. Only valid if `command` is `runTests`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -175,7 +202,7 @@ Exit with a non-zero code if one or more tests fails. Only valid if `command` is
 
 ### `create_issue_on_fail` (default: `false`)
 
-Create a GitHub issue if one or more tests fails. Only valid if `command` is "runTests".
+Create a GitHub issue if one or more tests fails. Only valid if `command` is `runTests`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
