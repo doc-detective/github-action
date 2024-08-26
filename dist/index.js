@@ -32482,8 +32482,6 @@ async function createPullRequest() {
   const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
-  console.log({ base, head, title, body, labels, assignees });
-
   const octokit = github.getOctokit(token);
 
   // Infer user email and name
