@@ -32511,23 +32511,23 @@ async function createPullRequest() {
   });
 
   // Add labels, reviewers, and assignees
-  await octokit.rest.issues.addLabels({
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/labels", {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     issue_number: pr.data.number,
     labels: labels.split(","),
   });
-  await octokit.rest.pulls.requestReviewers({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    pull_number: pr.data.number,
-    reviewers: reviewers.split(","),
-  });
-  await octokit.rest.issues.addAssignees({
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/assignees", {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     issue_number: pr.data.number,
     assignees: assignees.split(","),
+  });
+  await octokit.request("POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    pull_number: pr.data.number,
+    reviewers: reviewers.split(","),
   });
 
   return pr;
