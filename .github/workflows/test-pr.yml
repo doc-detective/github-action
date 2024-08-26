@@ -1,4 +1,4 @@
-name: Run local action
+name: Test PR functionality
 
 on:
   workflow_dispatch:
@@ -44,7 +44,7 @@ permissions:
 jobs:
   
   run:
-    runs-on: ${{ github.event.inputs.runner }}
+    runs-on: ubuntu-latest
     name: Run the action
     steps:
       - uses: actions/checkout@v4
