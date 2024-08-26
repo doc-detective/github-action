@@ -167,6 +167,7 @@ async function createPullRequest() {
   await exec(`git config --global user.name "${userName}"`);
 
   // Create new branch
+  core.info(`Creating branch: ${head}`);
   await exec(`git checkout -b ${head}`);
 
   // Commit changes
@@ -175,6 +176,7 @@ async function createPullRequest() {
   await exec(`git push origin ${head}`);
 
   // Create pull request
+  try {
   core.info(`Creating pull request.`);
   const pr = await octokit.rest.pulls.create({
     owner: github.context.repo.owner,
@@ -207,6 +209,13 @@ async function createPullRequest() {
     pull_number: pr.data.number,
     reviewers: reviewers.split(","),
   });
+} catch (error) {
+  if (error.status === 403) {
+    core.error("Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests.");
+  } else {
+    throw core.error(error);
+  }
+}
 
   return pr;
 }
