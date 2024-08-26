@@ -32403,6 +32403,7 @@ async function main() {
         // Create a pull request if there are changed files
         try {
           const pr = await createPullRequest(status);
+          core.setOutput("pull_request_url", pr.data.html_url);
           core.info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error) {
           core.error(`Error creating pull request: ${error.message}`);
@@ -32416,6 +32417,7 @@ async function main() {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(JSON.stringify(results, null, 2));
+          core.setOutput("issue_url", issue.data.html_url);
           core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
           core.error(`Error creating issue: ${error.message}`);
@@ -32475,11 +32477,10 @@ async function createPullRequest() {
     .getInput("pr_body")
     .replace("$RUN_URL", runURL)
   const labels = core.getInput("pr_labels");
+  const reviewers = core.getInput("pr_reviewers");
   const assignees = core.getInput("pr_assignees");
   const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
-
-  console.log({ base, head, title, body, labels, assignees });
 
   const octokit = github.getOctokit(token);
 
@@ -32492,6 +32493,7 @@ async function createPullRequest() {
   await exec(`git config --global user.name "${userName}"`);
 
   // Create new branch
+  core.info(`Creating branch: ${head}`);
   await exec(`git checkout -b ${head}`);
 
   // Commit changes
@@ -32500,6 +32502,8 @@ async function createPullRequest() {
   await exec(`git push origin ${head}`);
 
   // Create pull request
+  try {
+  core.info(`Creating pull request.`);
   const pr = await octokit.rest.pulls.create({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -32507,9 +32511,37 @@ async function createPullRequest() {
     body,
     head,
     base,
+  });
+
+  // Add labels, reviewers, and assignees
+  core.info(`Adding labels.`);
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/labels", {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    issue_number: pr.data.number,
     labels: labels.split(","),
+  });
+  core.info(`Adding assignees.`);
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/assignees", {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    issue_number: pr.data.number,
     assignees: assignees.split(","),
   });
+  core.info(`Adding reviewers.`);
+  await octokit.request("POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    pull_number: pr.data.number,
+    reviewers: reviewers.split(","),
+  });
+} catch (error) {
+  if (error.status === 403) {
+    core.error("Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests.");
+  } else {
+    throw core.error(error);
+  }
+}
 
   return pr;
 }
