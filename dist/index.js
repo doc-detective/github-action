@@ -32501,6 +32501,7 @@ async function createPullRequest() {
   await exec(`git push origin ${head}`);
 
   // Create pull request
+  core.info(`Creating pull request.`);
   const pr = await octokit.rest.pulls.create({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -32511,18 +32512,21 @@ async function createPullRequest() {
   });
 
   // Add labels, reviewers, and assignees
+  core.info(`Adding labels.`);
   await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/labels", {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     issue_number: pr.data.number,
     labels: labels.split(","),
   });
+  core.info(`Adding assignees.`);
   await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/assignees", {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     issue_number: pr.data.number,
     assignees: assignees.split(","),
   });
+  core.info(`Adding reviewers.`);
   await octokit.request("POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
