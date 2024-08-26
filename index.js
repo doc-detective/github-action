@@ -149,6 +149,7 @@ async function createPullRequest() {
     .getInput("pr_body")
     .replace("$RUN_URL", runURL)
   const labels = core.getInput("pr_labels");
+  const reviewers = core.getInput("pr_reviewers");
   const assignees = core.getInput("pr_assignees");
   const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
@@ -181,7 +182,25 @@ async function createPullRequest() {
     body,
     head,
     base,
+  });
+
+  // Add labels, reviewers, and assignees
+  await octokit.rest.issues.addLabels({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    issue_number: pr.data.number,
     labels: labels.split(","),
+  });
+  await octokit.rest.pulls.requestReviewers({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    pull_number: pr.data.number,
+    reviewers: reviewers.split(","),
+  });
+  await octokit.rest.issues.addAssignees({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    issue_number: pr.data.number,
     assignees: assignees.split(","),
   });
 
