@@ -32329,9 +32329,16 @@ const { exec } = __nccwpck_require__(1514);
 const github = __nccwpck_require__(5438);
 const os = __nccwpck_require__(2037);
 const path = __nccwpck_require__(1017);
+const { execSync } = __nccwpck_require__(2081);
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
+
+const repoOwner = github.context.repo.owner;
+const repoName = github.context.repo.repo;
+const runId = process.env.GITHUB_RUN_ID;
+const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId}`;
+
 main();
 
 async function main() {
@@ -32385,6 +32392,25 @@ async function main() {
     const results = require(outputFile);
     core.setOutput("results", results);
 
+    // Check if there are new or changed files with git
+    let changedFiles = true;
+    const statusResponse = execSync("git status");
+    const status = statusResponse.toString();
+    if (status.indexOf("working tree clean") >= 0) changedFiles = false;
+    if (changedFiles) {
+      core.info(`Git status: ${status}`);
+      if (core.getInput("create_pr_on_change") == "true") {
+        // Create a pull request if there are changed files
+        try {
+          const pr = await createPullRequest(status);
+          core.info(`Pull Request: ${JSON.stringify(pr)}`);
+        } catch (error) {
+          core.error(`Error creating pull request: ${error.message}`);
+        }
+      }
+    }
+
+    // Create an issue if there are failing tests
     if (command === "runTests" && results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
@@ -32405,12 +32431,18 @@ async function main() {
   }
 }
 
+/**
+ * Creates an issue using the provided inputs.
+ *
+ * @param {string} results - The results to be included in the issue body.
+ * @returns {Promise<object>} - A promise that resolves to the created issue object.
+ */
 async function createIssue(results) {
-  // Attempt to get the token from action input; fall back to GITHUB_TOKEN environment variable
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
   const body = core
     .getInput("issue_body")
+    .replace("$RUN_URL", runURL)
     .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``);
   const labels = core.getInput("issue_labels");
   const assignees = core.getInput("issue_assignees");
@@ -32429,6 +32461,57 @@ async function createIssue(results) {
   core.info(`Issue created: ${issue.data.html_url}`);
   core.setOutput("issueUrl", issue.data.html_url);
   return issue;
+}
+
+/**
+ * Creates a pull request with the specified parameters.
+ *
+ * @returns {Promise<object>} - A promise that resolves when the pull request is created.
+ */
+async function createPullRequest() {
+  const token = core.getInput("token");
+  const title = core.getInput("pr_title");
+  const body = core
+    .getInput("pr_body")
+    .replace("$RUN_URL", runURL)
+  const labels = core.getInput("pr_labels");
+  const assignees = core.getInput("pr_assignees");
+  const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
+  const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
+
+  console.log({ base, head, title, body, labels, assignees });
+
+  const octokit = github.getOctokit(token);
+
+  // Infer user email and name
+  const userName = process.env.GITHUB_ACTOR;
+  const userEmail = `${userName}@users.noreply.github.com`;
+
+  // Configure git with user email and name
+  await exec(`git config --global user.email "${userEmail}"`);
+  await exec(`git config --global user.name "${userName}"`);
+
+  // Create new branch
+  await exec(`git checkout -b ${head}`);
+
+  // Commit changes
+  await exec("git add .");
+  await exec(`git commit -m "Doc Detective results"`);
+  await exec(`git push origin ${head}`);
+
+  // Create pull request
+  const pr = await octokit.rest.pulls.create({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    title,
+    body,
+    head,
+    base,
+    labels: labels.split(","),
+    assignees: assignees.split(","),
+  });
+
+  return pr;
 }
 
 })();
