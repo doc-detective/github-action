@@ -301,3 +301,27 @@ JSON-formatted results of the command. This can be used in subsequent steps in t
   id: doc-detective
 - run: echo "${{ steps.doc-detective.outputs.results }}"
 ```
+
+### `pull_request_url`
+
+URL of the created pull request. Only set if `create_pr_on_change` is `true`.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  id: doc-detective
+  with:
+    create_pr_on_change: true
+- run: echo "${{ steps.doc-detective.outputs.pull_request_url }}"
+```
+
+### `issue_url`
+
+URL of the created GitHub issue. Only set if `create_issue_on_fail` is `true`.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  id: doc-detective
+  with:
+    create_issue_on_fail: true
+- run: echo "${{ steps.doc-detective.outputs.issue_url }}"
+```

@@ -32403,6 +32403,7 @@ async function main() {
         // Create a pull request if there are changed files
         try {
           const pr = await createPullRequest(status);
+          core.setOutput("pull_request_url", pr.data.html_url);
           core.info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error) {
           core.error(`Error creating pull request: ${error.message}`);
@@ -32416,6 +32417,7 @@ async function main() {
         // Create an issue if there are failing tests
         try {
           const issue = await createIssue(JSON.stringify(results, null, 2));
+          core.setOutput("issue_url", issue.data.html_url);
           core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
           core.error(`Error creating issue: ${error.message}`);
