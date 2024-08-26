@@ -30,7 +30,10 @@ inputs:
   pr_body:
     description: The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if "create_pr_on_change" is set to "true".
     required: false
-    default: "A Doc Detective run ($RUN_URL) updated files."
+    default: |
+      A Doc Detective run ($RUN_URL) updated files.
+
+      DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed for failed, only that files in the repository changed. Review the changes to make sure they're accurate.
   pr_labels:
     description: Comma-separated list of labels to apply to the pull request. Only valid if "create_pr_on_change" is set to "true".
     required: false
