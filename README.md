@@ -22,19 +22,6 @@ The action outputs the results of the command as a JSON-formatted string that yo
 
 **Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
 
-## File structure
-
-This action runs in the current working directory of the workflow. If you want to change the directory, you can do so by adding a `working-directory` key to the `github-action` step:
-
-```yaml
-- uses: doc-detective/github-action@v1
-  working-directory: path/to/your/directory
-```
-
-Just like the main project, this action looks for a `.doc-detective.json` file in the current directory for the configuration if it isn't specified in the `config` input.
-
-All paths are relative to the current working directory.
-
 ## Inputs
 
 You can customize the action with the following optional inputs.
@@ -55,6 +42,16 @@ Specify the version of Doc Detective to use. This can be a specific version numb
 - uses: doc-detective/github-action@v1
   with:
     version: 2.15.0
+```
+
+### `working_directory` (default: Repository root)
+
+The working directory for the action, relative to the root of the repository. This is where the action looks for the configuration file and where it runs the command.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    working_directory: path/to/your/directory
 ```
 
 ### `command` (default: `runTests`)

@@ -11,6 +11,9 @@ on:
         description: version
         required: false
         default: latest
+      working_directory:
+        description: working_directory
+        required: false
       command:
         description: command
         required: false

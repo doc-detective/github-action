@@ -27,6 +27,7 @@ async function main() {
     // Get the inputs
     const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
+    const cwd = core.getInput("working_directory");
     const command = core.getInput("command");
     const config = core.getInput("config");
     const input = core.getInput("input");
@@ -44,7 +45,9 @@ async function main() {
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
     let commandOutputData = "";
-    const options = {}; // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts#L5
+    const options = { // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts
+      cwd
+    }; 
     options.listeners = {
       stdout: (data) => {
         commandOutputData += data.toString();
