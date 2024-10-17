@@ -23,15 +23,10 @@ async function main() {
         "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows runners."
       );
     }
-    const cwd = core.getInput("working_directory");
-
-    await exec(`ls`, [], {cwd});
-    process.exit();
-
     // Get the inputs
     const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
-    // const cwd = core.getInput("working_directory");
+    const cwd = core.getInput("working_directory");
     const command = core.getInput("command");
     const config = core.getInput("config");
     const input = core.getInput("input");
@@ -45,6 +40,13 @@ async function main() {
       "doc-detective-output.json"
     );
     compiledCommand += ` --output ${outputPath}`;
+
+    // Change to specified working directory
+    if (cwd) {
+      process.chdir(cwd);
+    }
+    core.info(`Working directory: ${process.cwd()}`);
+    process.exit();
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
