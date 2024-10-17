@@ -7,10 +7,6 @@ on:
         description: runner
         required: true
         default: ubuntu-latest
-      version:
-        description: version
-        required: false
-        default: latest
       working_directory:
         description: working_directory
         required: false
@@ -29,7 +25,7 @@ on:
       create_pr_on_change:
         description: create_pr_on_change
         required: false
-        default: 'true'
+        default: 'false'
       pr_body:
         description: pr_body
         required: false
