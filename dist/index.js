@@ -31840,16 +31840,10 @@ async function main() {
     );
     compiledCommand += ` --output ${outputPath}`;
 
-    // Change to specified working directory
-    if (cwd) {
-      process.chdir(cwd);
-    }
-    core.info(`Working directory: ${process.cwd()}`);
-    process.exit();
-
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
     core.info(`Working directory: ${cwd}`);
+
     let commandOutputData = "";
     const options = { // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts
       cwd
