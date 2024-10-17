@@ -13,7 +13,6 @@ inputs:
   working_directory:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
-    default: "."
   config:
     description: Path to the configuration file.
     required: false

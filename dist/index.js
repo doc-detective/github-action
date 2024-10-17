@@ -31824,7 +31824,7 @@ async function main() {
     }
     const cwd = core.getInput("working_directory");
 
-    await exec(`echo `, [], {cwd});
+    await exec(`ls`, [], {cwd});
     process.exit();
 
     // Get the inputs
