@@ -10,6 +10,10 @@ inputs:
     description: The command to run. Valid values are "runTests" and "runCoverage".
     required: true
     default: runTests
+  working_directory:
+    description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
+    required: false
+    default: "."
   config:
     description: Path to the configuration file.
     required: false
