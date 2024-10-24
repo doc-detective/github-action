@@ -46,9 +46,10 @@ async function main() {
     core.info(`Working directory: ${cwd}`);
 
     let commandOutputData = "";
-    const options = { // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts
-      cwd
-    }; 
+    const options = {
+      // Full options: https://github.com/actions/toolkit/blob/d9347d4ab99fd507c0b9104b2cf79fb44fcc827d/packages/exec/src/interfaces.ts
+      cwd,
+    };
     options.listeners = {
       stdout: (data) => {
         commandOutputData += data.toString();
@@ -70,21 +71,43 @@ async function main() {
     const results = require(outputFile);
     core.setOutput("results", results);
 
-    // Check if there are new or changed files with git
-    let changedFiles = true;
-    const statusResponse = execSync("git status");
-    const status = statusResponse.toString();
-    if (status.indexOf("working tree clean") >= 0) changedFiles = false;
-    if (changedFiles) {
-      core.info(`Git status: ${status}`);
-      if (core.getInput("create_pr_on_change") == "true") {
-        // Create a pull request if there are changed files
-        try {
-          const pr = await createPullRequest(status);
-          core.setOutput("pull_request_url", pr.data.html_url);
-          core.info(`Pull Request: ${JSON.stringify(pr)}`);
-        } catch (error) {
-          core.error(`Error creating pull request: ${error.message}`);
+    // Create a pull request if there are changed files
+    if (core.getInput("create_pr_on_change") == "true") {
+      // Check if git is available
+      let hasGit;
+      try {
+        const gitVersionCheck = execSync("git --version", { cwd });
+        if (gitVersionCheck) hasGit = true;
+      } catch (error) {
+        core.warning("Git isn't available. Skipping change checking.");
+      }
+
+      if (hasGit) {
+        let changedFiles;
+
+        // Check if there are changed files
+        const statusResponse = execSync("git status", { cwd });
+        const status = statusResponse.toString();
+        if (status.includes("working tree clean")) changedFiles = true;
+        if (status.includes("Changes not staged for commit"))
+          changedFiles = true;
+        if (status.includes("not a git repository")) {
+          core.warning(
+            `${process.cwd()} isn't a git repository. Skipping change checking.`
+          );
+        }
+
+        if (changedFiles) {
+          core.info(`Git status: ${status}`);
+
+          // Create a pull request if there are changed files
+          try {
+            const pr = await createPullRequest(status);
+            core.setOutput("pull_request_url", pr.data.html_url);
+            core.info(`Pull Request: ${JSON.stringify(pr)}`);
+          } catch (error) {
+            core.error(`Error creating pull request: ${error.message}`);
+          }
         }
       }
     }
@@ -151,13 +174,13 @@ async function createIssue(results) {
 async function createPullRequest() {
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
-  const body = core
-    .getInput("pr_body")
-    .replace("$RUN_URL", runURL)
+  const body = core.getInput("pr_body").replace("$RUN_URL", runURL);
   const labels = core.getInput("pr_labels");
   const reviewers = core.getInput("pr_reviewers");
   const assignees = core.getInput("pr_assignees");
-  const base = execSync("git rev-parse --abbrev-ref HEAD").toString().replace('\n','');
+  const base = execSync("git rev-parse --abbrev-ref HEAD")
+    .toString()
+    .replace("\n", "");
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
   const octokit = github.getOctokit(token);
@@ -181,45 +204,56 @@ async function createPullRequest() {
 
   // Create pull request
   try {
-  core.info(`Creating pull request.`);
-  const pr = await octokit.rest.pulls.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    title,
-    body,
-    head,
-    base,
-  });
+    core.info(`Creating pull request.`);
+    const pr = await octokit.rest.pulls.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      title,
+      body,
+      head,
+      base,
+    });
 
-  // Add labels, reviewers, and assignees
-  core.info(`Adding labels.`);
-  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/labels", {
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    issue_number: pr.data.number,
-    labels: labels.split(","),
-  });
-  core.info(`Adding assignees.`);
-  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/assignees", {
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    issue_number: pr.data.number,
-    assignees: assignees.split(","),
-  });
-  core.info(`Adding reviewers.`);
-  await octokit.request("POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", {
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    pull_number: pr.data.number,
-    reviewers: reviewers.split(","),
-  });
-} catch (error) {
-  if (error.status === 403) {
-    core.error("Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests.");
-  } else {
-    throw core.error(error);
+    // Add labels, reviewers, and assignees
+    core.info(`Adding labels.`);
+    await octokit.request(
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
+      {
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: pr.data.number,
+        labels: labels.split(","),
+      }
+    );
+    core.info(`Adding assignees.`);
+    await octokit.request(
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees",
+      {
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: pr.data.number,
+        assignees: assignees.split(","),
+      }
+    );
+    core.info(`Adding reviewers.`);
+    await octokit.request(
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
+      {
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: pr.data.number,
+        reviewers: reviewers.split(","),
+      }
+    );
+  } catch (error) {
+    if (error.status === 403) {
+      core.error(
+        "Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests."
+      );
+    } else {
+      throw core.error(error);
+    }
   }
-}
 
   return pr;
 }
