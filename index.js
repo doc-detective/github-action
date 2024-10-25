@@ -67,7 +67,7 @@ async function main() {
       );
     }
 
-    core.info(execSync("git --version"));  // Working
+    // core.info(execSync("git --version"));  // Working
 
     // Set outputs
     const results = require(outputFile);
@@ -83,7 +83,7 @@ async function main() {
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
-        core.warning(execSync("git --version").toString());
+        // core.warning(execSync("git --version").toString());
       }
 
       if (hasGit) {
