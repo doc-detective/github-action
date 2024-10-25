@@ -31816,7 +31816,7 @@ main();
 
 async function main() {
   // DEBUG
-  core.info(execSync("git --version"));
+  core.info(execSync("git --version", {cwd: core.getInput("working_directory")}));
   process.exit();
   // END DEBUG
   try {
