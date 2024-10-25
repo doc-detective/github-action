@@ -31874,7 +31874,12 @@ async function main() {
     if (core.getInput("create_pr_on_change") == "true") {
       // Check if git is available
       let hasGit;
+      core.info('1');
+      core.info(execSync("git --version", { cwd }).toString());
       try {
+        core.info('2');
+        core.info(execSync("git --version", { cwd }).toString());
+
         const gitVersionCheck = execSync("git --version", { cwd });
         if (gitVersionCheck) hasGit = true;
       } catch (error) {
