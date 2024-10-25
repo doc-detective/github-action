@@ -31876,11 +31876,11 @@ async function main() {
       // Check if git is available
       let hasGit;
       try {
-        const gitVersionCheck = execSync("git --version", { cwd });
+        const gitVersionCheck = execSync("git --version");
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
-        core.warning(execSync("git --version", {cwd}).toString());
+        core.warning(execSync("git --version").toString());
       }
 
       if (hasGit) {
