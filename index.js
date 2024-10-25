@@ -16,10 +16,6 @@ const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId
 main();
 
 async function main() {
-  // DEBUG
-  core.info(execSync("git --version", {cwd: core.getInput("working_directory")}));
-  process.exit();
-  // END DEBUG
   try {
     // Post warning if running on Linux
     if (os.platform() === "linux") {
@@ -44,6 +40,9 @@ async function main() {
       "doc-detective-output.json"
     );
     compiledCommand += ` --output ${outputPath}`;
+
+    core.info('1');
+    core.info(execSync("git --version"));
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
@@ -70,6 +69,9 @@ async function main() {
         }`
       );
     }
+
+    core.info('2');
+    core.info(execSync("git --version"));
 
     // Set outputs
     const results = require(outputFile);
