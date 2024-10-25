@@ -79,11 +79,11 @@ async function main() {
       // Check if git is available
       let hasGit;
       core.info('outside try');
-      core.info(execSync("git --version", {shell: '/bin/sh', cwd}))
+      core.info(execSync("git --version").toString())
       try {
         core.info('inside try');
-        core.info(execSync("git --version", {shell: '/bin/sh', cwd}))
-          const gitVersionCheck = execSync("git --version", {shell: '/bin/sh', cwd}); // Not working
+        core.info(execSync("git --version").toString());
+          const gitVersionCheck = execSync("git --version"); // Not working
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
