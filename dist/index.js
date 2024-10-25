@@ -31815,6 +31815,10 @@ const runURL = `https://github.com/${repoOwner}/${repoName}/actions/runs/${runId
 main();
 
 async function main() {
+  // DEBUG
+  core.info(execSync("git --version"));
+  process.exit();
+  // END DEBUG
   try {
     // Post warning if running on Linux
     if (os.platform() === "linux") {
