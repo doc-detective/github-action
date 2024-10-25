@@ -78,12 +78,8 @@ async function main() {
       core.info("Checking for changed files.");
       // Check if git is available
       let hasGit;
-      core.info('outside try');
-      core.info(execSync("git --version").toString())
       try {
-        core.info('inside try');
-        core.info(execSync("git --version").toString());
-          const gitVersionCheck = execSync("git --version"); // Not working
+        const gitVersionCheck = execSync("git --version"); // Not working
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
@@ -94,7 +90,8 @@ async function main() {
         let changedFiles;
 
         // Check if there are changed files
-        const statusResponse = execSync("git status", { cwd });
+        core.info("git status");
+        const statusResponse = execSync("git status");
         const status = statusResponse.toString();
         if (!status.includes("working tree clean")) changedFiles = true;
         if (status.includes("not a git repository")) {
