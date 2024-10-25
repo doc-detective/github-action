@@ -41,9 +41,6 @@ async function main() {
     );
     compiledCommand += ` --output ${outputPath}`;
 
-    core.info('1');
-    core.info(execSync("git --version"));
-
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
     core.info(`Working directory: ${cwd}`);
@@ -70,8 +67,7 @@ async function main() {
       );
     }
 
-    core.info('2');
-    core.info(execSync("git --version"));
+    core.info(execSync("git --version"));  // Working
 
     // Set outputs
     const results = require(outputFile);
@@ -83,7 +79,7 @@ async function main() {
       // Check if git is available
       let hasGit;
       try {
-        const gitVersionCheck = execSync("git --version");
+        const gitVersionCheck = execSync("git --version", {shell: '/bin/sh', cwd}); // Not working
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
