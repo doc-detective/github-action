@@ -31881,7 +31881,7 @@ async function main() {
       core.info(execSync("git --version").toString())
       try {
         core.info('inside try');
-        core.info(execSync("git --version", {shell: '/bin/sh', cwd}))
+        core.info(execSync("git --version").toString());
           const gitVersionCheck = execSync("git --version"); // Not working
         if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
