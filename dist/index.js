@@ -31866,7 +31866,6 @@ async function main() {
       );
     }
 
-
     // Set outputs
     const results = require(outputFile);
     core.setOutput("results", results);
@@ -31887,14 +31886,17 @@ async function main() {
         let changedFiles;
 
         // Check if there are changed files
-        core.info("git status");
-        const statusResponse = execSync("git status");
-        const status = statusResponse.toString();
-        if (!status.includes("working tree clean")) changedFiles = true;
-        if (status.includes("not a git repository")) {
-          core.warning(
-            `${process.cwd()} isn't a git repository. Skipping change checking.`
-          );
+        try {
+          const statusResponse = execSync("git status");
+          const status = statusResponse.toString();
+          if (!status.includes("working tree clean")) changedFiles = true;
+          if (status.includes("not a git repository")) {
+            core.warning(
+              `${process.cwd()} isn't a git repository. Skipping change checking.`
+            );
+          }
+        } catch (error) {
+          core.warning(`Error checking for changed files: ${error.message}`);
         }
 
         if (changedFiles) {
