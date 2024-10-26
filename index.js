@@ -73,11 +73,12 @@ async function main() {
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
+      core.info("Checking for changed files.");
       // Check if git is available
       let hasGit;
       try {
-        const gitVersionCheck = execSync("git --version", { cwd });
-        if (gitVersionCheck) hasGit = true;
+        const gitVersionCheck = execSync("git --version");
+        if (gitVersionCheck.toString()) hasGit = true;
       } catch (error) {
         core.warning("Git isn't available. Skipping change checking.");
       }
@@ -86,18 +87,21 @@ async function main() {
         let changedFiles;
 
         // Check if there are changed files
-        const statusResponse = execSync("git status", { cwd });
-        const status = statusResponse.toString();
-        if (status.includes("working tree clean")) changedFiles = true;
-        if (status.includes("Changes not staged for commit"))
-          changedFiles = true;
-        if (status.includes("not a git repository")) {
-          core.warning(
-            `${process.cwd()} isn't a git repository. Skipping change checking.`
-          );
+        try {
+          const statusResponse = execSync("git status");
+          const status = statusResponse.toString();
+          if (!status.includes("working tree clean")) changedFiles = true;
+          if (status.includes("not a git repository")) {
+            core.warning(
+              `${process.cwd()} isn't a git repository. Skipping change checking.`
+            );
+          }
+        } catch (error) {
+          core.warning(`Error checking for changed files: ${error.message}`);
         }
 
         if (changedFiles) {
+          core.info("Changed files found.");
           core.info(`Git status: ${status}`);
 
           // Create a pull request if there are changed files
