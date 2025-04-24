@@ -5,15 +5,16 @@
   "main": "index.js",
   "scripts": {
     "build": "ncc build index.js --license licenses.txt",
+    "postbuild": "npm run test",
     "watch": "nodemon --exec \"npm run build\" --ext js --ignore dist/",
-    "test": "act"
+    "test": "act -j run-local"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/doc-detective/github-action.git"
   },
   "author": "Manny Silva",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "bugs": {
     "url": "https://github.com/doc-detective/github-action/issues"
   },
