@@ -4,7 +4,7 @@ author: Doc Detective
 inputs:
   version:
     description: Specify the version of Doc Detective to use instead of the installed default. This can be a specific version number or an NPM tag (like `latest`).
-    required: true
+    required: false
     default: latest
   working_directory:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
