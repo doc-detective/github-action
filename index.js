@@ -55,13 +55,13 @@ async function main() {
       },
     };
     await exec(compiledCommand, [], options);
-    const outputFiles = commandOutputData.split("See results at ");
+    const outputFiles = commandOutputData.split("results at ");
     const outputFile = outputFiles[outputFiles.length - 1].trim();
     // If output file is not found, throw an error
     if (!outputFile) {
       throw new Error(
         `Output file not found.\nOutput file: ${outputFile}\nCWD: ${process.cwd()}\nstdout: ${
-          coverateResults.stdout
+          commandOutputData
         }`
       );
     }
@@ -116,7 +116,7 @@ async function main() {
     }
 
     // Create an issue if there are failing tests
-    if (command === "runTests" && results.summary.specs.fail > 0) {
+    if (results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
