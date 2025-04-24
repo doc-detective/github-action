@@ -25,7 +25,7 @@ async function main() {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const dd = `doc-detective@${version}`;
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
