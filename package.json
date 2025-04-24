@@ -1,6 +1,6 @@
 {
   "name": "doc-detective-github-action",
-  "version": "1.2.2",
+  "version": "3.0.0-dev.0",
   "description": "Validate doc content by treating docs as testable assertions for a product.",
   "main": "index.js",
   "scripts": {
@@ -21,10 +21,11 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.0"
+    "@actions/github": "^6.0.0",
+    "doc-detective": "^3.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.2",
-    "nodemon": "^3.1.7"
+    "@vercel/ncc": "^0.38.3",
+    "nodemon": "^3.1.10"
   }
 }
