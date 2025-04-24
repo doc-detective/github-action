@@ -31824,14 +31824,13 @@ async function main() {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const dd = `doc-detective@${version}`;
+    const dd = version ? `doc-detective@${version}` : "doc-detective";
     const cwd = core.getInput("working_directory");
-    const command = core.getInput("command");
     const config = core.getInput("config");
     const input = core.getInput("input");
 
     // Compile command
-    let compiledCommand = `npx ${dd} ${command}`;
+    let compiledCommand = `npx ${dd}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(

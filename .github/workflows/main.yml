@@ -10,10 +10,6 @@ on:
       working_directory:
         description: working_directory
         required: false
-      command:
-        description: command
-        required: false
-        default: runTests
       config:
         description: config
         required: false

@@ -3,13 +3,8 @@ description: Treat doc content as testable assertions to validate doc accuracy a
 author: Doc Detective
 inputs:
   version:
-    description: Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
-    required: true
-    default: latest
-  command:
-    description: The command to run. Valid values are "runTests" and "runCoverage".
-    required: true
-    default: runTests
+    description: Specify the version of Doc Detective to use instead of the installed default. This can be a specific version number or an NPM tag (like `latest`).
+    required: false
   working_directory:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
