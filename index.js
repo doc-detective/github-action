@@ -20,19 +20,18 @@ async function main() {
     // Post warning if running on Linux
     if (os.platform() === "linux") {
       core.warning(
-        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows runners."
+        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
       );
     }
     // Get the inputs
     const version = core.getInput("version");
     const dd = `doc-detective@${version}`;
     const cwd = core.getInput("working_directory");
-    const command = core.getInput("command");
     const config = core.getInput("config");
     const input = core.getInput("input");
 
     // Compile command
-    let compiledCommand = `npx ${dd} ${command}`;
+    let compiledCommand = `npx ${dd}`;
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
@@ -56,13 +55,13 @@ async function main() {
       },
     };
     await exec(compiledCommand, [], options);
-    const outputFiles = commandOutputData.split("See results at ");
+    const outputFiles = commandOutputData.split("results at ");
     const outputFile = outputFiles[outputFiles.length - 1].trim();
     // If output file is not found, throw an error
     if (!outputFile) {
       throw new Error(
         `Output file not found.\nOutput file: ${outputFile}\nCWD: ${process.cwd()}\nstdout: ${
-          coverateResults.stdout
+          commandOutputData
         }`
       );
     }
@@ -117,7 +116,7 @@ async function main() {
     }
 
     // Create an issue if there are failing tests
-    if (command === "runTests" && results.summary.specs.fail > 0) {
+    if (results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {

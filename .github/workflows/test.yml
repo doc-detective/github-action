@@ -22,7 +22,7 @@ jobs:
         id: dd
         with:
           config: ./artifacts/.doc-detective.json
-          input: ./artifacts/doc-content-inline-tests.md
+          input: doc-content-inline-tests.md
 
   fail-tests:
     runs-on: ${{ matrix.os }}
@@ -42,5 +42,5 @@ jobs:
         continue-on-error: true
         with:
           config: ./artifacts/.doc-detective.json
-          input: ./artifacts/doc-content-inline-tests-fail.md
+          input: doc-content-inline-tests-fail.md
           exit_on_fail: true

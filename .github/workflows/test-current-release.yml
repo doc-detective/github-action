@@ -11,10 +11,6 @@ on:
         description: version
         required: false
         default: latest
-      command:
-        description: command
-        required: false
-        default: runTests
       config:
         description: config
         required: false

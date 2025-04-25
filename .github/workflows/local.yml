@@ -45,9 +45,8 @@ permissions:
   pull-requests: write
     
 jobs:
-  
-  run:
-    runs-on: ${{ github.event.inputs.runner }}
+  run-local:
+    runs-on: ubuntu-latest
     name: Run the action
     steps:
       - uses: actions/checkout@v4
@@ -59,11 +58,4 @@ jobs:
         uses: ./ # Uses an action in the root directory
         id: dd
         with:
-          working_directory: ${{ github.event.inputs.working_directory }}
-          command: ${{ github.event.inputs.command }}
-          config: ${{ github.event.inputs.config }}
-          input: ${{ github.event.inputs.input }}
-          create_pr_on_change: ${{ github.event.inputs.create_pr_on_change }}
-          exit_on_fail: ${{ github.event.inputs.exit_on_fail }}
-          create_issue_on_fail: ${{ github.event.inputs.create_issue_on_fail }}
-          issue_body: ${{ github.event.inputs.issue_body }}
+          config: ./artifacts/.doc-detective.json
