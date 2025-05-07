@@ -3725,6 +3725,7 @@ var import_universal_user_agent = __nccwpck_require__(3843);
 
 // pkg/dist-src/version.js
 var VERSION = "9.0.6";
+var VERSION = "9.0.6";
 
 // pkg/dist-src/defaults.js
 var userAgent = `octokit-endpoint.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
@@ -3830,7 +3831,9 @@ function addQueryParameters(url, parameters) {
 
 // pkg/dist-src/util/extract-url-variable-names.js
 var urlVariableRegex = /\{[^{}}]+\}/g;
+var urlVariableRegex = /\{[^{}}]+\}/g;
 function removeNonChars(variableName) {
+  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
   return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
 function extractUrlVariableNames(url) {
@@ -4017,6 +4020,7 @@ function parse(options) {
     }
     if (url.endsWith("/graphql")) {
       if (options.mediaType.previews?.length) {
+        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
         const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
         headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
           const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
@@ -4267,6 +4271,7 @@ module.exports = __toCommonJS(dist_src_exports);
 
 // pkg/dist-src/version.js
 var VERSION = "9.2.2";
+var VERSION = "9.2.2";
 
 // pkg/dist-src/normalize-paginated-list-response.js
 function normalizePaginatedListResponse(response) {
@@ -4314,6 +4319,7 @@ function iterator(octokit, route, parameters) {
           const response = await requestMethod({ method, url, headers });
           const normalizedResponse = normalizePaginatedListResponse(response);
           url = ((normalizedResponse.headers.link || "").match(
+            /<([^<>]+)>;\s*rel="next"/
             /<([^<>]+)>;\s*rel="next"/
           ) || [])[1];
           return { value: normalizedResponse };
@@ -6867,6 +6873,7 @@ var RequestError = class extends Error {
       requestCopy.headers = Object.assign({}, options.request.headers, {
         authorization: options.request.headers.authorization.replace(
           /(?<! ) .*$/,
+          /(?<! ) .*$/,
           " [REDACTED]"
         )
       });
@@ -6935,6 +6942,7 @@ var import_universal_user_agent = __nccwpck_require__(3843);
 
 // pkg/dist-src/version.js
 var VERSION = "8.4.1";
+var VERSION = "8.4.1";
 
 // pkg/dist-src/is-plain-object.js
 function isPlainObject(value) {
@@ -6960,6 +6968,7 @@ function getBufferResponse(response) {
 // pkg/dist-src/fetch-wrapper.js
 function fetchWrapper(requestOptions) {
   var _a, _b, _c, _d;
+  var _a, _b, _c, _d;
   const log = requestOptions.request && requestOptions.request.log ? requestOptions.request.log : console;
   const parseSuccessResponseBody = ((_a = requestOptions.request) == null ? void 0 : _a.parseSuccessResponseBody) !== false;
   if (isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body)) {
@@ -6981,7 +6990,9 @@ function fetchWrapper(requestOptions) {
     method: requestOptions.method,
     body: requestOptions.body,
     redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
+    redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
     headers: requestOptions.headers,
+    signal: (_d = requestOptions.request) == null ? void 0 : _d.signal,
     signal: (_d = requestOptions.request) == null ? void 0 : _d.signal,
     // duplex must be set if request.body is ReadableStream or Async Iterables.
     // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex.
@@ -6993,6 +7004,7 @@ function fetchWrapper(requestOptions) {
       headers[keyAndValue[0]] = keyAndValue[1];
     }
     if ("deprecation" in headers) {
+      const matches = headers.link && headers.link.match(/<([^<>]+)>; rel="deprecation"/);
       const matches = headers.link && headers.link.match(/<([^<>]+)>; rel="deprecation"/);
       const deprecationLink = matches && matches.pop();
       log.warn(
@@ -12998,6 +13010,7 @@ module.exports = {
 
 const { parseSetCookie } = __nccwpck_require__(8915)
 const { stringify } = __nccwpck_require__(3834)
+const { stringify } = __nccwpck_require__(3834)
 const { webidl } = __nccwpck_require__(4222)
 const { Headers } = __nccwpck_require__(6349)
 
@@ -13074,11 +13087,13 @@ function getSetCookies (headers) {
   webidl.brandCheck(headers, Headers, { strict: false })
 
   const cookies = headers.getSetCookie()
+  const cookies = headers.getSetCookie()
 
   if (!cookies) {
     return []
   }
 
+  return cookies.map((pair) => parseSetCookie(pair))
   return cookies.map((pair) => parseSetCookie(pair))
 }
 
@@ -13508,10 +13523,15 @@ module.exports = {
 
 /***/ 3834:
 /***/ ((module) => {
+/***/ ((module) => {
 
 "use strict";
 
 
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
 /**
  * @param {string} value
  * @returns {boolean}
@@ -13778,6 +13798,11 @@ function stringify (cookie) {
 
 module.exports = {
   isCTLExcludingHtab,
+  validateCookieName,
+  validateCookiePath,
+  validateCookieValue,
+  toIMFDate,
+  stringify
   validateCookieName,
   validateCookiePath,
   validateCookieValue,
@@ -15719,6 +15744,14 @@ try {
   random = (max) => Math.floor(Math.random(max))
 }
 
+let random
+try {
+  const crypto = __nccwpck_require__(7598)
+  random = (max) => crypto.randomInt(0, max)
+} catch {
+  random = (max) => Math.floor(Math.random(max))
+}
+
 let ReadableStream = globalThis.ReadableStream
 
 /** @type {globalThis['File']} */
@@ -15804,6 +15837,7 @@ function extractBody (object, keepalive = false) {
     // Set source to a copy of the bytes held by object.
     source = new Uint8Array(object.buffer.slice(object.byteOffset, object.byteOffset + object.byteLength))
   } else if (util.isFormDataLike(object)) {
+    const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, '0')}`
     const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, '0')}`
     const prefix = `--${boundary}\r\nContent-Disposition: form-data`
 
@@ -17787,6 +17821,7 @@ const {
   isValidHeaderValue
 } = __nccwpck_require__(5523)
 const util = __nccwpck_require__(9023)
+const util = __nccwpck_require__(9023)
 const { webidl } = __nccwpck_require__(4222)
 const assert = __nccwpck_require__(2613)
 
@@ -18340,6 +18375,9 @@ Object.defineProperties(Headers.prototype, {
   [Symbol.toStringTag]: {
     value: 'Headers',
     configurable: true
+  },
+  [util.inspect.custom]: {
+    enumerable: false
   },
   [util.inspect.custom]: {
     enumerable: false
@@ -27533,6 +27571,20 @@ class Pool extends PoolBase {
         }
       }
     })
+
+    this.on('connectionError', (origin, targets, error) => {
+      // If a connection error occurs, we remove the client from the pool,
+      // and emit a connectionError event. They will not be re-used.
+      // Fixes https://github.com/nodejs/undici/issues/3895
+      for (const target of targets) {
+        // Do not use kRemoveClient here, as it will close the client,
+        // but the client cannot be closed in this state.
+        const idx = this[kClients].indexOf(target)
+        if (idx !== -1) {
+          this[kClients].splice(idx, 1)
+        }
+      }
+    })
   }
 
   [kGetDispatcher] () {
@@ -30015,6 +30067,14 @@ module.exports = require("node:crypto");
 
 /***/ }),
 
+/***/ 7598:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:crypto");
+
+/***/ }),
+
 /***/ 8474:
 /***/ ((module) => {
 
@@ -31838,6 +31898,7 @@ async function main() {
     if (os.platform() === "linux") {
       core.warning(
         "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
+        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
       );
     }
     // Get the inputs
@@ -31887,11 +31948,13 @@ async function main() {
     };
     await exec(compiledCommand, [], options);
     const outputFiles = commandOutputData.split("results at ");
+    const outputFiles = commandOutputData.split("results at ");
     const outputFile = outputFiles[outputFiles.length - 1].trim();
     // If output file is not found, throw an error
     if (!outputFile) {
       throw new Error(
         `Output file not found.\nOutput file: ${outputFile}\nCWD: ${process.cwd()}\nstdout: ${
+          commandOutputData
           commandOutputData
         }`
       );
@@ -31947,6 +32010,7 @@ async function main() {
     }
 
     // Create an issue if there are failing tests
+    if (results.summary.specs.fail > 0) {
     if (results.summary.specs.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
