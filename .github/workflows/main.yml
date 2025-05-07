@@ -1,4 +1,4 @@
-name: Run local action
+name: Run branch action
 
 on:
   workflow_dispatch:
@@ -7,6 +7,10 @@ on:
         description: runner
         required: true
         default: ubuntu-latest
+      version:
+        description: version
+        required: false
+        default: latest
       working_directory:
         description: working_directory
         required: false
@@ -60,7 +64,7 @@ jobs:
         id: dd
         with:
           working_directory: ${{ github.event.inputs.working_directory }}
-          command: ${{ github.event.inputs.command }}
+          version: ${{ github.event.inputs.version }}
           config: ${{ github.event.inputs.config }}
           input: ${{ github.event.inputs.input }}
           create_pr_on_change: ${{ github.event.inputs.create_pr_on_change }}

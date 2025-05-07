@@ -1882,6 +1882,7 @@ class Context {
         this.action = process.env.GITHUB_ACTION;
         this.actor = process.env.GITHUB_ACTOR;
         this.job = process.env.GITHUB_JOB;
+        this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
         this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
         this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
         this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : `https://api.github.com`;
@@ -31841,13 +31842,18 @@ async function main() {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const dd = `doc-detective@${version}`;
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
 
     // Compile command
     let compiledCommand = `npx ${dd}`;
+    // If v2, add the 'runTests' command
+    if (version.startsWith("2")) {
+      compiledCommand += " runTests";
+    }
+    // Add the options
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
