@@ -1,4 +1,4 @@
-name: Run local action
+name: Run branch action
 
 on:
   workflow_dispatch:
