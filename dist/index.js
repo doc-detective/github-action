@@ -31841,13 +31841,18 @@ async function main() {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const dd = `doc-detective@${version}`;
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
 
     // Compile command
     let compiledCommand = `npx ${dd}`;
+    // If v2, add the 'runTests' command
+    if (version.startsWith("v2")) {
+      compiledCommand += " runTests";
+    }
+    // Add the options
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(

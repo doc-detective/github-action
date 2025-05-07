@@ -32,6 +32,11 @@ async function main() {
 
     // Compile command
     let compiledCommand = `npx ${dd}`;
+    // If v2, add the 'runTests' command
+    if (version.startsWith("v2")) {
+      compiledCommand += " runTests";
+    }
+    // Add the options
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
