@@ -26,6 +26,6 @@
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.11"
   }
 }
