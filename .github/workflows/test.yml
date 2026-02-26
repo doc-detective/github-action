@@ -44,3 +44,23 @@ jobs:
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
+
+  fail-tests-with-integrations:
+    runs-on: ubuntu-latest
+    name: Fail tests with integrations
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Doc Detective
+        uses: ./
+        id: dd
+        continue-on-error: true
+        with:
+          config: ./artifacts/.doc-detective.json
+          input: ./artifacts/doc-content-inline-tests-fail.md
+          exit_on_fail: true
+          create_issue_on_fail: true
+          integrations: doc-sentinel,claude
+          prompt: "Investigate the failures and suggest fixes"

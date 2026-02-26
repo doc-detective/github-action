@@ -42,6 +42,14 @@ on:
         description: issue_body
         required: false
         default: 'A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS'
+      integrations:
+        description: integrations
+        required: false
+        default: ''
+      prompt:
+        description: prompt
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -71,3 +79,5 @@ jobs:
           exit_on_fail: ${{ github.event.inputs.exit_on_fail }}
           create_issue_on_fail: ${{ github.event.inputs.create_issue_on_fail }}
           issue_body: ${{ github.event.inputs.issue_body }}
+          integrations: ${{ github.event.inputs.integrations }}
+          prompt: ${{ github.event.inputs.prompt }}
