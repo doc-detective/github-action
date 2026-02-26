@@ -2759,7 +2759,7 @@ class HttpClient {
         }
         const usingSsl = parsedUrl.protocol === 'https:';
         proxyAgent = new undici_1.ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
-            token: `${proxyUrl.username}:${proxyUrl.password}`
+            token: `Basic ${Buffer.from(`${proxyUrl.username}:${proxyUrl.password}`).toString('base64')}`
         })));
         this._proxyAgentDispatcher = proxyAgent;
         if (usingSsl && this._ignoreSslError) {
@@ -2873,11 +2873,11 @@ function getProxyUrl(reqUrl) {
     })();
     if (proxyVar) {
         try {
-            return new URL(proxyVar);
+            return new DecodedURL(proxyVar);
         }
         catch (_a) {
             if (!proxyVar.startsWith('http://') && !proxyVar.startsWith('https://'))
-                return new URL(`http://${proxyVar}`);
+                return new DecodedURL(`http://${proxyVar}`);
         }
     }
     else {
@@ -2935,6 +2935,19 @@ function isLoopbackAddress(host) {
         hostLower.startsWith('127.') ||
         hostLower.startsWith('[::1]') ||
         hostLower.startsWith('[0:0:0:0:0:0:0:1]'));
+}
+class DecodedURL extends URL {
+    constructor(url, base) {
+        super(url, base);
+        this._decodedUsername = decodeURIComponent(super.username);
+        this._decodedPassword = decodeURIComponent(super.password);
+    }
+    get username() {
+        return this._decodedUsername;
+    }
+    get password() {
+        return this._decodedPassword;
+    }
 }
 //# sourceMappingURL=proxy.js.map
 
@@ -3545,11 +3558,11 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // pkg/dist-src/index.js
-var dist_src_exports = {};
-__export(dist_src_exports, {
+var index_exports = {};
+__export(index_exports, {
   Octokit: () => Octokit
 });
-module.exports = __toCommonJS(dist_src_exports);
+module.exports = __toCommonJS(index_exports);
 var import_universal_user_agent = __nccwpck_require__(3843);
 var import_before_after_hook = __nccwpck_require__(2732);
 var import_request = __nccwpck_require__(8636);
@@ -3557,13 +3570,28 @@ var import_graphql = __nccwpck_require__(7);
 var import_auth_token = __nccwpck_require__(7864);
 
 // pkg/dist-src/version.js
-var VERSION = "5.1.0";
+var VERSION = "5.2.2";
 
 // pkg/dist-src/index.js
 var noop = () => {
 };
 var consoleWarn = console.warn.bind(console);
 var consoleError = console.error.bind(console);
+function createLogger(logger = {}) {
+  if (typeof logger.debug !== "function") {
+    logger.debug = noop;
+  }
+  if (typeof logger.info !== "function") {
+    logger.info = noop;
+  }
+  if (typeof logger.warn !== "function") {
+    logger.warn = consoleWarn;
+  }
+  if (typeof logger.error !== "function") {
+    logger.error = consoleError;
+  }
+  return logger;
+}
 var userAgentTrail = `octokit-core.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
 var Octokit = class {
   static {
@@ -3637,15 +3665,7 @@ var Octokit = class {
     }
     this.request = import_request.request.defaults(requestDefaults);
     this.graphql = (0, import_graphql.withCustomRequest)(this.request).defaults(requestDefaults);
-    this.log = Object.assign(
-      {
-        debug: noop,
-        info: noop,
-        warn: consoleWarn,
-        error: consoleError
-      },
-      options.log
-    );
+    this.log = createLogger(options.log);
     this.hook = hook;
     if (!options.authStrategy) {
       if (!options.auth) {
@@ -4098,18 +4118,18 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // pkg/dist-src/index.js
-var dist_src_exports = {};
-__export(dist_src_exports, {
+var index_exports = {};
+__export(index_exports, {
   GraphqlResponseError: () => GraphqlResponseError,
   graphql: () => graphql2,
   withCustomRequest: () => withCustomRequest
 });
-module.exports = __toCommonJS(dist_src_exports);
+module.exports = __toCommonJS(index_exports);
 var import_request3 = __nccwpck_require__(8636);
 var import_universal_user_agent = __nccwpck_require__(3843);
 
 // pkg/dist-src/version.js
-var VERSION = "7.0.2";
+var VERSION = "7.1.1";
 
 // pkg/dist-src/with-defaults.js
 var import_request2 = __nccwpck_require__(8636);
@@ -4157,8 +4177,7 @@ function graphql(request2, query, options) {
       );
     }
     for (const key in options) {
-      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
-        continue;
+      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
       return Promise.reject(
         new Error(
           `[@octokit/graphql] "${key}" cannot be used as variable name`
@@ -31825,6 +31844,47 @@ const { execSync } = __nccwpck_require__(5317);
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 
+const INTEGRATION_MAP = {
+  "doc-sentinel": "\n/cc @reem-sab",
+  "promptless": "\n@promptless $PROMPT",
+  "dosu": "\n@dosu $PROMPT",
+  "claude": "\n@claude $PROMPT",
+  "opencode": "\n/opencode $PROMPT",
+};
+
+// All valid integration names (INTEGRATION_MAP keys + special-case integrations)
+const VALID_INTEGRATIONS = new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
+
+function parseIntegrations(integrationsInput) {
+  if (!integrationsInput || !integrationsInput.trim()) return [];
+
+  const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
+  const valid = [];
+
+  for (const name of requested) {
+    if (VALID_INTEGRATIONS.has(name)) {
+      valid.push(name);
+    } else {
+      core.warning(
+        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+      );
+    }
+  }
+
+  return valid;
+}
+
+function buildIntegrationsAccordion(integrations, prompt) {
+  const accordionEntries = integrations
+    .filter((name) => name !== "copilot")
+    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
+    .filter(Boolean);
+
+  if (accordionEntries.length === 0) return "";
+
+  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
+}
+
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
 const runId = process.env.GITHUB_RUN_ID;
@@ -31968,23 +32028,48 @@ async function main() {
 async function createIssue(results) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
+  const prompt = core.getInput("prompt");
+  const integrations = parseIntegrations(core.getInput("integrations"));
+  const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = core
     .getInput("issue_body")
-    .replace("$RUN_URL", runURL)
-    .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``);
-  const labels = core.getInput("issue_labels");
-  const assignees = core.getInput("issue_assignees");
+    .replaceAll("$RUN_URL", runURL)
+    .replaceAll("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
+    .replaceAll("$PROMPT", prompt)
+    + integrationsAccordion;
+  const labelsList = core.getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
+  const assigneesList = core.getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
+  if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
+    assigneesList.push("copilot-swe-agent");
+  }
 
   const octokit = github.getOctokit(token);
 
-  const issue = await octokit.rest.issues.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    title,
-    body,
-    labels: labels.split(","),
-    assignees: assignees.split(","),
-  });
+  // Try creating the issue; if assignees cause a 422, retry without them
+  let issue;
+  try {
+    issue = await octokit.rest.issues.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      title,
+      body,
+      labels: labelsList,
+      assignees: assigneesList,
+    });
+  } catch (error) {
+    if (error.status === 422) {
+      core.warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
+      issue = await octokit.rest.issues.create({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        title,
+        body,
+        labels: labelsList,
+      });
+    } else {
+      throw error;
+    }
+  }
 
   core.info(`Issue created: ${issue.data.html_url}`);
   core.setOutput("issueUrl", issue.data.html_url);

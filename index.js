@@ -8,6 +8,47 @@ const { execSync } = require("child_process");
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 
+const INTEGRATION_MAP = {
+  "doc-sentinel": "\n/cc @reem-sab",
+  "promptless": "\n@promptless $PROMPT",
+  "dosu": "\n@dosu $PROMPT",
+  "claude": "\n@claude $PROMPT",
+  "opencode": "\n/opencode $PROMPT",
+};
+
+// All valid integration names (INTEGRATION_MAP keys + special-case integrations)
+const VALID_INTEGRATIONS = new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
+
+function parseIntegrations(integrationsInput) {
+  if (!integrationsInput || !integrationsInput.trim()) return [];
+
+  const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
+  const valid = [];
+
+  for (const name of requested) {
+    if (VALID_INTEGRATIONS.has(name)) {
+      valid.push(name);
+    } else {
+      core.warning(
+        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+      );
+    }
+  }
+
+  return valid;
+}
+
+function buildIntegrationsAccordion(integrations, prompt) {
+  const accordionEntries = integrations
+    .filter((name) => name !== "copilot")
+    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
+    .filter(Boolean);
+
+  if (accordionEntries.length === 0) return "";
+
+  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
+}
+
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
 const runId = process.env.GITHUB_RUN_ID;
@@ -151,23 +192,48 @@ async function main() {
 async function createIssue(results) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
+  const prompt = core.getInput("prompt");
+  const integrations = parseIntegrations(core.getInput("integrations"));
+  const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = core
     .getInput("issue_body")
-    .replace("$RUN_URL", runURL)
-    .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``);
-  const labels = core.getInput("issue_labels");
-  const assignees = core.getInput("issue_assignees");
+    .replaceAll("$RUN_URL", runURL)
+    .replaceAll("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
+    .replaceAll("$PROMPT", prompt)
+    + integrationsAccordion;
+  const labelsList = core.getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
+  const assigneesList = core.getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
+  if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
+    assigneesList.push("copilot-swe-agent");
+  }
 
   const octokit = github.getOctokit(token);
 
-  const issue = await octokit.rest.issues.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    title,
-    body,
-    labels: labels.split(","),
-    assignees: assignees.split(","),
-  });
+  // Try creating the issue; if assignees cause a 422, retry without them
+  let issue;
+  try {
+    issue = await octokit.rest.issues.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      title,
+      body,
+      labels: labelsList,
+      assignees: assigneesList,
+    });
+  } catch (error) {
+    if (error.status === 422) {
+      core.warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
+      issue = await octokit.rest.issues.create({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        title,
+        body,
+        labels: labelsList,
+      });
+    } else {
+      throw error;
+    }
+  }
 
   core.info(`Issue created: ${issue.data.html_url}`);
   core.setOutput("issueUrl", issue.data.html_url);

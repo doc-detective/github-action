@@ -38,6 +38,13 @@ on:
         description: issue_body
         required: false
         default: 'A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS'
+      integrations:
+        description: integrations
+        required: false
+        default: ''
+      prompt:
+        description: prompt
+        required: false
 
 permissions:
   contents: write
@@ -59,3 +66,5 @@ jobs:
         id: dd
         with:
           config: ./artifacts/.doc-detective.json
+          integrations: ${{ github.event.inputs.integrations }}
+          prompt: ${{ github.event.inputs.prompt }}
