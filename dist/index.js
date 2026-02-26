@@ -31846,7 +31846,7 @@ process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 
 const INTEGRATION_MAP = {
   "doc-sentinel": "\n/cc @reem-sab",
-  "promptless": "\n@Promptless $PROMPT",
+  "promptless": "\n@promptless $PROMPT",
   "dosu": "\n@dosu $PROMPT",
   "claude": "\n@claude $PROMPT",
   "opencode": "\n/opencode $PROMPT",
