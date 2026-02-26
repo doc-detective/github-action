@@ -72,23 +72,22 @@ inputs:
     default: ""
   integrations:
     description: >-
-      Comma-separated list of integrations to notify in the created GitHub issue.
-      When specified, matching integrations are triggered via mentions or commands
-      in a collapsible "Integrations" section appended to the issue body.
-      Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot".
+      Comma-separated list of integrations to notify in the created GitHub issue. When specified, matching integrations are triggered via mentions or commands in a collapsible "Integrations" section appended to the issue body.
+      
+      Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot". Invalid values are ignored with a warning.
+
       The "copilot" integration auto-assigns the issue to Copilot instead of adding to the accordion.
-      Invalid values are ignored with a warning.
+            
       Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: ""
   prompt:
     description: >-
-      The prompt text passed to integrations and available in issue bodies.
-      In integration strings, `$PROMPT` is replaced with this value (e.g., "@claude <prompt>").
-      Also available as `$PROMPT` in the `issue_body` template alongside `$RUN_URL` and `$RESULTS`.
+      The prompt passed to integrations. For example, if `integrations` is set to `claude`, the issue includes "@claude <prompt_value>"). Also available as `$PROMPT` in the `issue_body` template.
+      
       Only valid if "create_issue_on_fail" is set to "true".
     required: false
-    default: "Investigate the causes of the failures reported in this Doc Detective test output and suggest fixes"
+    default: "Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes."
   token:
     description: The GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.
     required: false
