@@ -46,6 +46,7 @@ jobs:
           exit_on_fail: true
 
   fail-tests-with-integrations:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Fail tests with integrations
     permissions:

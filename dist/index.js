@@ -32033,26 +32033,43 @@ async function createIssue(results) {
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = core
     .getInput("issue_body")
-    .replace("$RUN_URL", runURL)
-    .replace("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
-    .replace("$PROMPT", prompt)
+    .replaceAll("$RUN_URL", runURL)
+    .replaceAll("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
+    .replaceAll("$PROMPT", prompt)
     + integrationsAccordion;
-  const labels = core.getInput("issue_labels");
-  const assigneesList = core.getInput("issue_assignees").split(",").filter((s) => s.length > 0);
-  if (integrations.includes("copilot")) {
+  const labelsList = core.getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
+  const assigneesList = core.getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
+  if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
     assigneesList.push("copilot-swe-agent");
   }
 
   const octokit = github.getOctokit(token);
 
-  const issue = await octokit.rest.issues.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    title,
-    body,
-    labels: labels.split(","),
-    assignees: assigneesList,
-  });
+  // Try creating the issue; if assignees cause a 422, retry without them
+  let issue;
+  try {
+    issue = await octokit.rest.issues.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      title,
+      body,
+      labels: labelsList,
+      assignees: assigneesList,
+    });
+  } catch (error) {
+    if (error.status === 422) {
+      core.warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
+      issue = await octokit.rest.issues.create({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        title,
+        body,
+        labels: labelsList,
+      });
+    } else {
+      throw error;
+    }
+  }
 
   core.info(`Issue created: ${issue.data.html_url}`);
   core.setOutput("issueUrl", issue.data.html_url);

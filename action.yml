@@ -83,7 +83,7 @@ inputs:
     default: ""
   prompt:
     description: >-
-      The prompt passed to integrations. For example, if `integrations` is set to `claude`, the issue includes "@claude <prompt_value>"). Also available as `$PROMPT` in the `issue_body` template.
+      The prompt passed to integrations. For example, if `integrations` is set to `claude`, the issue includes "@claude <prompt_value>". Also available as `$PROMPT` in the `issue_body` template.
       
       Only valid if "create_issue_on_fail" is set to "true".
     required: false

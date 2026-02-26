@@ -45,7 +45,6 @@ on:
       prompt:
         description: prompt
         required: false
-        default: ''
 
 permissions:
   contents: write
