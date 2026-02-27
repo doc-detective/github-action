@@ -237,9 +237,9 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
+### `issue_body` (default: `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`)
 
-he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+The body of the created GitHub issue. Use `$RESULTS` to insert the results object, `$RUN_URL` to insert the URL of the workflow run that created the issue, and `$PROMPT` to insert the prompt text. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -272,6 +272,37 @@ Comma-separated list of GitHub usernames to assign to the GitHub issue. Only val
   with:
     create_issue_on_fail: true
     issue_assignees: octocat,monalisa
+```
+
+### `integrations`
+
+Comma-separated list of integrations to notify in the created GitHub issue. When specified, matching integrations are triggered via mentions or commands in a collapsible "Integrations" section appended to the issue body.
+
+Supported values: `doc-sentinel`, `promptless`, `dosu`, `claude`, `opencode`, `copilot`, `cursor`. Invalid values are ignored with a warning.
+
+The `copilot` integration auto-assigns the issue to Copilot instead of adding to the accordion.
+
+Only valid if `create_issue_on_fail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_issue_on_fail: true
+    integrations: claude,copilot
+```
+
+### `prompt` (default: `Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.`)
+
+The prompt passed to integrations. For example, if `integrations` is set to `claude`, the issue includes `@claude <prompt_value>`. Also available as `$PROMPT` in the `issue_body` template.
+
+Only valid if `create_issue_on_fail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    create_issue_on_fail: true
+    integrations: claude
+    prompt: Investigate the Doc Detective test failures and suggest fixes for the documentation.
 ```
 
 ### `token` (default: `${{ github.token }}`)
