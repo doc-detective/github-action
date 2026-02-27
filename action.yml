@@ -74,7 +74,7 @@ inputs:
     description: >-
       Comma-separated list of integrations to notify in the created GitHub issue. When specified, matching integrations are triggered via mentions or commands in a collapsible "Integrations" section appended to the issue body.
       
-      Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot". Invalid values are ignored with a warning.
+      Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot", "cursor". Invalid values are ignored with a warning.
 
       The "copilot" integration auto-assigns the issue to Copilot instead of adding to the accordion.
             

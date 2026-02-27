@@ -31850,6 +31850,7 @@ const INTEGRATION_MAP = {
   "dosu": "\n@dosu $PROMPT",
   "claude": "\n@claude $PROMPT",
   "opencode": "\n/opencode $PROMPT",
+  "cursor": "\n@cursor $PROMPT",
 };
 
 // All valid integration names (INTEGRATION_MAP keys + special-case integrations)
