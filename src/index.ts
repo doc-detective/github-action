@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
-      process.env.RUNNER_TEMP || "",
+      process.env.RUNNER_TEMP || os.tmpdir(),
       "doc-detective-output.json"
     );
     compiledCommand += ` --output ${outputPath}`;
@@ -284,7 +284,7 @@ async function createPullRequest() {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         issue_number: pr.data.number,
-        labels: labels.split(","),
+        labels: labels.split(",").map((s) => s.trim()).filter(Boolean),
       }
     );
     core.info(`Adding assignees.`);
@@ -294,7 +294,7 @@ async function createPullRequest() {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         issue_number: pr.data.number,
-        assignees: assignees.split(","),
+        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean),
       }
     );
     core.info(`Adding reviewers.`);
@@ -304,7 +304,7 @@ async function createPullRequest() {
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         pull_number: pr.data.number,
-        reviewers: reviewers.split(","),
+        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean),
       }
     );
   } catch (error) {

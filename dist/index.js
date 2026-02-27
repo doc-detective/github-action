@@ -24351,7 +24351,7 @@ async function main() {
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const outputPath = import_path.default.resolve(
-      process.env.RUNNER_TEMP || "",
+      process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"
     );
     compiledCommand += ` --output ${outputPath}`;
@@ -24514,7 +24514,7 @@ async function createPullRequest() {
         owner: context2.repo.owner,
         repo: context2.repo.repo,
         issue_number: pr.data.number,
-        labels: labels.split(",")
+        labels: labels.split(",").map((s) => s.trim()).filter(Boolean)
       }
     );
     info(`Adding assignees.`);
@@ -24524,7 +24524,7 @@ async function createPullRequest() {
         owner: context2.repo.owner,
         repo: context2.repo.repo,
         issue_number: pr.data.number,
-        assignees: assignees.split(",")
+        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean)
       }
     );
     info(`Adding reviewers.`);
@@ -24534,7 +24534,7 @@ async function createPullRequest() {
         owner: context2.repo.owner,
         repo: context2.repo.repo,
         pull_number: pr.data.number,
-        reviewers: reviewers.split(",")
+        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean)
       }
     );
   } catch (error2) {
