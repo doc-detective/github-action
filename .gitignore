@@ -128,5 +128,8 @@ out
 .yarn/install-state.gz
 .pnp.*
 
+# Intermediate TypeScript build output
+build/
+
 # Doc Detective
 testResults-*.json
