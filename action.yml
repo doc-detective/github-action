@@ -96,7 +96,7 @@ outputs:
   results:
     description: JSON-formatted results of the command.
 runs:
-  using: node20 # Specifies the node version
+  using: node24 # Specifies the node version
   main: dist/index.js # Path to the JavaScript file that will be executed
 branding:
   icon: search # The icon to display in the GitHub Marketplace
