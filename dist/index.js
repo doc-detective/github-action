@@ -24289,8 +24289,41 @@ function getOctokit(token, options, ...additionalPlugins) {
 // src/index.ts
 var import_os4 = __toESM(require("os"));
 var import_path = __toESM(require("path"));
-var import_fs3 = __toESM(require("fs"));
 var import_child_process = require("child_process");
+
+// src/loadResults.ts
+var import_fs3 = __toESM(require("fs"));
+function loadResults(outputPath, stdout = "") {
+  if (!outputPath) {
+    throw new Error(
+      "No output path was provided to load Doc Detective results from."
+    );
+  }
+  if (!import_fs3.default.existsSync(outputPath)) {
+    throw new Error(
+      `Doc Detective did not write results to ${outputPath}. The run may have exited before writing output, or a custom config disabled the JSON reporter.
+stdout:
+${stdout}`
+    );
+  }
+  let raw;
+  try {
+    raw = import_fs3.default.readFileSync(outputPath, "utf-8");
+  } catch (error2) {
+    throw new Error(
+      `Failed to read Doc Detective results at ${outputPath}: ${error2.message}`
+    );
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error2) {
+    throw new Error(
+      `Failed to parse Doc Detective results at ${outputPath}: ${error2.message}`
+    );
+  }
+}
+
+// src/index.ts
 var meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 var INTEGRATION_MAP = {
@@ -24367,17 +24400,7 @@ async function main() {
       }
     };
     await exec(compiledCommand, [], options);
-    const outputFiles = commandOutputData.split("results at ");
-    const outputFile = outputFiles[outputFiles.length - 1].trim();
-    if (!outputFile) {
-      throw new Error(
-        `Output file not found.
-Output file: ${outputFile}
-CWD: ${process.cwd()}
-stdout: ${commandOutputData}`
-      );
-    }
-    const results = JSON.parse(import_fs3.default.readFileSync(outputFile, "utf-8"));
+    const results = loadResults(outputPath, commandOutputData);
     setOutput("results", results);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
@@ -24416,7 +24439,7 @@ stdout: ${commandOutputData}`
         }
       }
     }
-    if (results.summary.specs.fail > 0) {
+    if (results?.summary?.specs?.fail > 0) {
       if (getInput("create_issue_on_fail") == "true") {
         try {
           const issue2 = await createIssue(JSON.stringify(results, null, 2));
