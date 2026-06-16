@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'npm'
+          node-version: 24
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Verify dist is up to date
+        # dist/index.js is the committed bundle the action runs. Rebuild and
+        # fail if it differs from what's checked in, so a source change can't
+        # ship without its rebuilt bundle.
+        run: |
+          npm run build
+          if ! git diff --quiet -- dist; then
+            echo "dist/ is out of date. Run 'npm run build' and commit the result." >&2
+            git --no-pager diff -- dist
+            exit 1
+          fi
