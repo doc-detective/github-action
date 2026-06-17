@@ -24311,14 +24311,18 @@ ${stdout}`
     raw = import_fs3.default.readFileSync(outputPath, "utf-8");
   } catch (error2) {
     throw new Error(
-      `Failed to read Doc Detective results at ${outputPath}: ${error2.message}`
+      `Failed to read Doc Detective results at ${outputPath}: ${error2.message}
+stdout:
+${stdout}`
     );
   }
   try {
     return JSON.parse(raw);
   } catch (error2) {
     throw new Error(
-      `Failed to parse Doc Detective results at ${outputPath}: ${error2.message}`
+      `Failed to parse Doc Detective results at ${outputPath}: ${error2.message}
+stdout:
+${stdout}`
     );
   }
 }

@@ -34,14 +34,14 @@ export function loadResults(outputPath: string, stdout = ""): any {
     raw = fs.readFileSync(outputPath, "utf-8");
   } catch (error) {
     throw new Error(
-      `Failed to read Doc Detective results at ${outputPath}: ${(error as Error).message}`
+      `Failed to read Doc Detective results at ${outputPath}: ${(error as Error).message}\nstdout:\n${stdout}`
     );
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     throw new Error(
-      `Failed to parse Doc Detective results at ${outputPath}: ${(error as Error).message}`
+      `Failed to parse Doc Detective results at ${outputPath}: ${(error as Error).message}\nstdout:\n${stdout}`
     );
   }
 }
