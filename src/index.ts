@@ -3,8 +3,8 @@ import { exec } from "@actions/exec";
 import * as github from "@actions/github";
 import os from "os";
 import path from "path";
-import fs from "fs";
 import { execSync } from "child_process";
+import { loadResults } from "./loadResults.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -102,17 +102,12 @@ async function main(): Promise<void> {
       },
     };
     await exec(compiledCommand, [], options);
-    const outputFiles = commandOutputData.split("results at ");
-    const outputFile = outputFiles[outputFiles.length - 1].trim();
-    // If output file is not found, throw an error
-    if (!outputFile) {
-      throw new Error(
-        `Output file not found.\nOutput file: ${outputFile}\nCWD: ${process.cwd()}\nstdout: ${commandOutputData}`
-      );
-    }
 
-    // Set outputs
-    const results = JSON.parse(fs.readFileSync(outputFile, "utf-8"));
+    // Read results from the file we passed via `--output`, not from stdout.
+    // Doc Detective's log text is human-facing and free to change (e.g. extra
+    // "See per-run ..." lines), and scraping the path back out of it coupled
+    // this action to that format and broke it. See doc-detective#346.
+    const results = loadResults(outputPath, commandOutputData);
     core.setOutput("results", results);
 
     // Create a pull request if there are changed files
@@ -162,7 +157,7 @@ async function main(): Promise<void> {
     }
 
     // Create an issue if there are failing tests
-    if (results.summary.specs.fail > 0) {
+    if (results?.summary?.specs?.fail > 0) {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
