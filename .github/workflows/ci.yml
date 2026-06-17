@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # This job only reads the repo (install, test, build, git diff) and
+          # never pushes, so it doesn't need the checkout token left on disk.
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           cache: 'npm'
