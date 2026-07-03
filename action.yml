@@ -3,7 +3,7 @@ description: Treat doc content as testable assertions to validate doc accuracy a
 author: Doc Detective
 inputs:
   version:
-    description: Specify the version of Doc Detective to use instead of the installed default. This can be a specific version number or an NPM tag (like `latest`).
+    description: Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`). Set to an empty string ("") to run whatever `doc-detective` is already resolvable in the working directory (e.g. a locally-built checkout exposed via `npm link`) instead of installing from the registry — useful for a repo dog-fooding this action against its own build.
     required: false
     default: latest
   working_directory:

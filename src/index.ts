@@ -68,7 +68,13 @@ async function main(): Promise<void> {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const dd = `doc-detective@${version}`;
+    // An empty `version` means "use whatever doc-detective is already resolvable
+    // from the working directory" — e.g. a locally-built checkout exposed via
+    // `npm link`, so a repo can dog-food the action against its own build under
+    // review rather than the published package. Pinning `doc-detective@<tag>`
+    // (even `@latest`) makes npx resolve from the registry and ignore a linked
+    // local build, so omit the `@version` suffix entirely when version is blank.
+    const dd = version ? `doc-detective@${version}` : "doc-detective";
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");

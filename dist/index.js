@@ -24377,7 +24377,7 @@ async function main() {
       );
     }
     const version = getInput("version");
-    const dd = `doc-detective@${version}`;
+    const dd = version ? `doc-detective@${version}` : "doc-detective";
     const cwd = getInput("working_directory");
     const config = getInput("config");
     const input = getInput("input");
