@@ -10,6 +10,10 @@ inputs:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
     default: "."
+  android:
+    description: 'Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). "auto" (default) scans your specs and only sets up KVM when an android platform is present; "true" always sets it up; "false" never does. No effect on macOS/Windows runners, which can''t accelerate the emulator. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.'
+    required: false
+    default: auto
   config:
     description: Path to the configuration file.
     required: false
