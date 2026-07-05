@@ -146,7 +146,7 @@ export async function enableLinuxKvm(deps: KvmDeps): Promise<boolean> {
   try {
     await deps.exec("bash", [
       "-c",
-      `echo '${rule}' | sudo tee /etc/udev/rules.d/99-kvm4all.rules && sudo udevadm trigger --name-match=kvm`,
+      `echo '${rule}' | sudo tee /etc/udev/rules.d/99-kvm4all.rules && sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm`,
     ]);
     deps.info("Enabled KVM access for the Android emulator.");
     return true;

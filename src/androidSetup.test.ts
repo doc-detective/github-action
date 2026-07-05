@@ -116,7 +116,11 @@ test("enableLinuxKvm runs the udev step when /dev/kvm exists", async () => {
   });
   assert.equal(ok, true);
   assert.equal(ran?.command, "bash");
-  assert.match(ran?.args.join(" ") ?? "", /udevadm trigger --name-match=kvm/);
+  const cmd = ran?.args.join(" ") ?? "";
+  // Rules must be reloaded before the trigger, or the freshly-written rule
+  // isn't applied and /dev/kvm stays inaccessible.
+  assert.match(cmd, /udevadm control --reload-rules/);
+  assert.match(cmd, /udevadm trigger --name-match=kvm/);
   assert.match(infos[0], /Enabled KVM/);
 });
 
