@@ -3,8 +3,10 @@ import { exec } from "@actions/exec";
 import * as github from "@actions/github";
 import os from "os";
 import path from "path";
+import fs from "fs";
 import { execSync } from "child_process";
 import { loadResults } from "./loadResults.ts";
+import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -78,6 +80,32 @@ async function main(): Promise<void> {
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
+
+    // Android emulator support: on Linux, grant KVM access so the emulator can
+    // accelerate. Driven by the `android` input ("auto" | "true" | "false");
+    // "auto" scans the specs and sets up KVM only when an android platform is
+    // present. Everything else (SDK, emulator, image, driver) Doc Detective
+    // bootstraps itself at test time.
+    const androidInput = core.getInput("android");
+    const scanRoots = [input, config, cwd]
+      .filter((p) => p && p.length > 0)
+      .map((p) => path.resolve(cwd || ".", p));
+    const androidDecision = shouldSetUpAndroid({
+      androidInput,
+      platform: os.platform(),
+      roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
+    });
+    core.info(
+      `Android setup: ${androidDecision.setUp ? "enabled" : "skipped"} (${androidDecision.reason}).`
+    );
+    if (androidDecision.setUp) {
+      await enableLinuxKvm({
+        existsSync: (p) => fs.existsSync(p),
+        exec: (command, args) => exec(command, args),
+        info: (m) => core.info(m),
+        warning: (m) => core.warning(m),
+      });
+    }
 
     // Compile command
     let compiledCommand = `npx ${dd}`;
