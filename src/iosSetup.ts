@@ -127,23 +127,28 @@ export async function restoreWdaCache({
   deps: WdaCacheDeps;
 }): Promise<{ key: string; exactHit: boolean }> {
   const key = wdaCacheKey(xcodeVersion);
-  let restoredKey: string | undefined;
   try {
-    restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const exactHit = restoredKey === key;
+    deps.info(
+      exactHit
+        ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.`
+        : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
+    );
+    return { key, exactHit };
   } catch (error) {
+    // A cache-service error isn't a definitive miss — WDA just builds cold — so
+    // warn rather than claim "no cache yet". Report exactHit=false so the run
+    // still attempts to save the freshly-built WDA afterward (a transient blip
+    // shouldn't cost the next run its warm start); a save that also fails is a
+    // best-effort warning.
     deps.warning(
       `WebDriverAgent cache restore failed (continuing; WDA will build): ${
         (error as Error)?.message ?? error
       }`
     );
+    return { key, exactHit: false };
   }
-  const exactHit = restoredKey === key;
-  deps.info(
-    exactHit
-      ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.`
-      : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
-  );
-  return { key, exactHit };
 }
 
 /**

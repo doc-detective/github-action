@@ -33784,19 +33784,19 @@ async function restoreWdaCache({
   deps
 }) {
   const key = wdaCacheKey(xcodeVersion);
-  let restoredKey;
   try {
-    restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const exactHit = restoredKey === key;
+    deps.info(
+      exactHit ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.` : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
+    );
+    return { key, exactHit };
   } catch (error2) {
     deps.warning(
       `WebDriverAgent cache restore failed (continuing; WDA will build): ${error2?.message ?? error2}`
     );
+    return { key, exactHit: false };
   }
-  const exactHit = restoredKey === key;
-  deps.info(
-    exactHit ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.` : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
-  );
-  return { key, exactHit };
 }
 async function saveWdaCache({
   derivedDataPath,
