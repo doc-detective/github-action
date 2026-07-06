@@ -112,6 +112,23 @@ test("wdaCacheKey folds the Xcode and XCUITest driver versions into a stable key
   );
 });
 
+test("wdaCacheKey sanitizes key segments to the cache-safe charset", () => {
+  // npm versions can carry +build metadata; actions/cache keys want a
+  // conservative charset (and never commas).
+  assert.equal(
+    wdaCacheKey("Xcode 26.5", "9.2.1+build.5", "darwin"),
+    "dd-wda-v2-darwin-Xcode-26.5-xcuitest-9.2.1-build.5"
+  );
+  assert.equal(
+    wdaCacheKey("Xcode 26.5 (17F42), extra", "9.2.1", "darwin"),
+    "dd-wda-v2-darwin-Xcode-26.5-17F42-extra-xcuitest-9.2.1"
+  );
+  assert.equal(
+    wdaCacheKey("Xcode 26.5", "   ", "darwin"),
+    "dd-wda-v2-darwin-Xcode-26.5-xcuitest-unknown"
+  );
+});
+
 test("wdaCacheKeyPrefix is the key minus the driver version, for restore-keys fallback", () => {
   const prefix = wdaCacheKeyPrefix("Xcode 26.5", "darwin");
   assert.equal(prefix, "dd-wda-v2-darwin-Xcode-26.5-xcuitest-");

@@ -33641,13 +33641,14 @@ function shouldCacheWda({
   return scan(roots) ? { setUp: true, reason: "auto-detected an ios platform in your specs" } : { setUp: false, reason: "no ios platform detected in specs" };
 }
 var CACHE_VERSION = "v2";
+function sanitizeKeySegment(value) {
+  return (value || "unknown").trim().replace(/[^A-Za-z0-9._-]+/g, "-") || "unknown";
+}
 function wdaCacheKey(xcodeVersion, driverVersion, platform2 = import_os4.default.platform()) {
-  const dv = (driverVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `${wdaCacheKeyPrefix(xcodeVersion, platform2)}${dv}`;
+  return `${wdaCacheKeyPrefix(xcodeVersion, platform2)}${sanitizeKeySegment(driverVersion)}`;
 }
 function wdaCacheKeyPrefix(xcodeVersion, platform2 = import_os4.default.platform()) {
-  const xc = (xcodeVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `dd-wda-${CACHE_VERSION}-${platform2}-${xc}-xcuitest-`;
+  return `dd-wda-${CACHE_VERSION}-${platform2}-${sanitizeKeySegment(xcodeVersion)}-xcuitest-`;
 }
 function detectXcodeVersion(run = (c) => (0, import_child_process.execSync)(c).toString()) {
   try {

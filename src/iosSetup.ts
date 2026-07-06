@@ -87,13 +87,21 @@ const CACHE_VERSION = "v2";
  * makes a driver release a non-exact (prefix) hit instead: the old build
  * still warms the compile, and the healed build is saved under the new key.
  */
+// actions/cache keys forbid commas and behave best on a conservative charset;
+// npm versions can carry +build metadata and Xcode's version line has spaces.
+// Collapse runs of anything outside [A-Za-z0-9._-] to a single "-".
+function sanitizeKeySegment(value: string): string {
+  return (
+    (value || "unknown").trim().replace(/[^A-Za-z0-9._-]+/g, "-") || "unknown"
+  );
+}
+
 export function wdaCacheKey(
   xcodeVersion: string,
   driverVersion: string,
   platform: NodeJS.Platform = os.platform()
 ): string {
-  const dv = (driverVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `${wdaCacheKeyPrefix(xcodeVersion, platform)}${dv}`;
+  return `${wdaCacheKeyPrefix(xcodeVersion, platform)}${sanitizeKeySegment(driverVersion)}`;
 }
 
 /**
@@ -104,8 +112,7 @@ export function wdaCacheKeyPrefix(
   xcodeVersion: string,
   platform: NodeJS.Platform = os.platform()
 ): string {
-  const xc = (xcodeVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `dd-wda-${CACHE_VERSION}-${platform}-${xc}-xcuitest-`;
+  return `dd-wda-${CACHE_VERSION}-${platform}-${sanitizeKeySegment(xcodeVersion)}-xcuitest-`;
 }
 
 /** Read the Xcode version line (e.g. "Xcode 26.5"); "unknown" if unavailable. */
