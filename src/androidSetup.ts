@@ -10,8 +10,7 @@
 // The detection half is pure (regex over spec text) so it's unit-testable; the
 // KVM half shells out and is injected for tests.
 
-import fs from "fs";
-import path from "path";
+import { scanSpecs, realScanDeps, type ScanDeps } from "./scanSpecs.ts";
 
 // Matches an `android` value on a `platform`/`platforms` field in a resolved
 // spec or config — `"platform": "android"`, `"platforms": "android"`, and the
@@ -24,27 +23,9 @@ export function textRequestsAndroid(text: string): boolean {
   return ANDROID_PLATFORM_RE.test(text);
 }
 
-// File extensions worth scanning for Doc Detective specs (JSON specs, and specs
-// embedded in Markdown/MDX). Kept small so the walk stays cheap.
-const SCANNABLE = new Set([".json", ".md", ".mdx", ".markdown", ".yaml", ".yml"]);
-const SKIP_DIRS = new Set(["node_modules", ".git", ".github"]);
-
-export interface ScanDeps {
-  readFileSync: (p: string, enc: "utf8") => string;
-  readdirSync: (p: string) => Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
-  existsSync: (p: string) => boolean;
-}
-
-const realScanDeps: ScanDeps = {
-  readFileSync: (p, enc) => fs.readFileSync(p, enc),
-  readdirSync: (p) => fs.readdirSync(p, { withFileTypes: true }),
-  existsSync: (p) => fs.existsSync(p),
-};
-
 /**
  * Walk the given roots (files or directories) and return true as soon as any
- * scannable file requests the `android` platform. Bounded by `maxDepth` and the
- * skip-list so it stays cheap on a large repo. A false positive here is
+ * scannable file requests the `android` platform. A false positive here is
  * harmless (KVM gets enabled but unused); a false negative just falls back to a
  * capability SKIP — so the scan errs toward matching.
  */
@@ -53,38 +34,7 @@ export function scanForAndroid(
   deps: ScanDeps = realScanDeps,
   maxDepth = 6
 ): boolean {
-  const seen = new Set<string>();
-  const walk = (target: string, depth: number): boolean => {
-    if (depth > maxDepth || seen.has(target) || !deps.existsSync(target)) return false;
-    seen.add(target);
-    let entries: ReturnType<ScanDeps["readdirSync"]>;
-    try {
-      entries = deps.readdirSync(target);
-    } catch {
-      // Not a directory (or unreadable) — treat as a file.
-      return scanFile(target, deps);
-    }
-    for (const entry of entries) {
-      const child = path.join(target, entry.name);
-      if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) continue;
-        if (walk(child, depth + 1)) return true;
-      } else if (entry.isFile() && scanFile(child, deps)) {
-        return true;
-      }
-    }
-    return false;
-  };
-  return roots.some((root) => walk(root, 0));
-}
-
-function scanFile(file: string, deps: ScanDeps): boolean {
-  if (!SCANNABLE.has(path.extname(file).toLowerCase())) return false;
-  try {
-    return textRequestsAndroid(deps.readFileSync(file, "utf8"));
-  } catch {
-    return false;
-  }
+  return scanSpecs(roots, textRequestsAndroid, deps, maxDepth);
 }
 
 /**

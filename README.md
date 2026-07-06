@@ -84,6 +84,26 @@ Path to the input file or directory. Overrides the "input" field in the config f
     input: path/to/your/tests
 ```
 
+### `android` (default: `auto`)
+
+Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present; `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    android: auto
+```
+
+### `ios` (default: `auto`)
+
+Cache the WebDriverAgent (WDA) build to speed up iOS tests on macOS runners. The first XCUITest session compiles WDA via `xcodebuild` (~10 min on a cold runner); this action caches the build products and restores them on later runs, so the build becomes near-instant. `auto` scans your specs and only caches when an `ios` platform is present; `true` always caches; `false` never does. No effect off macOS (iOS simulators are macOS-only). Doc Detective bootstraps the XCUITest driver and simulator itself at test time.
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    ios: auto
+```
+
 ### `create_pr_on_change` (default: `false`)
 
 Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
