@@ -10,6 +10,7 @@ import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import {
   shouldCacheWda,
   detectXcodeVersion,
+  detectXcuitestDriverVersion,
   restoreWdaCache,
   saveWdaCache,
   type WdaCacheDeps,
@@ -151,6 +152,7 @@ async function main(): Promise<void> {
       const { key, exactHit } = await restoreWdaCache({
         derivedDataPath,
         xcodeVersion: detectXcodeVersion(),
+        driverVersion: detectXcuitestDriverVersion(),
         deps: wdaDeps,
       });
       wdaCache = { derivedDataPath, key, exactHit, deps: wdaDeps };

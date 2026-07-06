@@ -8,7 +8,9 @@ import {
   scanForIos,
   shouldCacheWda,
   wdaCacheKey,
+  wdaCacheKeyPrefix,
   detectXcodeVersion,
+  detectXcuitestDriverVersion,
   restoreWdaCache,
   saveWdaCache,
   type WdaCacheDeps,
@@ -99,12 +101,21 @@ test("shouldCacheWda: true always caches on macOS; auto scans", () => {
   );
 });
 
-test("wdaCacheKey folds the Xcode version into a stable key", () => {
+test("wdaCacheKey folds the Xcode and XCUITest driver versions into a stable key", () => {
   assert.equal(
-    wdaCacheKey("Xcode 26.5", "darwin"),
-    "dd-wda-v1-darwin-Xcode-26.5"
+    wdaCacheKey("Xcode 26.5", "9.2.1", "darwin"),
+    "dd-wda-v2-darwin-Xcode-26.5-xcuitest-9.2.1"
   );
-  assert.equal(wdaCacheKey("", "darwin"), "dd-wda-v1-darwin-unknown");
+  assert.equal(
+    wdaCacheKey("", "", "darwin"),
+    "dd-wda-v2-darwin-unknown-xcuitest-unknown"
+  );
+});
+
+test("wdaCacheKeyPrefix is the key minus the driver version, for restore-keys fallback", () => {
+  const prefix = wdaCacheKeyPrefix("Xcode 26.5", "darwin");
+  assert.equal(prefix, "dd-wda-v2-darwin-Xcode-26.5-xcuitest-");
+  assert.ok(wdaCacheKey("Xcode 26.5", "9.2.1", "darwin").startsWith(prefix));
 });
 
 test("detectXcodeVersion reads the first line and tolerates failure", () => {
@@ -115,6 +126,17 @@ test("detectXcodeVersion reads the first line and tolerates failure", () => {
   assert.equal(
     detectXcodeVersion(() => {
       throw new Error("xcodebuild missing");
+    }),
+    "unknown"
+  );
+});
+
+test("detectXcuitestDriverVersion trims npm's output and tolerates failure", () => {
+  assert.equal(detectXcuitestDriverVersion(() => "9.2.1\n"), "9.2.1");
+  assert.equal(detectXcuitestDriverVersion(() => "  \n"), "unknown");
+  assert.equal(
+    detectXcuitestDriverVersion(() => {
+      throw new Error("registry unreachable");
     }),
     "unknown"
   );
@@ -140,11 +162,12 @@ function recordingDeps(
 }
 
 test("restoreWdaCache reports an exact hit vs a cold cache", async () => {
-  const hitKey = wdaCacheKey("Xcode 26.5");
+  const hitKey = wdaCacheKey("Xcode 26.5", "9.2.1");
   const hit = recordingDeps({ restoreCache: async () => hitKey });
   const r1 = await restoreWdaCache({
     derivedDataPath: "/tmp/wda",
     xcodeVersion: "Xcode 26.5",
+    driverVersion: "9.2.1",
     deps: hit.deps,
   });
   assert.equal(r1.exactHit, true);
@@ -154,9 +177,33 @@ test("restoreWdaCache reports an exact hit vs a cold cache", async () => {
   const r2 = await restoreWdaCache({
     derivedDataPath: "/tmp/wda",
     xcodeVersion: "Xcode 26.5",
+    driverVersion: "9.2.1",
     deps: cold.deps,
   });
   assert.equal(r2.exactHit, false);
+});
+
+test("restoreWdaCache falls back to an older driver's build via restore-keys and reports a non-exact hit", async () => {
+  // A prefix restore (same Xcode, older xcuitest driver) still warms the
+  // incremental build, but must NOT count as exact — the post-run save then
+  // re-caches the healed build under the new driver's key.
+  const staleKey = wdaCacheKey("Xcode 26.5", "9.1.0");
+  let restoreKeysSeen: string[] | undefined;
+  const stale = recordingDeps({
+    restoreCache: async (_paths, _key, restoreKeys) => {
+      restoreKeysSeen = restoreKeys;
+      return staleKey;
+    },
+  });
+  const r = await restoreWdaCache({
+    derivedDataPath: "/tmp/wda",
+    xcodeVersion: "Xcode 26.5",
+    driverVersion: "9.2.1",
+    deps: stale.deps,
+  });
+  assert.equal(r.exactHit, false);
+  assert.equal(r.key, wdaCacheKey("Xcode 26.5", "9.2.1"));
+  assert.deepEqual(restoreKeysSeen, [wdaCacheKeyPrefix("Xcode 26.5")]);
 });
 
 test("restoreWdaCache warns but doesn't throw when the cache service errors", async () => {
@@ -168,6 +215,7 @@ test("restoreWdaCache warns but doesn't throw when the cache service errors", as
   const r = await restoreWdaCache({
     derivedDataPath: "/tmp/wda",
     xcodeVersion: "Xcode 26.5",
+    driverVersion: "9.2.1",
     deps,
   });
   assert.equal(r.exactHit, false);

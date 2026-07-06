@@ -33640,10 +33640,14 @@ function shouldCacheWda({
   if (value === "true") return { setUp: true, reason: "ios input is true" };
   return scan(roots) ? { setUp: true, reason: "auto-detected an ios platform in your specs" } : { setUp: false, reason: "no ios platform detected in specs" };
 }
-var CACHE_VERSION = "v1";
-function wdaCacheKey(xcodeVersion, platform2 = import_os4.default.platform()) {
+var CACHE_VERSION = "v2";
+function wdaCacheKey(xcodeVersion, driverVersion, platform2 = import_os4.default.platform()) {
+  const dv = (driverVersion || "unknown").trim().replace(/\s+/g, "-");
+  return `${wdaCacheKeyPrefix(xcodeVersion, platform2)}${dv}`;
+}
+function wdaCacheKeyPrefix(xcodeVersion, platform2 = import_os4.default.platform()) {
   const xc = (xcodeVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `dd-wda-${CACHE_VERSION}-${platform2}-${xc}`;
+  return `dd-wda-${CACHE_VERSION}-${platform2}-${xc}-xcuitest-`;
 }
 function detectXcodeVersion(run = (c) => (0, import_child_process.execSync)(c).toString()) {
   try {
@@ -33652,17 +33656,28 @@ function detectXcodeVersion(run = (c) => (0, import_child_process.execSync)(c).t
     return "unknown";
   }
 }
+function detectXcuitestDriverVersion(run = (c) => (0, import_child_process.execSync)(c).toString()) {
+  try {
+    return run("npm view appium-xcuitest-driver version").trim() || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 async function restoreWdaCache({
   derivedDataPath,
   xcodeVersion,
+  driverVersion,
   deps
 }) {
-  const key = wdaCacheKey(xcodeVersion);
+  const key = wdaCacheKey(xcodeVersion, driverVersion);
+  const prefix2 = wdaCacheKeyPrefix(xcodeVersion);
   try {
-    const restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const restoredKey = await deps.restoreCache([derivedDataPath], key, [
+      prefix2
+    ]);
     const exactHit = restoredKey === key;
     deps.info(
-      exactHit ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.` : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
+      exactHit ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.` : restoredKey ? `Restored an older WebDriverAgent build (${restoredKey}); the build warms from it and is re-cached as ${key}.` : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
     );
     return { key, exactHit };
   } catch (error2) {
@@ -73425,6 +73440,7 @@ async function main() {
       const { key, exactHit } = await restoreWdaCache({
         derivedDataPath,
         xcodeVersion: detectXcodeVersion(),
+        driverVersion: detectXcuitestDriverVersion(),
         deps: wdaDeps
       });
       wdaCache = { derivedDataPath, key, exactHit, deps: wdaDeps };
