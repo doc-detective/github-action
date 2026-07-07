@@ -72,21 +72,47 @@ export function shouldCacheWda({
     : { setUp: false, reason: "no ios platform detected in specs" };
 }
 
-// Bump to invalidate every cached WDA build (e.g. after a WDA-shape change in
-// the driver that the version check wouldn't catch).
-const CACHE_VERSION = "v1";
+// Bump to invalidate every cached WDA build (e.g. after a WDA-shape change
+// that neither the Xcode nor the driver version would catch).
+const CACHE_VERSION = "v2";
 
 /**
- * Cache key from the runner OS + Xcode version. Coarse on purpose: the XCUITest
- * driver rebuilds WDA on a version mismatch, so an over-broad hit self-heals —
- * far better than a too-narrow key that never hits.
+ * Exact cache key from the runner OS + Xcode version + XCUITest driver
+ * version. The driver version matters because WDA's source ships inside
+ * appium-xcuitest-driver, which Doc Detective JIT-installs at its latest
+ * version: a cache built for an older driver is stale, and (v1 lesson) a
+ * *stale exact hit* is the worst case — the driver rebuilds WDA nearly from
+ * scratch every run, and the exact hit suppresses the post-run save, so the
+ * cache never heals until the Xcode image moves. Keying on the driver version
+ * makes a driver release a non-exact (prefix) hit instead: the old build
+ * still warms the compile, and the healed build is saved under the new key.
  */
+// actions/cache keys forbid commas and behave best on a conservative charset;
+// npm versions can carry +build metadata and Xcode's version line has spaces.
+// Collapse runs of anything outside [A-Za-z0-9._-] to a single "-".
+function sanitizeKeySegment(value: string): string {
+  return (
+    (value || "unknown").trim().replace(/[^A-Za-z0-9._-]+/g, "-") || "unknown"
+  );
+}
+
 export function wdaCacheKey(
+  xcodeVersion: string,
+  driverVersion: string,
+  platform: NodeJS.Platform = os.platform()
+): string {
+  return `${wdaCacheKeyPrefix(xcodeVersion, platform)}${sanitizeKeySegment(driverVersion)}`;
+}
+
+/**
+ * The exact key minus the driver version — passed as a restore-keys fallback
+ * so an older driver's build still restores for an incremental rebuild.
+ */
+export function wdaCacheKeyPrefix(
   xcodeVersion: string,
   platform: NodeJS.Platform = os.platform()
 ): string {
-  const xc = (xcodeVersion || "unknown").trim().replace(/\s+/g, "-");
-  return `dd-wda-${CACHE_VERSION}-${platform}-${xc}`;
+  return `dd-wda-${CACHE_VERSION}-${platform}-${sanitizeKeySegment(xcodeVersion)}-xcuitest-`;
 }
 
 /** Read the Xcode version line (e.g. "Xcode 26.5"); "unknown" if unavailable. */
@@ -95,6 +121,21 @@ export function detectXcodeVersion(
 ): string {
   try {
     return run("xcodebuild -version").split(/\r?\n/)[0].trim() || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * Resolve the appium-xcuitest-driver version Doc Detective will JIT-install
+ * (it installs the latest, so the registry's `latest` is the right predictor).
+ * "unknown" on any failure — the key still works, it's just coarser.
+ */
+export function detectXcuitestDriverVersion(
+  run: (command: string) => string = (c) => execSync(c).toString()
+): string {
+  try {
+    return run("npm view appium-xcuitest-driver version").trim() || "unknown";
   } catch {
     return "unknown";
   }
@@ -120,20 +161,27 @@ export interface WdaCacheDeps {
 export async function restoreWdaCache({
   derivedDataPath,
   xcodeVersion,
+  driverVersion,
   deps,
 }: {
   derivedDataPath: string;
   xcodeVersion: string;
+  driverVersion: string;
   deps: WdaCacheDeps;
 }): Promise<{ key: string; exactHit: boolean }> {
-  const key = wdaCacheKey(xcodeVersion);
+  const key = wdaCacheKey(xcodeVersion, driverVersion);
+  const prefix = wdaCacheKeyPrefix(xcodeVersion);
   try {
-    const restoredKey = await deps.restoreCache([derivedDataPath], key);
+    const restoredKey = await deps.restoreCache([derivedDataPath], key, [
+      prefix,
+    ]);
     const exactHit = restoredKey === key;
     deps.info(
       exactHit
         ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.`
-        : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
+        : restoredKey
+          ? `Restored an older WebDriverAgent build (${restoredKey}); the build warms from it and is re-cached as ${key}.`
+          : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
     );
     return { key, exactHit };
   } catch (error) {
