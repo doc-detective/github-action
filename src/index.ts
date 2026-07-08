@@ -6,6 +6,12 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 import { loadResults } from "./loadResults.ts";
+import {
+  parseHtmlReportPath,
+  renderMarkdownSummary,
+  writeJobSummary,
+  uploadReportArtifact,
+} from "./report.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import {
   shouldCacheWda,
@@ -200,6 +206,53 @@ async function main(): Promise<void> {
     // this action to that format and broke it. See doc-detective#346.
     const results = loadResults(outputPath, commandOutputData);
     core.setOutput("results", results);
+
+    // Attach the reports to the run: a Markdown summary (derived from the JSON)
+    // on the job summary page, plus a downloadable artifact bundling the JSON,
+    // the Markdown, and — when Doc Detective emits one — the HTML report. This
+    // runs regardless of pass/fail (so reports are attached even before an
+    // `exit_on_fail` failure) and is best effort: any failure here is a
+    // warning, never a run failure.
+    try {
+      const stagingDir = path.join(
+        process.env.RUNNER_TEMP || os.tmpdir(),
+        "doc-detective-report"
+      );
+      fs.rmSync(stagingDir, { recursive: true, force: true });
+      fs.mkdirSync(stagingDir, { recursive: true });
+
+      const artifactFiles: string[] = [];
+
+      // JSON results (always available — we just read them above).
+      const stagedJson = path.join(stagingDir, "doc-detective-results.json");
+      fs.copyFileSync(outputPath, stagedJson);
+      artifactFiles.push(stagedJson);
+
+      // Markdown summary, derived from the JSON.
+      const markdown = renderMarkdownSummary(results);
+      const stagedMarkdown = path.join(stagingDir, "doc-detective-summary.md");
+      fs.writeFileSync(stagedMarkdown, markdown);
+      artifactFiles.push(stagedMarkdown);
+      await writeJobSummary(markdown);
+
+      // HTML report, if Doc Detective produced one (4.10.0+).
+      const htmlPath = parseHtmlReportPath(commandOutputData);
+      if (htmlPath && fs.existsSync(htmlPath)) {
+        const stagedHtml = path.join(stagingDir, path.basename(htmlPath));
+        fs.copyFileSync(htmlPath, stagedHtml);
+        artifactFiles.push(stagedHtml);
+      } else {
+        core.info("No HTML report found; the artifact will omit it.");
+      }
+
+      await uploadReportArtifact(
+        "doc-detective-report",
+        artifactFiles,
+        stagingDir
+      );
+    } catch (error) {
+      core.warning(`Failed to attach reports to the run: ${(error as Error).message}`);
+    }
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {

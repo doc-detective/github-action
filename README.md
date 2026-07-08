@@ -342,3 +342,10 @@ URL of the created GitHub issue. Only set if `create_issue_on_fail` is `true`.
     create_issue_on_fail: true
 - run: echo "${{ steps.doc-detective.outputs.issue_url }}"
 ```
+
+## Reports
+
+On every run — pass or fail — the action attaches the results to the workflow run automatically. No configuration required.
+
+- **Job summary:** a Markdown summary of the results (derived from the JSON) is written to the run's summary page.
+- **Artifact:** a `doc-detective-report` artifact is uploaded with the JSON results (`doc-detective-results.json`), the Markdown summary (`doc-detective-summary.md`), and — when Doc Detective produces one (4.10.0+) — the HTML report. Download it from the run's summary page.
