@@ -56,3 +56,19 @@ test("renderMarkdownSummary does not throw on missing or empty summary", () => {
   assert.match(renderMarkdownSummary(undefined), /No summary available/);
   assert.match(renderMarkdownSummary({ summary: {} }), /No summary available/);
 });
+
+test("renderMarkdownSummary handles buckets with no numeric fields", () => {
+  // Object buckets that carry no counts must not produce a malformed table
+  // (empty headers / all-"—" rows) — they degrade to "No summary available".
+  assert.match(renderMarkdownSummary({ summary: { specs: {} } }), /No summary available/);
+  assert.match(
+    renderMarkdownSummary({ summary: { meta: { name: "run" } } }),
+    /No summary available/
+  );
+  // A metadata-only bucket alongside a real one is dropped, not rendered.
+  const md = renderMarkdownSummary({
+    summary: { specs: { pass: 1, fail: 0 }, meta: { name: "run" } },
+  });
+  assert.match(md, /\| Specs \| 1 \| 0 \|/);
+  assert.doesNotMatch(md, /Meta/);
+});

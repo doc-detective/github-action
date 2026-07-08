@@ -102191,7 +102191,11 @@ function renderMarkdownSummary(results) {
     const hasNumbers = Object.values(summary2).some((v) => typeof v === "number");
     if (hasNumbers) buckets = [["summary", summary2]];
   }
-  if (buckets.length === 0) {
+  buckets = buckets.filter(
+    ([, v]) => Object.values(v).some((x) => typeof x === "number")
+  );
+  const fields = collectFields(buckets);
+  if (buckets.length === 0 || fields.length === 0) {
     return "## Doc Detective results\n\nNo summary available.";
   }
   const totalFail = buckets.reduce((acc, [, v]) => {
@@ -102199,7 +102203,6 @@ function renderMarkdownSummary(results) {
     return acc + (typeof fail === "number" ? fail : 0);
   }, 0);
   const heading = totalFail > 0 ? "## Doc Detective results: \u274C Failed" : "## Doc Detective results: \u2705 Passed";
-  const fields = collectFields(buckets);
   const lines = [heading, ""];
   lines.push(`| Category | ${fields.map(titleCase).join(" | ")} |`);
   lines.push(`| --- | ${fields.map(() => "---").join(" | ")} |`);

@@ -68,7 +68,15 @@ export function renderMarkdownSummary(results: any): string {
     if (hasNumbers) buckets = [["summary", summary as Record<string, unknown>]];
   }
 
-  if (buckets.length === 0) {
+  // Keep only buckets that carry at least one numeric count. This drops
+  // metadata-only objects (e.g. `{ specs: {} }` or `{ meta: { name: "x" } }`)
+  // that would otherwise render as an all-"—" row under empty headers.
+  buckets = buckets.filter(([, v]) =>
+    Object.values(v).some((x) => typeof x === "number")
+  );
+
+  const fields = collectFields(buckets);
+  if (buckets.length === 0 || fields.length === 0) {
     return "## Doc Detective results\n\nNo summary available.";
   }
 
@@ -80,7 +88,6 @@ export function renderMarkdownSummary(results: any): string {
     ? "## Doc Detective results: ❌ Failed"
     : "## Doc Detective results: ✅ Passed";
 
-  const fields = collectFields(buckets);
   const lines = [heading, ""];
   lines.push(`| Category | ${fields.map(titleCase).join(" | ")} |`);
   lines.push(`| --- | ${fields.map(() => "---").join(" | ")} |`);
