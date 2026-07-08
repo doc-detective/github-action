@@ -61,6 +61,15 @@ test("renderMarkdownSummary does not throw on missing or empty summary", () => {
   assert.match(renderMarkdownSummary({ summary: {} }), /No summary available/);
 });
 
+test("renderMarkdownSummary escapes pipes/newlines in bucket and field names", () => {
+  const md = renderMarkdownSummary({
+    summary: { "a|b": { "p|q": 1, fail: 0 } },
+  });
+  // The literal pipe must be escaped so it doesn't start a new table column.
+  assert.match(md, /A\\\|b/);
+  assert.match(md, /P\\\|q/);
+});
+
 test("renderMarkdownSummary reports 'No tests were run' for a null result", () => {
   // Doc Detective writes `null` to the output file when it resolves no tests.
   const md = renderMarkdownSummary(null);
@@ -68,11 +77,24 @@ test("renderMarkdownSummary reports 'No tests were run' for a null result", () =
   assert.doesNotMatch(md, /No summary available/);
 });
 
-test("reportArtifactName suffixes with job and runner OS when present", () => {
+test("reportArtifactName suffixes with job, runner OS, and step discriminator", () => {
   assert.equal(
-    reportArtifactName("doc-detective-report", { GITHUB_JOB: "pass", RUNNER_OS: "Linux" }),
-    "doc-detective-report-pass-Linux"
+    reportArtifactName("doc-detective-report", {
+      GITHUB_JOB: "pass",
+      RUNNER_OS: "Linux",
+      GITHUB_ACTION: "__self",
+    }),
+    "doc-detective-report-pass-Linux-__self"
   );
+});
+
+test("reportArtifactName distinguishes multiple invocations in one job", () => {
+  // Same job + OS, different step discriminators must yield different names so
+  // artifact/artifact v4 doesn't reject the second upload.
+  const base = { GITHUB_JOB: "ci", RUNNER_OS: "Linux" };
+  const first = reportArtifactName("doc-detective-report", { ...base, GITHUB_ACTION: "__self" });
+  const second = reportArtifactName("doc-detective-report", { ...base, GITHUB_ACTION: "__self_2" });
+  assert.notEqual(first, second);
 });
 
 test("reportArtifactName falls back to the base name and sanitizes", () => {

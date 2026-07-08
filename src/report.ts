@@ -41,6 +41,12 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Keep a Markdown table cell well-formed even for unexpected keys: escape the
+// pipe that would start a new column and flatten any line breaks.
+function escapeCell(s: string): string {
+  return s.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
 /**
  * Render a Markdown summary of Doc Detective results, derived from the JSON
  * results object alone. Defensive about shape: the only documented contract is
@@ -95,14 +101,14 @@ export function renderMarkdownSummary(results: any): string {
     : "## Doc Detective results: ✅ Passed";
 
   const lines = [heading, ""];
-  lines.push(`| Category | ${fields.map(titleCase).join(" | ")} |`);
+  lines.push(`| Category | ${fields.map((f) => escapeCell(titleCase(f))).join(" | ")} |`);
   lines.push(`| --- | ${fields.map(() => "---").join(" | ")} |`);
   for (const [name, value] of buckets) {
     const cells = fields.map((f) => {
       const cell = value[f];
       return typeof cell === "number" ? String(cell) : "—";
     });
-    lines.push(`| ${titleCase(name)} | ${cells.join(" | ")} |`);
+    lines.push(`| ${escapeCell(titleCase(name))} | ${cells.join(" | ")} |`);
   }
   return lines.join("\n");
 }
@@ -123,21 +129,26 @@ export async function writeJobSummary(markdown: string): Promise<void> {
 const ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
 
 /**
- * Build a per-job artifact name by suffixing the base with the job and runner
- * OS when available. `actions/artifact` v4 scopes artifacts per run, so a
- * workflow that invokes the action in a matrix (as this repo's own tests do)
- * would otherwise produce several indistinguishable `doc-detective-report`
- * artifacts. Falls back to the bare base name outside a matrix / when the env
- * vars are absent.
+ * Build a per-invocation artifact name by suffixing the base with the job, the
+ * runner OS, and the step discriminator. `actions/artifact` v4 scopes artifacts
+ * per run, so any workflow that invokes the action more than once would
+ * otherwise produce colliding names and silently drop all but the first upload.
+ * - `GITHUB_JOB` + `RUNNER_OS` distinguish matrix jobs (as this repo's own tests
+ *   run).
+ * - `GITHUB_ACTION` distinguishes multiple invocations *within one job* — GitHub
+ *   makes it unique per step (`__self`, `__self_2`, …), so two "Run Doc
+ *   Detective" steps in the same job get distinct artifacts.
+ * Absent env vars are skipped, so this degrades to the bare base name off
+ * GitHub Actions.
  *
  * @param base - Base artifact name.
- * @param env - Environment to read `GITHUB_JOB` / `RUNNER_OS` from.
+ * @param env - Environment to read `GITHUB_JOB` / `RUNNER_OS` / `GITHUB_ACTION` from.
  */
 export function reportArtifactName(
   base: string,
   env: NodeJS.ProcessEnv = process.env
 ): string {
-  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS].filter(
+  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS, env.GITHUB_ACTION].filter(
     (p): p is string => typeof p === "string" && p.trim().length > 0
   );
   return parts.join("-").replace(ARTIFACT_NAME_DISALLOWED, "-");

@@ -102179,6 +102179,9 @@ function collectFields(buckets) {
 function titleCase(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+function escapeCell(s) {
+  return s.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
 function renderMarkdownSummary(results) {
   if (results === null) {
     return "## Doc Detective results\n\nNo tests were run.";
@@ -102207,14 +102210,14 @@ function renderMarkdownSummary(results) {
   }, 0);
   const heading = totalFail > 0 ? "## Doc Detective results: \u274C Failed" : "## Doc Detective results: \u2705 Passed";
   const lines = [heading, ""];
-  lines.push(`| Category | ${fields.map(titleCase).join(" | ")} |`);
+  lines.push(`| Category | ${fields.map((f) => escapeCell(titleCase(f))).join(" | ")} |`);
   lines.push(`| --- | ${fields.map(() => "---").join(" | ")} |`);
   for (const [name, value] of buckets) {
     const cells = fields.map((f) => {
       const cell = value[f];
       return typeof cell === "number" ? String(cell) : "\u2014";
     });
-    lines.push(`| ${titleCase(name)} | ${cells.join(" | ")} |`);
+    lines.push(`| ${escapeCell(titleCase(name))} | ${cells.join(" | ")} |`);
   }
   return lines.join("\n");
 }
@@ -102227,7 +102230,7 @@ async function writeJobSummary(markdown) {
 }
 var ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
 function reportArtifactName(base, env = process.env) {
-  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS].filter(
+  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS, env.GITHUB_ACTION].filter(
     (p) => typeof p === "string" && p.trim().length > 0
   );
   return parts.join("-").replace(ARTIFACT_NAME_DISALLOWED, "-");
