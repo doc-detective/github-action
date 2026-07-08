@@ -51,6 +51,12 @@ function titleCase(s: string): string {
  * @returns Markdown suitable for a GitHub Actions job summary.
  */
 export function renderMarkdownSummary(results: any): string {
+  // Doc Detective's `runTests` returns `null` (which its JSON reporter writes
+  // verbatim to the output file) only when it couldn't resolve any tests, so a
+  // null result specifically means nothing ran.
+  if (results === null) {
+    return "## Doc Detective results\n\nNo tests were run.";
+  }
   const summary = results?.summary;
   if (!summary || typeof summary !== "object") {
     return "## Doc Detective results\n\nNo summary available.";
@@ -111,6 +117,30 @@ export async function writeJobSummary(markdown: string): Promise<void> {
   } catch (error) {
     core.warning(`Failed to write job summary: ${(error as Error).message}`);
   }
+}
+
+// Characters GitHub disallows in artifact names.
+const ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
+
+/**
+ * Build a per-job artifact name by suffixing the base with the job and runner
+ * OS when available. `actions/artifact` v4 scopes artifacts per run, so a
+ * workflow that invokes the action in a matrix (as this repo's own tests do)
+ * would otherwise produce several indistinguishable `doc-detective-report`
+ * artifacts. Falls back to the bare base name outside a matrix / when the env
+ * vars are absent.
+ *
+ * @param base - Base artifact name.
+ * @param env - Environment to read `GITHUB_JOB` / `RUNNER_OS` from.
+ */
+export function reportArtifactName(
+  base: string,
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS].filter(
+    (p): p is string => typeof p === "string" && p.trim().length > 0
+  );
+  return parts.join("-").replace(ARTIFACT_NAME_DISALLOWED, "-");
 }
 
 /**

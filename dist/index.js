@@ -102180,6 +102180,9 @@ function titleCase(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 function renderMarkdownSummary(results) {
+  if (results === null) {
+    return "## Doc Detective results\n\nNo tests were run.";
+  }
   const summary2 = results?.summary;
   if (!summary2 || typeof summary2 !== "object") {
     return "## Doc Detective results\n\nNo summary available.";
@@ -102221,6 +102224,13 @@ async function writeJobSummary(markdown) {
   } catch (error2) {
     warning(`Failed to write job summary: ${error2.message}`);
   }
+}
+var ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
+function reportArtifactName(base, env = process.env) {
+  const parts = [base, env.GITHUB_JOB, env.RUNNER_OS].filter(
+    (p) => typeof p === "string" && p.trim().length > 0
+  );
+  return parts.join("-").replace(ARTIFACT_NAME_DISALLOWED, "-");
 }
 async function uploadReportArtifact(name, files, rootDirectory) {
   if (files.length === 0) return;
@@ -105875,7 +105885,7 @@ async function main() {
         info("No HTML report found; the artifact will omit it.");
       }
       await uploadReportArtifact(
-        "doc-detective-report",
+        reportArtifactName("doc-detective-report"),
         artifactFiles,
         stagingDir
       );

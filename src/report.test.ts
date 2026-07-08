@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "path";
-import { parseHtmlReportPath, renderMarkdownSummary } from "./report.ts";
+import {
+  parseHtmlReportPath,
+  renderMarkdownSummary,
+  reportArtifactName,
+} from "./report.ts";
 
 test("parseHtmlReportPath extracts the path from multi-line CLI output", () => {
   const runDir = path.join("/tmp", "run-x");
@@ -55,6 +59,29 @@ test("renderMarkdownSummary does not throw on missing or empty summary", () => {
   assert.match(renderMarkdownSummary({}), /No summary available/);
   assert.match(renderMarkdownSummary(undefined), /No summary available/);
   assert.match(renderMarkdownSummary({ summary: {} }), /No summary available/);
+});
+
+test("renderMarkdownSummary reports 'No tests were run' for a null result", () => {
+  // Doc Detective writes `null` to the output file when it resolves no tests.
+  const md = renderMarkdownSummary(null);
+  assert.match(md, /No tests were run/);
+  assert.doesNotMatch(md, /No summary available/);
+});
+
+test("reportArtifactName suffixes with job and runner OS when present", () => {
+  assert.equal(
+    reportArtifactName("doc-detective-report", { GITHUB_JOB: "pass", RUNNER_OS: "Linux" }),
+    "doc-detective-report-pass-Linux"
+  );
+});
+
+test("reportArtifactName falls back to the base name and sanitizes", () => {
+  assert.equal(reportArtifactName("doc-detective-report", {}), "doc-detective-report");
+  // Disallowed characters in env values are replaced so the upload can't fail.
+  assert.equal(
+    reportArtifactName("doc-detective-report", { GITHUB_JOB: "a/b:c" }),
+    "doc-detective-report-a-b-c"
+  );
 });
 
 test("renderMarkdownSummary handles buckets with no numeric fields", () => {

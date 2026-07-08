@@ -9,6 +9,7 @@ import { loadResults } from "./loadResults.ts";
 import {
   parseHtmlReportPath,
   renderMarkdownSummary,
+  reportArtifactName,
   writeJobSummary,
   uploadReportArtifact,
 } from "./report.ts";
@@ -246,7 +247,7 @@ async function main(): Promise<void> {
       }
 
       await uploadReportArtifact(
-        "doc-detective-report",
+        reportArtifactName("doc-detective-report"),
         artifactFiles,
         stagingDir
       );
