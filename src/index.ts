@@ -7,6 +7,7 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { loadResults } from "./loadResults.ts";
 import {
+  errorMessage,
   parseHtmlReportPath,
   renderMarkdownSummary,
   reportArtifactName,
@@ -252,7 +253,7 @@ async function main(): Promise<void> {
         stagingDir
       );
     } catch (error) {
-      core.warning(`Failed to attach reports to the run: ${(error as Error).message}`);
+      core.warning(`Failed to attach reports to the run: ${errorMessage(error)}`);
     }
 
     // Create a pull request if there are changed files

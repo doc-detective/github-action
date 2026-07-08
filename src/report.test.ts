@@ -2,10 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import path from "path";
 import {
+  errorMessage,
   parseHtmlReportPath,
   renderMarkdownSummary,
   reportArtifactName,
 } from "./report.ts";
+
+test("errorMessage uses Error.message and stringifies non-Errors", () => {
+  assert.equal(errorMessage(new Error("boom")), "boom");
+  assert.equal(errorMessage("plain string"), "plain string");
+  assert.equal(errorMessage(undefined), "undefined");
+  assert.equal(errorMessage({ code: 1 }), "[object Object]");
+});
 
 test("parseHtmlReportPath extracts the path from multi-line CLI output", () => {
   const runDir = path.join("/tmp", "run-x");

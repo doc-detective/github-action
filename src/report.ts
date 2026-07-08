@@ -2,6 +2,15 @@ import * as core from "@actions/core";
 import { DefaultArtifactClient } from "@actions/artifact";
 
 /**
+ * Format a caught value for a log message. A thrown non-`Error` (string, plain
+ * object, etc.) has no `.message`, so `(error as Error).message` would log
+ * "undefined"; fall back to `String(error)` to keep the warning informative.
+ */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * Extract the per-run HTML report path from captured Doc Detective stdout.
  *
  * Doc Detective 4.10.0+ announces the report on its own line, e.g.
@@ -121,7 +130,7 @@ export async function writeJobSummary(markdown: string): Promise<void> {
   try {
     await core.summary.addRaw(markdown).addEOL().write();
   } catch (error) {
-    core.warning(`Failed to write job summary: ${(error as Error).message}`);
+    core.warning(`Failed to write job summary: ${errorMessage(error)}`);
   }
 }
 
@@ -173,6 +182,6 @@ export async function uploadReportArtifact(
     const { id } = await client.uploadArtifact(name, files, rootDirectory);
     core.info(`Uploaded "${name}" artifact (id: ${id ?? "unknown"}).`);
   } catch (error) {
-    core.warning(`Failed to upload report artifact: ${(error as Error).message}`);
+    core.warning(`Failed to upload report artifact: ${errorMessage(error)}`);
   }
 }

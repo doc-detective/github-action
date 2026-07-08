@@ -64449,7 +64449,7 @@ var ArtifactHttpClient = class {
   retryableRequest(operation) {
     return __awaiter9(this, void 0, void 0, function* () {
       let attempt = 0;
-      let errorMessage = "";
+      let errorMessage2 = "";
       let rawBody = "";
       while (attempt < this.maxAttempts) {
         let isRetryable = false;
@@ -64466,12 +64466,12 @@ var ArtifactHttpClient = class {
             return { response, body: body2 };
           }
           isRetryable = this.isRetryableHttpStatusCode(statusCode);
-          errorMessage = `Failed request: (${statusCode}) ${response.message.statusMessage}`;
+          errorMessage2 = `Failed request: (${statusCode}) ${response.message.statusMessage}`;
           if (body2.msg) {
             if (UsageError.isUsageErrorMessage(body2.msg)) {
               throw new UsageError();
             }
-            errorMessage = `${errorMessage}: ${body2.msg}`;
+            errorMessage2 = `${errorMessage2}: ${body2.msg}`;
           }
         } catch (error2) {
           if (error2 instanceof SyntaxError) {
@@ -64484,16 +64484,16 @@ var ArtifactHttpClient = class {
             throw new NetworkError(error2 === null || error2 === void 0 ? void 0 : error2.code);
           }
           isRetryable = true;
-          errorMessage = error2.message;
+          errorMessage2 = error2.message;
         }
         if (!isRetryable) {
-          throw new Error(`Received non-retryable error: ${errorMessage}`);
+          throw new Error(`Received non-retryable error: ${errorMessage2}`);
         }
         if (attempt + 1 === this.maxAttempts) {
-          throw new Error(`Failed to make request after ${this.maxAttempts} attempts: ${errorMessage}`);
+          throw new Error(`Failed to make request after ${this.maxAttempts} attempts: ${errorMessage2}`);
         }
         const retryTimeMilliseconds = this.getExponentialRetryTimeMilliseconds(attempt);
-        info(`Attempt ${attempt + 1} of ${this.maxAttempts} failed with error: ${errorMessage}. Retrying request in ${retryTimeMilliseconds} ms...`);
+        info(`Attempt ${attempt + 1} of ${this.maxAttempts} failed with error: ${errorMessage2}. Retrying request in ${retryTimeMilliseconds} ms...`);
         yield this.sleep(retryTimeMilliseconds);
         attempt++;
       }
@@ -102158,6 +102158,9 @@ If the error persists, please check whether Actions and API requests are operati
 var client = new DefaultArtifactClient();
 
 // src/report.ts
+function errorMessage(error2) {
+  return error2 instanceof Error ? error2.message : String(error2);
+}
 function parseHtmlReportPath(stdout) {
   if (!stdout) return void 0;
   const match2 = stdout.match(/per-run HTML report at\s+(.+?)\s*$/m);
@@ -102225,7 +102228,7 @@ async function writeJobSummary(markdown) {
   try {
     await summary.addRaw(markdown).addEOL().write();
   } catch (error2) {
-    warning(`Failed to write job summary: ${error2.message}`);
+    warning(`Failed to write job summary: ${errorMessage(error2)}`);
   }
 }
 var ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
@@ -102242,7 +102245,7 @@ async function uploadReportArtifact(name, files, rootDirectory) {
     const { id } = await client2.uploadArtifact(name, files, rootDirectory);
     info(`Uploaded "${name}" artifact (id: ${id ?? "unknown"}).`);
   } catch (error2) {
-    warning(`Failed to upload report artifact: ${error2.message}`);
+    warning(`Failed to upload report artifact: ${errorMessage(error2)}`);
   }
 }
 
@@ -103599,7 +103602,7 @@ function sleep(milliseconds) {
 }
 function retry2(name_1, method_1, getStatusCode_1) {
   return __awaiter23(this, arguments, void 0, function* (name, method, getStatusCode, maxAttempts = DefaultRetryAttempts, delay4 = DefaultRetryDelay, onError = void 0) {
-    let errorMessage = "";
+    let errorMessage2 = "";
     let attempt = 1;
     while (attempt <= maxAttempts) {
       let response = void 0;
@@ -103612,7 +103615,7 @@ function retry2(name_1, method_1, getStatusCode_1) {
           response = onError(error2);
         }
         isRetryable = true;
-        errorMessage = error2.message;
+        errorMessage2 = error2.message;
       }
       if (response) {
         statusCode = getStatusCode(response);
@@ -103622,9 +103625,9 @@ function retry2(name_1, method_1, getStatusCode_1) {
       }
       if (statusCode) {
         isRetryable = isRetryableStatusCode(statusCode);
-        errorMessage = `Cache service responded with ${statusCode}`;
+        errorMessage2 = `Cache service responded with ${statusCode}`;
       }
-      debug(`${name} - Attempt ${attempt} of ${maxAttempts} failed with error: ${errorMessage}`);
+      debug(`${name} - Attempt ${attempt} of ${maxAttempts} failed with error: ${errorMessage2}`);
       if (!isRetryable) {
         debug(`${name} - Error is not retryable`);
         break;
@@ -103632,7 +103635,7 @@ function retry2(name_1, method_1, getStatusCode_1) {
       yield sleep(delay4);
       attempt++;
     }
-    throw Error(`${name} failed: ${errorMessage}`);
+    throw Error(`${name} failed: ${errorMessage2}`);
   });
 }
 function retryTypedResponse(name_1, method_1) {
@@ -105038,7 +105041,7 @@ var CacheServiceClient = class {
   retryableRequest(operation) {
     return __awaiter26(this, void 0, void 0, function* () {
       let attempt = 0;
-      let errorMessage = "";
+      let errorMessage2 = "";
       let rawBody = "";
       while (attempt < this.maxAttempts) {
         let isRetryable = false;
@@ -105055,12 +105058,12 @@ var CacheServiceClient = class {
             return { response, body: body2 };
           }
           isRetryable = this.isRetryableHttpStatusCode(statusCode);
-          errorMessage = `Failed request: (${statusCode}) ${response.message.statusMessage}`;
+          errorMessage2 = `Failed request: (${statusCode}) ${response.message.statusMessage}`;
           if (body2.msg) {
             if (UsageError2.isUsageErrorMessage(body2.msg)) {
               throw new UsageError2();
             }
-            errorMessage = `${errorMessage}: ${body2.msg}`;
+            errorMessage2 = `${errorMessage2}: ${body2.msg}`;
           }
           if (statusCode === HttpCodes.TooManyRequests) {
             const retryAfterHeader = response.message.headers["retry-after"];
@@ -105070,7 +105073,7 @@ var CacheServiceClient = class {
                 warning(`You've hit a rate limit, your rate limit will reset in ${parsedSeconds} seconds`);
               }
             }
-            throw new RateLimitError(`Rate limited: ${errorMessage}`);
+            throw new RateLimitError(`Rate limited: ${errorMessage2}`);
           }
         } catch (error2) {
           if (error2 instanceof SyntaxError) {
@@ -105086,16 +105089,16 @@ var CacheServiceClient = class {
             throw new NetworkError2(error2 === null || error2 === void 0 ? void 0 : error2.code);
           }
           isRetryable = true;
-          errorMessage = error2.message;
+          errorMessage2 = error2.message;
         }
         if (!isRetryable) {
-          throw new Error(`Received non-retryable error: ${errorMessage}`);
+          throw new Error(`Received non-retryable error: ${errorMessage2}`);
         }
         if (attempt + 1 === this.maxAttempts) {
-          throw new Error(`Failed to make request after ${this.maxAttempts} attempts: ${errorMessage}`);
+          throw new Error(`Failed to make request after ${this.maxAttempts} attempts: ${errorMessage2}`);
         }
         const retryTimeMilliseconds = this.getExponentialRetryTimeMilliseconds(attempt);
-        info(`Attempt ${attempt + 1} of ${this.maxAttempts} failed with error: ${errorMessage}. Retrying request in ${retryTimeMilliseconds} ms...`);
+        info(`Attempt ${attempt + 1} of ${this.maxAttempts} failed with error: ${errorMessage2}. Retrying request in ${retryTimeMilliseconds} ms...`);
         yield this.sleep(retryTimeMilliseconds);
         attempt++;
       }
@@ -105683,9 +105686,9 @@ function saveCacheV2(paths_1, key_1, options_1) {
         signedUploadUrl = response.signedUploadUrl;
       } catch (error2) {
         debug(`Failed to reserve cache: ${error2}`);
-        const errorMessage = (_a = error2 === null || error2 === void 0 ? void 0 : error2.message) !== null && _a !== void 0 ? _a : "";
-        if (errorMessage.startsWith(CACHE_WRITE_DENIED_PREFIX)) {
-          throw new CacheWriteDeniedError(`Unable to reserve cache with key ${key}. More details: ${errorMessage}`);
+        const errorMessage2 = (_a = error2 === null || error2 === void 0 ? void 0 : error2.message) !== null && _a !== void 0 ? _a : "";
+        if (errorMessage2.startsWith(CACHE_WRITE_DENIED_PREFIX)) {
+          throw new CacheWriteDeniedError(`Unable to reserve cache with key ${key}. More details: ${errorMessage2}`);
         }
         throw new ReserveCacheError(`Unable to reserve cache with key ${key}, another job may be creating this cache.`);
       }
@@ -105893,7 +105896,7 @@ async function main() {
         stagingDir
       );
     } catch (error2) {
-      warning(`Failed to attach reports to the run: ${error2.message}`);
+      warning(`Failed to attach reports to the run: ${errorMessage(error2)}`);
     }
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
