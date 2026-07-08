@@ -243,8 +243,16 @@ async function main(): Promise<void> {
         const stagedHtml = path.join(stagingDir, path.basename(htmlPath));
         fs.copyFileSync(htmlPath, stagedHtml);
         artifactFiles.push(stagedHtml);
+      } else if (htmlPath) {
+        // Doc Detective announced a report path but the file isn't there —
+        // unexpected, so surface it.
+        core.warning(
+          `Doc Detective reported an HTML report at ${htmlPath}, but the file wasn't found; the artifact will omit it.`
+        );
       } else {
-        core.info("No HTML report found; the artifact will omit it.");
+        // No HTML report announced at all (older Doc Detective, or the HTML
+        // reporter disabled). This is the common case, so keep it quiet.
+        core.debug("No HTML report was reported; the artifact will omit it.");
       }
 
       await uploadReportArtifact(

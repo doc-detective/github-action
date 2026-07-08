@@ -139,9 +139,10 @@ const ARTIFACT_NAME_DISALLOWED = /["<>|*?:\r\n\\/]/g;
 
 /**
  * Build a per-invocation artifact name by suffixing the base with the job, the
- * runner OS, and the step discriminator. `actions/artifact` v4 scopes artifacts
- * per run, so any workflow that invokes the action more than once would
- * otherwise produce colliding names and silently drop all but the first upload.
+ * runner OS, and the step discriminator. The `@actions/artifact` upload service
+ * scopes artifacts per run and rejects duplicate names, so any workflow that
+ * invokes the action more than once would otherwise produce colliding names and
+ * silently drop all but the first upload.
  * - `GITHUB_JOB` + `RUNNER_OS` distinguish matrix jobs (as this repo's own tests
  *   run).
  * - `GITHUB_ACTION` distinguishes multiple invocations *within one job* — GitHub

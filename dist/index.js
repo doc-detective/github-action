@@ -105887,8 +105887,12 @@ async function main() {
         const stagedHtml = import_path3.default.join(stagingDir, import_path3.default.basename(htmlPath));
         import_fs6.default.copyFileSync(htmlPath, stagedHtml);
         artifactFiles.push(stagedHtml);
+      } else if (htmlPath) {
+        warning(
+          `Doc Detective reported an HTML report at ${htmlPath}, but the file wasn't found; the artifact will omit it.`
+        );
       } else {
-        info("No HTML report found; the artifact will omit it.");
+        debug("No HTML report was reported; the artifact will omit it.");
       }
       await uploadReportArtifact(
         reportArtifactName("doc-detective-report"),
