@@ -18,6 +18,10 @@ inputs:
     description: 'Cache the WebDriverAgent (WDA) build to speed up iOS tests on macOS runners. The first XCUITest session compiles WDA via xcodebuild (~10 min on a cold runner); this caches the build products and restores them on later runs, so the build becomes near-instant. "auto" (default) scans your specs and only caches when an ios platform is present; "true" always caches; "false" never does. No effect off macOS (iOS simulators are macOS-only). Doc Detective bootstraps the XCUITest driver and simulator itself at test time.'
     required: false
     default: auto
+  cache:
+    description: 'Persist the Doc Detective runtime and browser cache across runs via actions/cache, so the dependency warm-up (webdriverio, Appium drivers, sharp, ffmpeg, browsers, geckodriver) only happens once per repo. The cache is keyed on OS, architecture, Node major version, and the resolved Doc Detective version. "true" (default) restores the cache before the run and saves it after; "false" disables caching entirely. Only the runtime, browsers, and installed.json are cached — the multi-GB android-sdk and jre are deliberately excluded.'
+    required: false
+    default: "true"
   config:
     description: Path to the configuration file.
     required: false

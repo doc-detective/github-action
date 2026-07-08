@@ -15,6 +15,7 @@
 import os from "os";
 import { execSync } from "child_process";
 import { scanSpecs, realScanDeps, type ScanDeps } from "./scanSpecs.ts";
+import { sanitizeKeySegment } from "./cacheKeys.ts";
 
 // Matches an `ios` value on a `platform`/`platforms` field — mirrors the
 // android matcher: `"platform": "ios"`, `"platforms": "ios"`, and the array
@@ -87,15 +88,6 @@ const CACHE_VERSION = "v2";
  * makes a driver release a non-exact (prefix) hit instead: the old build
  * still warms the compile, and the healed build is saved under the new key.
  */
-// actions/cache keys forbid commas and behave best on a conservative charset;
-// npm versions can carry +build metadata and Xcode's version line has spaces.
-// Collapse runs of anything outside [A-Za-z0-9._-] to a single "-".
-function sanitizeKeySegment(value: string): string {
-  return (
-    (value || "unknown").trim().replace(/[^A-Za-z0-9._-]+/g, "-") || "unknown"
-  );
-}
-
 export function wdaCacheKey(
   xcodeVersion: string,
   driverVersion: string,

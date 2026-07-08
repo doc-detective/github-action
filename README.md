@@ -104,6 +104,20 @@ Cache the WebDriverAgent (WDA) build to speed up iOS tests on macOS runners. The
     ios: auto
 ```
 
+### `cache` (default: `true`)
+
+Persist the Doc Detective runtime and browser cache across runs via [`actions/cache`](https://github.com/actions/cache), so the dependency warm-up only happens once per repo. Doc Detective keeps its heavy runtime (webdriverio, Appium + drivers, sharp, ffmpeg, browsers, geckodriver) out of its npm dependencies and installs it at first use into a cache directory that's normally wiped between jobs — so every run pays the full download/install cost. This input points that cache directory at a stable path and restores/saves it across runs. Set to `false` to disable caching entirely (behavior identical to before this input existed).
+
+```yaml
+- uses: doc-detective/github-action@v1
+  with:
+    cache: true
+```
+
+The cache key is `dd-deps-v1-<platform>-<arch>-node<major>-<version>`, where `<version>` is the resolved exact Doc Detective version (an NPM tag like `latest` is resolved to the concrete version it points to, so a new release becomes a fresh key rather than a stale hit). On a new version, the previous cache still restores as a prefix match and warms the install — Doc Detective's own version skip-filter reinstalls only the out-of-range dependencies.
+
+Only the following are cached: the installed runtime (`runtime/`), the downloaded browsers (`browsers/`), and the install record (`installed.json`). The multi-GB Android SDK (`android-sdk/`) and Java runtime (`jre/`) are deliberately **not** cached — Linux runners ship a preinstalled Android SDK that Doc Detective finds first.
+
 ### `create_pr_on_change` (default: `false`)
 
 Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.

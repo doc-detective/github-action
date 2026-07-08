@@ -15,6 +15,14 @@ import {
   saveWdaCache,
   type WdaCacheDeps,
 } from "./iosSetup.ts";
+import {
+  resolveDdVersion,
+  depsCacheKey,
+  depsCacheKeyPrefix,
+  restoreDepsCache,
+  saveDepsCache,
+  type DepsCacheDeps,
+} from "./depsSetup.ts";
 import * as cache from "@actions/cache";
 
 const meta = { dist_interface: "github-actions" };
@@ -85,10 +93,14 @@ async function main(): Promise<void> {
     // review rather than the published package. Pinning `doc-detective@<tag>`
     // (even `@latest`) makes npx resolve from the registry and ignore a linked
     // local build, so omit the `@version` suffix entirely when version is blank.
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
+    // Persist the Doc Detective runtime/browser cache across runs via
+    // @actions/cache. "true" (default) restores before the run and saves after;
+    // "false" disables it entirely (restore/save/env pinning all skipped).
+    const cacheInput = core.getInput("cache");
+    const cacheEnabled = cacheInput !== "false";
 
     // Android emulator support: on Linux, grant KVM access so the emulator can
     // accelerate. Driven by the `android` input ("auto" | "true" | "false");
@@ -158,6 +170,67 @@ async function main(): Promise<void> {
       wdaCache = { derivedDataPath, key, exactHit, deps: wdaDeps };
     }
 
+    // Doc Detective runtime cache: point Doc Detective's cache dir at a stable
+    // path under RUNNER_TEMP and restore/save the installed runtime + browsers
+    // across runs so the dependency warm-up only happens once per repo. Also
+    // defers eager install to Doc Detective's just-in-time loader (only needed
+    // deps install) and pins browser freshness so a warm hit makes no network
+    // calls. Driven by the `cache` input ("true" default | "false").
+    // An empty `version` (local `npm link` dog-food mode) resolves to "local".
+    let depsCache:
+      | { cacheDir: string; key: string; exactHit: boolean; deps: DepsCacheDeps }
+      | undefined;
+    // The version pinned into the executed command. Empty `version` means "use
+    // whatever doc-detective is already resolvable" — leave it unpinned so npx
+    // resolves a linked local build. Otherwise pin to the resolved exact
+    // version so the executed version always matches the cache key (falling
+    // back to the tag string if resolution returned "unknown").
+    let dd = version ? `doc-detective@${version}` : "doc-detective";
+    if (cacheEnabled) {
+      const cacheDir = path.join(
+        process.env.RUNNER_TEMP || os.tmpdir(),
+        "doc-detective-cache"
+      );
+      // Doc Detective reads this and installs its runtime/browsers here.
+      process.env.DOC_DETECTIVE_CACHE_DIR = cacheDir;
+      // Defer to Doc Detective's just-in-time loader so only the deps the specs
+      // actually need get installed (smaller cold install + cache).
+      process.env.DOC_DETECTIVE_AUTOINSTALL = "0";
+      // Treat an installed browser record as authoritative — skip the periodic
+      // buildId/geckodriver network re-check (harmless no-op on older versions).
+      process.env.DOC_DETECTIVE_PIN_BROWSERS = "1";
+
+      const resolvedVersion = await resolveDdVersion(version);
+      if (version) {
+        // Pin to the resolved exact version; if resolution failed, fall back to
+        // the tag string the user supplied.
+        dd =
+          resolvedVersion === "unknown"
+            ? `doc-detective@${version}`
+            : `doc-detective@${resolvedVersion}`;
+      }
+      const keyArgs = {
+        platform: os.platform(),
+        arch: os.arch(),
+        nodeMajor: process.versions.node.split(".")[0],
+        ddVersion: resolvedVersion,
+      };
+      const depsDeps: DepsCacheDeps = {
+        restoreCache: (paths, key, restoreKeys) =>
+          cache.restoreCache(paths, key, restoreKeys),
+        saveCache: (paths, key) => cache.saveCache(paths, key),
+        info: (m) => core.info(m),
+        warning: (m) => core.warning(m),
+      };
+      const { key, exactHit } = await restoreDepsCache({
+        cacheDir,
+        key: depsCacheKey(keyArgs),
+        prefix: depsCacheKeyPrefix(keyArgs),
+        deps: depsDeps,
+      });
+      depsCache = { cacheDir, key, exactHit, deps: depsDeps };
+    }
+
     // Compile command
     let compiledCommand = `npx ${dd}`;
     // If v2, add the 'runTests' command
@@ -186,12 +259,21 @@ async function main(): Promise<void> {
         },
       },
     };
-    await exec(compiledCommand, [], options);
+    try {
+      await exec(compiledCommand, [], options);
 
-    // Persist the WebDriverAgent build for the next run (no-op on an exact hit;
-    // any failure is a warning, not a run failure).
-    if (wdaCache) {
-      await saveWdaCache(wdaCache);
+      // Persist the WebDriverAgent build for the next run (no-op on an exact
+      // hit; any failure is a warning, not a run failure).
+      if (wdaCache) {
+        await saveWdaCache(wdaCache);
+      }
+    } finally {
+      // Persist the runtime cache even if the run failed/threw — a failing test
+      // run still warmed the deps, and the next run shouldn't pay for them
+      // again. No-op on an exact hit; any failure is a warning.
+      if (depsCache) {
+        await saveDepsCache(depsCache);
+      }
     }
 
     // Read results from the file we passed via `--output`, not from stdout.
