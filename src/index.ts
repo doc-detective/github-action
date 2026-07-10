@@ -7,6 +7,7 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { loadResults } from "./loadResults.ts";
 import {
+  confineToRoot,
   errorMessage,
   parseHtmlReportPath,
   renderMarkdownSummary,
@@ -237,17 +238,26 @@ async function main(): Promise<void> {
       artifactFiles.push(stagedMarkdown);
       await writeJobSummary(markdown);
 
-      // HTML report, if Doc Detective produced one (4.10.0+).
+      // HTML report, if Doc Detective produced one (4.10.0+). The path comes
+      // from parsing stdout, which reflects the specs/content under test, so
+      // confine it to the runner temp root (the same root passed to
+      // `--output`) before treating it as trustworthy — otherwise a crafted
+      // log line from an untrusted repo could smuggle an arbitrary
+      // runner-filesystem path into the uploaded artifact.
       const htmlPath = parseHtmlReportPath(commandOutputData);
-      if (htmlPath && fs.existsSync(htmlPath)) {
-        const stagedHtml = path.join(stagingDir, path.basename(htmlPath));
-        fs.copyFileSync(htmlPath, stagedHtml);
+      const confinedHtmlPath = htmlPath
+        ? confineToRoot(htmlPath, path.resolve(process.env.RUNNER_TEMP || os.tmpdir()))
+        : undefined;
+      if (confinedHtmlPath) {
+        const stagedHtml = path.join(stagingDir, path.basename(confinedHtmlPath));
+        fs.copyFileSync(confinedHtmlPath, stagedHtml);
         artifactFiles.push(stagedHtml);
       } else if (htmlPath) {
-        // Doc Detective announced a report path but the file isn't there —
-        // unexpected, so surface it.
+        // Doc Detective announced a report path, but it wasn't found or
+        // doesn't resolve inside the runner temp root — unexpected, so
+        // surface it (without treating it as trustworthy).
         core.warning(
-          `Doc Detective reported an HTML report at ${htmlPath}, but the file wasn't found; the artifact will omit it.`
+          `Doc Detective reported an HTML report at ${htmlPath}, but it wasn't found under the runner temp directory; the artifact will omit it.`
         );
       } else {
         // No HTML report announced at all (older Doc Detective, or the HTML

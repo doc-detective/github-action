@@ -1,5 +1,7 @@
 import * as core from "@actions/core";
 import { DefaultArtifactClient } from "@actions/artifact";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * Format a caught value for a log message. A thrown non-`Error` (string, plain
@@ -30,6 +32,40 @@ export function parseHtmlReportPath(stdout: string): string | undefined {
   const match = stdout.match(/^See per-run HTML report at\s+(.+?)\s*$/m);
   const captured = match?.[1]?.trim();
   return captured ? captured : undefined;
+}
+
+/**
+ * Confine a candidate path to a trusted root before it's trusted for a copy
+ * or upload. `parseHtmlReportPath` reads its input from captured stdout,
+ * which reflects the specs/content under test (e.g. shell-step output) — an
+ * untrusted repo could print a crafted "See per-run HTML report at ..." line
+ * to smuggle an arbitrary runner-filesystem path (secrets, other jobs'
+ * files) into the uploaded artifact. Real Doc Detective HTML reports live
+ * under `<root>/.doc-detective/runs/<id>/`, so requiring containment inside
+ * `root` (the same temp root passed to `--output`) costs nothing in the
+ * legitimate case.
+ *
+ * Resolves symlinks on both sides before comparing (mirrors the confinement
+ * check Doc Detective's own runFolderReporter uses), so a candidate that is —
+ * or sits under — a symlink pointing outside `root` can't slip past a plain
+ * string-prefix check.
+ *
+ * @param candidatePath - Path to confine (typically from `parseHtmlReportPath`).
+ * @param root - Trusted root directory the path must resolve inside.
+ * @returns The resolved real path if it exists and is confined to `root`;
+ *   otherwise `undefined`.
+ */
+export function confineToRoot(candidatePath: string, root: string): string | undefined {
+  try {
+    const realRoot = fs.realpathSync(root);
+    const realCandidate = fs.realpathSync(candidatePath);
+    if (realCandidate === realRoot || realCandidate.startsWith(realRoot + path.sep)) {
+      return realCandidate;
+    }
+  } catch {
+    // candidatePath or root doesn't exist / isn't accessible — not confined.
+  }
+  return undefined;
 }
 
 // Column ordering for the summary table: the well-known buckets first, then

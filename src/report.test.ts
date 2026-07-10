@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
 import path from "path";
 import {
+  confineToRoot,
   errorMessage,
   parseHtmlReportPath,
   renderMarkdownSummary,
@@ -47,6 +50,52 @@ test("parseHtmlReportPath ignores the phrase mid-line instead of at the start", 
     parseHtmlReportPath('Test log: "per-run HTML report at /tmp/decoy.html" was expected but not found'),
     undefined
   );
+});
+
+test("confineToRoot accepts a file inside the root", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  const nested = path.join(root, "runs", "abc");
+  fs.mkdirSync(nested, { recursive: true });
+  const file = path.join(nested, "testResults.html");
+  fs.writeFileSync(file, "<html></html>");
+
+  const result = confineToRoot(file, root);
+  assert.equal(result, fs.realpathSync(file));
+
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("confineToRoot rejects a file outside the root", () => {
+  // Simulates a crafted stdout line pointing at an arbitrary runner-filesystem
+  // path (e.g. a secret file) instead of a real Doc Detective report.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-root-"));
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-outside-"));
+  const outsideFile = path.join(outsideDir, "secret.txt");
+  fs.writeFileSync(outsideFile, "not a report");
+
+  assert.equal(confineToRoot(outsideFile, root), undefined);
+
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(outsideDir, { recursive: true, force: true });
+});
+
+test("confineToRoot rejects a sibling directory whose name is prefixed by the root (no path.sep boundary bypass)", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  const sibling = root + "-evil";
+  fs.mkdirSync(sibling, { recursive: true });
+  const siblingFile = path.join(sibling, "testResults.html");
+  fs.writeFileSync(siblingFile, "<html></html>");
+
+  assert.equal(confineToRoot(siblingFile, root), undefined);
+
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(sibling, { recursive: true, force: true });
+});
+
+test("confineToRoot returns undefined for a nonexistent path", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  assert.equal(confineToRoot(path.join(root, "does-not-exist.html"), root), undefined);
+  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test("renderMarkdownSummary renders a Passed heading and table", () => {
