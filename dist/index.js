@@ -102163,7 +102163,7 @@ function errorMessage(error2) {
 }
 function parseHtmlReportPath(stdout) {
   if (!stdout) return void 0;
-  const match2 = stdout.match(/per-run HTML report at\s+(.+?)\s*$/m);
+  const match2 = stdout.match(/^See per-run HTML report at\s+(.+?)\s*$/m);
   const captured = match2?.[1]?.trim();
   return captured ? captured : void 0;
 }

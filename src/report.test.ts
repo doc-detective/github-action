@@ -39,6 +39,16 @@ test("parseHtmlReportPath returns undefined when the line is absent", () => {
   assert.equal(parseHtmlReportPath(""), undefined);
 });
 
+test("parseHtmlReportPath ignores the phrase mid-line instead of at the start", () => {
+  // Anchored to the start of the line (with the full "See ..." prefix) so
+  // unrelated stdout that happens to mention the phrase can't be misread as
+  // the report path.
+  assert.equal(
+    parseHtmlReportPath('Test log: "per-run HTML report at /tmp/decoy.html" was expected but not found'),
+    undefined
+  );
+});
+
 test("renderMarkdownSummary renders a Passed heading and table", () => {
   const md = renderMarkdownSummary({ summary: { specs: { pass: 1, fail: 0 } } });
   assert.match(md, /✅ Passed/);

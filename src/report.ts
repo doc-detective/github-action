@@ -15,9 +15,11 @@ export function errorMessage(error: unknown): string {
  *
  * Doc Detective 4.10.0+ announces the report on its own line, e.g.
  * `See per-run HTML report at /path/to/testResults.html`. We anchor the match
- * to a single line (`$` in multiline mode) and capture the rest of that line,
- * rather than the brittle `split(...).pop()` approach that folded trailing
- * lines into the path and broke the JSON parse (see doc-detective#346).
+ * to that whole line (`^`/`$` in multiline mode, with the full "See ..."
+ * prefix) rather than the brittle `split(...).pop()` approach that folded
+ * trailing lines into the path and broke the JSON parse (see
+ * doc-detective#346) — and rather than an unanchored substring match, which
+ * could misfire on unrelated stdout that happens to contain the phrase.
  *
  * @param stdout - Captured stdout from the Doc Detective run.
  * @returns The trimmed HTML report path, or undefined when absent (older
@@ -25,7 +27,7 @@ export function errorMessage(error: unknown): string {
  */
 export function parseHtmlReportPath(stdout: string): string | undefined {
   if (!stdout) return undefined;
-  const match = stdout.match(/per-run HTML report at\s+(.+?)\s*$/m);
+  const match = stdout.match(/^See per-run HTML report at\s+(.+?)\s*$/m);
   const captured = match?.[1]?.trim();
   return captured ? captured : undefined;
 }
