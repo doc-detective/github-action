@@ -216,7 +216,7 @@ async function main(): Promise<void> {
     // `exit_on_fail` failure) and is best effort: any failure here is a
     // warning, never a run failure.
     try {
-      const stagingDir = path.join(
+      const stagingDir = path.resolve(
         process.env.RUNNER_TEMP || os.tmpdir(),
         "doc-detective-report"
       );

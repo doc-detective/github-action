@@ -105867,7 +105867,7 @@ async function main() {
     const results = loadResults(outputPath, commandOutputData);
     setOutput("results", results);
     try {
-      const stagingDir = import_path3.default.join(
+      const stagingDir = import_path3.default.resolve(
         process.env.RUNNER_TEMP || import_os6.default.tmpdir(),
         "doc-detective-report"
       );
