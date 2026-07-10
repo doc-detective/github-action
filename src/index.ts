@@ -249,7 +249,13 @@ async function main(): Promise<void> {
         ? confineToRoot(htmlPath, path.resolve(process.env.RUNNER_TEMP || os.tmpdir()))
         : undefined;
       if (confinedHtmlPath) {
-        const stagedHtml = path.join(stagingDir, path.basename(confinedHtmlPath));
+        // Use a fixed staged filename rather than the confined path's own
+        // basename: that basename is still attacker-influenced (a crafted
+        // stdout line naming any real file under RUNNER_TEMP — e.g. one a
+        // runShell step created — would pass confinement), and could
+        // otherwise collide with and overwrite the already-staged JSON or
+        // Markdown filenames before upload.
+        const stagedHtml = path.join(stagingDir, "doc-detective-report.html");
         fs.copyFileSync(confinedHtmlPath, stagedHtml);
         artifactFiles.push(stagedHtml);
       } else if (htmlPath) {

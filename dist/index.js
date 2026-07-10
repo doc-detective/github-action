@@ -105899,7 +105899,7 @@ async function main() {
       const htmlPath = parseHtmlReportPath(commandOutputData);
       const confinedHtmlPath = htmlPath ? confineToRoot(htmlPath, import_path3.default.resolve(process.env.RUNNER_TEMP || import_os6.default.tmpdir())) : void 0;
       if (confinedHtmlPath) {
-        const stagedHtml = import_path3.default.join(stagingDir, import_path3.default.basename(confinedHtmlPath));
+        const stagedHtml = import_path3.default.join(stagingDir, "doc-detective-report.html");
         import_fs6.default.copyFileSync(confinedHtmlPath, stagedHtml);
         artifactFiles.push(stagedHtml);
       } else if (htmlPath) {
