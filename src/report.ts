@@ -48,18 +48,24 @@ export function parseHtmlReportPath(stdout: string): string | undefined {
  * Resolves symlinks on both sides before comparing (mirrors the confinement
  * check Doc Detective's own runFolderReporter uses), so a candidate that is —
  * or sits under — a symlink pointing outside `root` can't slip past a plain
- * string-prefix check.
+ * string-prefix check. Also requires the candidate to be a regular file: the
+ * caller copies it with `fs.copyFileSync`, which throws EISDIR on a
+ * directory — a crafted stdout line naming `root` itself (or any directory
+ * inside it) would otherwise abort the whole reports step instead of just
+ * skipping the HTML report.
  *
  * @param candidatePath - Path to confine (typically from `parseHtmlReportPath`).
  * @param root - Trusted root directory the path must resolve inside.
- * @returns The resolved real path if it exists and is confined to `root`;
- *   otherwise `undefined`.
+ * @returns The resolved real path if it exists, is a regular file, and is
+ *   confined to `root`; otherwise `undefined`.
  */
 export function confineToRoot(candidatePath: string, root: string): string | undefined {
   try {
     const realRoot = fs.realpathSync(root);
     const realCandidate = fs.realpathSync(candidatePath);
-    if (realCandidate === realRoot || realCandidate.startsWith(realRoot + path.sep)) {
+    const confined =
+      realCandidate === realRoot || realCandidate.startsWith(realRoot + path.sep);
+    if (confined && fs.statSync(realCandidate).isFile()) {
       return realCandidate;
     }
   } catch {

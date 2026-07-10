@@ -102173,7 +102173,8 @@ function confineToRoot(candidatePath, root) {
   try {
     const realRoot = fs9.realpathSync(root);
     const realCandidate = fs9.realpathSync(candidatePath);
-    if (realCandidate === realRoot || realCandidate.startsWith(realRoot + path7.sep)) {
+    const confined = realCandidate === realRoot || realCandidate.startsWith(realRoot + path7.sep);
+    if (confined && fs9.statSync(realCandidate).isFile()) {
       return realCandidate;
     }
   } catch {

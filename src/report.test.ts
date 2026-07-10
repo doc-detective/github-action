@@ -98,6 +98,19 @@ test("confineToRoot returns undefined for a nonexistent path", () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test("confineToRoot rejects a directory (caller copies with copyFileSync, which throws EISDIR)", () => {
+  // A crafted stdout line naming `root` itself (or a subdirectory) must not
+  // be confined — copyFileSync would throw and abort the whole reports step.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  const subdir = path.join(root, "runs");
+  fs.mkdirSync(subdir, { recursive: true });
+
+  assert.equal(confineToRoot(root, root), undefined);
+  assert.equal(confineToRoot(subdir, root), undefined);
+
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test("renderMarkdownSummary renders a Passed heading and table", () => {
   const md = renderMarkdownSummary({ summary: { specs: { pass: 1, fail: 0 } } });
   assert.match(md, /✅ Passed/);
