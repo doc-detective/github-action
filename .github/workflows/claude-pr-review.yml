@@ -25,6 +25,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          # This workflow only reads the repo (the review is posted via the
+          # GitHub MCP server, not git pushes), so don't persist the token
+          # into .git/config where the AI agent's shell could read it.
+          persist-credentials: false
 
       - name: Create MCP config
         run: |
