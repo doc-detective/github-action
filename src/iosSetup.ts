@@ -1,19 +1,17 @@
-// iOS WebDriverAgent build-cache support for the Doc Detective action.
+// iOS support for the Doc Detective action.
 //
-// The first XCUITest session in a run compiles WebDriverAgent (WDA) from source
-// via `xcodebuild` — ~10 minutes on a cold, ephemeral macOS runner, and the
-// dominant cost of any iOS run. Doc Detective writes WDA's build products to
-// `appium:derivedDataPath` when DOC_DETECTIVE_IOS_WDA_DERIVED_DATA_PATH is set;
-// this action sets that env var to a stable path and caches it across runs, so
-// after the first run WDA is restored and the build becomes near-instant. The
-// XCUITest driver validates the installed WDA and rebuilds on a version
-// mismatch, so a stale cache self-heals.
-//
-// The detection + decision + key halves are pure (unit-testable); the cache
-// restore/save shell out to @actions/cache and are injected for tests.
+// RETIRED: the WebDriverAgent (WDA) build cache this module used to manage
+// (github-action#74) is gone. Doc Detective v4.28+ prebuilds and manages WDA
+// products itself — `doc-detective install ios --yes` compiles WDA once into
+// the Doc Detective cache, keyed by Xcode version × XCUITest driver version,
+// and test sessions consume the products automatically and read-only. The
+// action-side derivedData cache was redundant next to that (running both
+// double-built WDA on cold runs), and its driver-blind key was the
+// stale-cache failure mode doc-detective's ADR 01033/01059 record. The `ios`
+// input is now a deprecated no-op; what remains here is the spec detection
+// that decides whether to surface a migration notice on runs that would have
+// used the cache.
 
-import os from "os";
-import { execSync } from "child_process";
 import { scanSpecs, realScanDeps, type ScanDeps } from "./scanSpecs.ts";
 
 // Matches an `ios` value on a `platform`/`platforms` field — mirrors the
@@ -37,13 +35,12 @@ export function scanForIos(
 }
 
 /**
- * Resolve whether the WebDriverAgent build cache should be set up, from the
- * `ios` input ("auto" | "true" | "false") and the host. iOS simulators +
- * XCUITest are macOS-only, so there's nothing to cache off macOS. `auto` scans
- * the specs and only caches when an ios platform is present (so a non-iOS macOS
- * run doesn't pay the cache round-trip).
+ * Decide whether to surface the WDA-cache retirement notice: exactly the
+ * runs the retired cache would have covered (macOS + `ios` input true, or
+ * auto with an ios platform detected in the specs) get pointed at
+ * `doc-detective install ios`; everything else stays silent.
  */
-export function shouldCacheWda({
+export function shouldNoticeRetiredWdaCache({
   iosInput,
   platform,
   roots,
@@ -53,177 +50,19 @@ export function shouldCacheWda({
   platform: NodeJS.Platform;
   roots: string[];
   scan?: (roots: string[]) => boolean;
-}): { setUp: boolean; reason: string } {
+}): { notify: boolean; reason: string } {
   const value = (iosInput || "auto").trim().toLowerCase();
-  if (value === "false") return { setUp: false, reason: "ios input is false" };
+  if (value === "false") return { notify: false, reason: "ios input is false" };
   if (platform !== "darwin") {
-    return {
-      setUp: false,
-      reason:
-        value === "true"
-          ? "ios requested, but the WebDriverAgent cache only applies to macOS runners (iOS simulators are macOS-only)"
-          : "not a macOS runner",
-    };
+    return { notify: false, reason: "not a macOS runner" };
   }
-  if (value === "true") return { setUp: true, reason: "ios input is true" };
+  if (value === "true") return { notify: true, reason: "ios input is true" };
   // auto
   return scan(roots)
-    ? { setUp: true, reason: "auto-detected an ios platform in your specs" }
-    : { setUp: false, reason: "no ios platform detected in specs" };
+    ? { notify: true, reason: "auto-detected an ios platform in your specs" }
+    : { notify: false, reason: "no ios platform detected in specs" };
 }
 
-// Bump to invalidate every cached WDA build (e.g. after a WDA-shape change
-// that neither the Xcode nor the driver version would catch).
-const CACHE_VERSION = "v2";
-
-/**
- * Exact cache key from the runner OS + Xcode version + XCUITest driver
- * version. The driver version matters because WDA's source ships inside
- * appium-xcuitest-driver, which Doc Detective JIT-installs at its latest
- * version: a cache built for an older driver is stale, and (v1 lesson) a
- * *stale exact hit* is the worst case — the driver rebuilds WDA nearly from
- * scratch every run, and the exact hit suppresses the post-run save, so the
- * cache never heals until the Xcode image moves. Keying on the driver version
- * makes a driver release a non-exact (prefix) hit instead: the old build
- * still warms the compile, and the healed build is saved under the new key.
- */
-// actions/cache keys forbid commas and behave best on a conservative charset;
-// npm versions can carry +build metadata and Xcode's version line has spaces.
-// Collapse runs of anything outside [A-Za-z0-9._-] to a single "-".
-function sanitizeKeySegment(value: string): string {
-  return (
-    (value || "unknown").trim().replace(/[^A-Za-z0-9._-]+/g, "-") || "unknown"
-  );
-}
-
-export function wdaCacheKey(
-  xcodeVersion: string,
-  driverVersion: string,
-  platform: NodeJS.Platform = os.platform()
-): string {
-  return `${wdaCacheKeyPrefix(xcodeVersion, platform)}${sanitizeKeySegment(driverVersion)}`;
-}
-
-/**
- * The exact key minus the driver version — passed as a restore-keys fallback
- * so an older driver's build still restores for an incremental rebuild.
- */
-export function wdaCacheKeyPrefix(
-  xcodeVersion: string,
-  platform: NodeJS.Platform = os.platform()
-): string {
-  return `dd-wda-${CACHE_VERSION}-${platform}-${sanitizeKeySegment(xcodeVersion)}-xcuitest-`;
-}
-
-/** Read the Xcode version line (e.g. "Xcode 26.5"); "unknown" if unavailable. */
-export function detectXcodeVersion(
-  run: (command: string) => string = (c) => execSync(c).toString()
-): string {
-  try {
-    return run("xcodebuild -version").split(/\r?\n/)[0].trim() || "unknown";
-  } catch {
-    return "unknown";
-  }
-}
-
-/**
- * Resolve the appium-xcuitest-driver version Doc Detective will JIT-install
- * (it installs the latest, so the registry's `latest` is the right predictor).
- * "unknown" on any failure — the key still works, it's just coarser.
- */
-export function detectXcuitestDriverVersion(
-  run: (command: string) => string = (c) => execSync(c).toString()
-): string {
-  try {
-    return run("npm view appium-xcuitest-driver version").trim() || "unknown";
-  } catch {
-    return "unknown";
-  }
-}
-
-export interface WdaCacheDeps {
-  restoreCache: (
-    paths: string[],
-    key: string,
-    restoreKeys?: string[]
-  ) => Promise<string | undefined>;
-  saveCache: (paths: string[], key: string) => Promise<number>;
-  info: (m: string) => void;
-  warning: (m: string) => void;
-}
-
-/**
- * Restore the WDA build cache before the run. Returns the exact key and whether
- * the restore was an exact hit — the caller passes that back to `saveWdaCache`
- * so an unchanged cache isn't needlessly re-uploaded. Restore failures are
- * non-fatal (WDA just builds cold).
- */
-export async function restoreWdaCache({
-  derivedDataPath,
-  xcodeVersion,
-  driverVersion,
-  deps,
-}: {
-  derivedDataPath: string;
-  xcodeVersion: string;
-  driverVersion: string;
-  deps: WdaCacheDeps;
-}): Promise<{ key: string; exactHit: boolean }> {
-  const key = wdaCacheKey(xcodeVersion, driverVersion);
-  const prefix = wdaCacheKeyPrefix(xcodeVersion);
-  try {
-    const restoredKey = await deps.restoreCache([derivedDataPath], key, [
-      prefix,
-    ]);
-    const exactHit = restoredKey === key;
-    deps.info(
-      exactHit
-        ? `Restored the WebDriverAgent build cache (${key}); the WDA build will be incremental.`
-        : restoredKey
-          ? `Restored an older WebDriverAgent build (${restoredKey}); the build warms from it and is re-cached as ${key}.`
-          : `No WebDriverAgent build cache yet (key ${key}); the first run compiles WDA (~10 min) and caches it.`
-    );
-    return { key, exactHit };
-  } catch (error) {
-    // A cache-service error isn't a definitive miss — WDA just builds cold — so
-    // warn rather than claim "no cache yet". Report exactHit=false so the run
-    // still attempts to save the freshly-built WDA afterward (a transient blip
-    // shouldn't cost the next run its warm start); a save that also fails is a
-    // best-effort warning.
-    deps.warning(
-      `WebDriverAgent cache restore failed (continuing; WDA will build): ${
-        (error as Error)?.message ?? error
-      }`
-    );
-    return { key, exactHit: false };
-  }
-}
-
-/**
- * Save the WDA build cache after the run, unless the restore was already an
- * exact hit. Best-effort — a save failure (e.g. a concurrent run saved the same
- * key) is a warning, not a run failure.
- */
-export async function saveWdaCache({
-  derivedDataPath,
-  key,
-  exactHit,
-  deps,
-}: {
-  derivedDataPath: string;
-  key: string;
-  exactHit: boolean;
-  deps: WdaCacheDeps;
-}): Promise<void> {
-  if (exactHit) return;
-  try {
-    await deps.saveCache([derivedDataPath], key);
-    deps.info(`Saved the WebDriverAgent build cache (${key}).`);
-  } catch (error) {
-    deps.warning(
-      `WebDriverAgent cache save failed (non-fatal): ${
-        (error as Error)?.message ?? error
-      }`
-    );
-  }
-}
+/** The migration notice shown once per run in place of the retired cache. */
+export const WDA_CACHE_RETIREMENT_NOTICE =
+  "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action — see https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
