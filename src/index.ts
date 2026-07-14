@@ -17,14 +17,9 @@ import {
 } from "./report.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import {
-  shouldCacheWda,
-  detectXcodeVersion,
-  detectXcuitestDriverVersion,
-  restoreWdaCache,
-  saveWdaCache,
-  type WdaCacheDeps,
+  shouldNoticeRetiredWdaCache,
+  WDA_CACHE_RETIREMENT_NOTICE,
 } from "./iosSetup.ts";
-import * as cache from "@actions/cache";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -125,46 +120,21 @@ async function main(): Promise<void> {
       });
     }
 
-    // iOS WebDriverAgent build cache: on macOS, point Doc Detective's WDA build
-    // at a stable derivedDataPath and restore/save it across runs so the ~10-min
-    // cold WDA compile only happens once. Driven by the `ios` input
-    // ("auto" | "true" | "false"); "auto" scans the specs. Everything else (the
-    // XCUITest driver, the simulator) Doc Detective bootstraps itself.
+    // The iOS WebDriverAgent build cache is RETIRED (see iosSetup.ts):
+    // Doc Detective v4.28+ prebuilds and manages WDA products itself
+    // (`install ios`), keyed by Xcode × driver version, which the
+    // action-side derivedData cache both duplicated (double builds when
+    // both ran) and undercut (its driver-blind key was the stale-cache
+    // session-timeout mode). The `ios` input is a deprecated no-op; runs
+    // that would have used the cache get a one-line migration notice.
     const iosInput = core.getInput("ios");
-    const wdaDecision = shouldCacheWda({
+    const iosNotice = shouldNoticeRetiredWdaCache({
       iosInput,
       platform: os.platform(),
       roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
     });
-    core.info(
-      `WebDriverAgent cache: ${wdaDecision.setUp ? "enabled" : "skipped"} (${wdaDecision.reason}).`
-    );
-    let wdaCache:
-      | { derivedDataPath: string; key: string; exactHit: boolean; deps: WdaCacheDeps }
-      | undefined;
-    if (wdaDecision.setUp) {
-      const derivedDataPath = path.join(
-        process.env.RUNNER_TEMP || os.tmpdir(),
-        "dd-wda-derived"
-      );
-      // Doc Detective reads this and passes it to the XCUITest driver as
-      // appium:derivedDataPath, so WDA's Xcode build products land where we
-      // cache them.
-      process.env.DOC_DETECTIVE_IOS_WDA_DERIVED_DATA_PATH = derivedDataPath;
-      const wdaDeps: WdaCacheDeps = {
-        restoreCache: (paths, key, restoreKeys) =>
-          cache.restoreCache(paths, key, restoreKeys),
-        saveCache: (paths, key) => cache.saveCache(paths, key),
-        info: (m) => core.info(m),
-        warning: (m) => core.warning(m),
-      };
-      const { key, exactHit } = await restoreWdaCache({
-        derivedDataPath,
-        xcodeVersion: detectXcodeVersion(),
-        driverVersion: detectXcuitestDriverVersion(),
-        deps: wdaDeps,
-      });
-      wdaCache = { derivedDataPath, key, exactHit, deps: wdaDeps };
+    if (iosNotice.notify) {
+      core.notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
 
     // Compile command
@@ -196,12 +166,6 @@ async function main(): Promise<void> {
       },
     };
     await exec(compiledCommand, [], options);
-
-    // Persist the WebDriverAgent build for the next run (no-op on an exact hit;
-    // any failure is a warning, not a run failure).
-    if (wdaCache) {
-      await saveWdaCache(wdaCache);
-    }
 
     // Read results from the file we passed via `--output`, not from stdout.
     // Doc Detective's log text is human-facing and free to change (e.g. extra
