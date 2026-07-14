@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "fs";
-import os from "os";
-import path from "path";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   confineToRoot,
   errorMessage,
@@ -52,8 +52,9 @@ test("parseHtmlReportPath ignores the phrase mid-line instead of at the start", 
   );
 });
 
-test("confineToRoot accepts a file inside the root", () => {
+test("confineToRoot accepts a file inside the root", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const nested = path.join(root, "runs", "abc");
   fs.mkdirSync(nested, { recursive: true });
   const file = path.join(nested, "testResults.html");
@@ -61,54 +62,49 @@ test("confineToRoot accepts a file inside the root", () => {
 
   const result = confineToRoot(file, root);
   assert.equal(result, fs.realpathSync(file));
-
-  fs.rmSync(root, { recursive: true, force: true });
 });
 
-test("confineToRoot rejects a file outside the root", () => {
+test("confineToRoot rejects a file outside the root", (t) => {
   // Simulates a crafted stdout line pointing at an arbitrary runner-filesystem
   // path (e.g. a secret file) instead of a real Doc Detective report.
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-root-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-outside-"));
+  t.after(() => fs.rmSync(outsideDir, { recursive: true, force: true }));
   const outsideFile = path.join(outsideDir, "secret.txt");
   fs.writeFileSync(outsideFile, "not a report");
 
   assert.equal(confineToRoot(outsideFile, root), undefined);
-
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.rmSync(outsideDir, { recursive: true, force: true });
 });
 
-test("confineToRoot rejects a sibling directory whose name is prefixed by the root (no path.sep boundary bypass)", () => {
+test("confineToRoot rejects a sibling directory whose name is prefixed by the root (no path.sep boundary bypass)", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const sibling = root + "-evil";
   fs.mkdirSync(sibling, { recursive: true });
+  t.after(() => fs.rmSync(sibling, { recursive: true, force: true }));
   const siblingFile = path.join(sibling, "testResults.html");
   fs.writeFileSync(siblingFile, "<html></html>");
 
   assert.equal(confineToRoot(siblingFile, root), undefined);
-
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.rmSync(sibling, { recursive: true, force: true });
 });
 
-test("confineToRoot returns undefined for a nonexistent path", () => {
+test("confineToRoot returns undefined for a nonexistent path", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   assert.equal(confineToRoot(path.join(root, "does-not-exist.html"), root), undefined);
-  fs.rmSync(root, { recursive: true, force: true });
 });
 
-test("confineToRoot rejects a directory (caller copies with copyFileSync, which throws EISDIR)", () => {
+test("confineToRoot rejects a directory (caller copies with copyFileSync, which throws EISDIR)", (t) => {
   // A crafted stdout line naming `root` itself (or a subdirectory) must not
   // be confined — copyFileSync would throw and abort the whole reports step.
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dd-confine-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const subdir = path.join(root, "runs");
   fs.mkdirSync(subdir, { recursive: true });
 
   assert.equal(confineToRoot(root, root), undefined);
   assert.equal(confineToRoot(subdir, root), undefined);
-
-  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test("renderMarkdownSummary renders a Passed heading and table", () => {
