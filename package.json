@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/doc-detective/github-action#readme",
   "dependencies": {
+    "@actions/artifact": "^6.2.1",
     "@actions/core": "^3.0.0",
     "@actions/exec": "^3.0.0",
     "@actions/github": "^9.0.0"

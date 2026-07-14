@@ -6,6 +6,15 @@ import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
 import { loadResults } from "./loadResults.ts";
+import {
+  confineToRoot,
+  errorMessage,
+  parseHtmlReportPath,
+  renderMarkdownSummary,
+  reportArtifactName,
+  writeJobSummary,
+  uploadReportArtifact,
+} from "./report.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import {
   shouldNoticeRetiredWdaCache,
@@ -164,6 +173,76 @@ async function main(): Promise<void> {
     // this action to that format and broke it. See doc-detective#346.
     const results = loadResults(outputPath, commandOutputData);
     core.setOutput("results", results);
+
+    // Attach the reports to the run: a Markdown summary (derived from the JSON)
+    // on the job summary page, plus a downloadable artifact bundling the JSON,
+    // the Markdown, and — when Doc Detective emits one — the HTML report. This
+    // runs regardless of pass/fail (so reports are attached even before an
+    // `exit_on_fail` failure) and is best effort: any failure here is a
+    // warning, never a run failure.
+    try {
+      const stagingDir = path.resolve(
+        process.env.RUNNER_TEMP || os.tmpdir(),
+        "doc-detective-report"
+      );
+      fs.rmSync(stagingDir, { recursive: true, force: true });
+      fs.mkdirSync(stagingDir, { recursive: true });
+
+      const artifactFiles: string[] = [];
+
+      // JSON results (always available — we just read them above).
+      const stagedJson = path.join(stagingDir, "doc-detective-results.json");
+      fs.copyFileSync(outputPath, stagedJson);
+      artifactFiles.push(stagedJson);
+
+      // Markdown summary, derived from the JSON.
+      const markdown = renderMarkdownSummary(results);
+      const stagedMarkdown = path.join(stagingDir, "doc-detective-summary.md");
+      fs.writeFileSync(stagedMarkdown, markdown);
+      artifactFiles.push(stagedMarkdown);
+      await writeJobSummary(markdown);
+
+      // HTML report, if Doc Detective produced one (4.10.0+). The path comes
+      // from parsing stdout, which reflects the specs/content under test, so
+      // confine it to the runner temp root (the same root passed to
+      // `--output`) before treating it as trustworthy — otherwise a crafted
+      // log line from an untrusted repo could smuggle an arbitrary
+      // runner-filesystem path into the uploaded artifact.
+      const htmlPath = parseHtmlReportPath(commandOutputData);
+      const confinedHtmlPath = htmlPath
+        ? confineToRoot(htmlPath, path.resolve(process.env.RUNNER_TEMP || os.tmpdir()))
+        : undefined;
+      if (confinedHtmlPath) {
+        // Use a fixed staged filename rather than the confined path's own
+        // basename: that basename is still attacker-influenced (a crafted
+        // stdout line naming any real file under RUNNER_TEMP — e.g. one a
+        // runShell step created — would pass confinement), and could
+        // otherwise collide with and overwrite the already-staged JSON or
+        // Markdown filenames before upload.
+        const stagedHtml = path.join(stagingDir, "doc-detective-report.html");
+        fs.copyFileSync(confinedHtmlPath, stagedHtml);
+        artifactFiles.push(stagedHtml);
+      } else if (htmlPath) {
+        // Doc Detective announced a report path, but it wasn't found or
+        // doesn't resolve inside the runner temp root — unexpected, so
+        // surface it (without treating it as trustworthy).
+        core.warning(
+          `Doc Detective reported an HTML report at ${htmlPath}, but it wasn't found under the runner temp directory; the artifact will omit it.`
+        );
+      } else {
+        // No HTML report announced at all (older Doc Detective, or the HTML
+        // reporter disabled). This is the common case, so keep it quiet.
+        core.debug("No HTML report was reported; the artifact will omit it.");
+      }
+
+      await uploadReportArtifact(
+        reportArtifactName("doc-detective-report"),
+        artifactFiles,
+        stagingDir
+      );
+    } catch (error) {
+      core.warning(`Failed to attach reports to the run: ${errorMessage(error)}`);
+    }
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
