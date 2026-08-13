@@ -133,14 +133,22 @@ async function main(): Promise<void> {
     // If v2, add the 'runTests' command
     if (version.startsWith("2")) {
       compiledCommand += " runTests";
+    } else {
+      // Request the markdown reporter (4.2x+) alongside the reporters Doc
+      // Detective runs by default, so it writes a run summary we can attach
+      // to the job summary page below. `--reporters` replaces Doc Detective's
+      // default list rather than adding to it, so terminal/json are named
+      // explicitly to keep existing console output and `--output` writing.
+      // An older Doc Detective without a markdown reporter just logs an
+      // "unknown reporter" line and continues; a config file that already
+      // sets its own `reporters` list is overridden by this flag.
+      compiledCommand += " --reporters terminal json markdown";
     }
     // Add the options
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
-    const outputPath = path.resolve(
-      process.env.RUNNER_TEMP || os.tmpdir(),
-      "doc-detective-output.json"
-    );
+    const runnerTempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
+    const outputPath = path.join(runnerTempRoot, "doc-detective-output.json");
     compiledCommand += ` --output ${outputPath}`;
 
     // Run Doc Detective
@@ -164,6 +172,23 @@ async function main(): Promise<void> {
     // this action to that format and broke it. See doc-detective#346.
     const results = loadResults(outputPath, commandOutputData);
     core.setOutput("results", results);
+
+    // Attach Doc Detective's own markdown-reporter output to the job summary
+    // page. `reportOutputDir` (Doc Detective) resolves a fixed-filename
+    // reporter's directory from `--output` when it names a file, exactly as
+    // it's set above, so this path is fully predictable — no need to parse it
+    // out of stdout. Best effort: only runs when the file exists (older Doc
+    // Detective, v2, or the reporter otherwise unavailable), and any failure
+    // here is a warning, never a run failure.
+    try {
+      const summaryPath = path.join(runnerTempRoot, "doc-detective-summary.md");
+      if (fs.existsSync(summaryPath)) {
+        const markdown = fs.readFileSync(summaryPath, "utf-8");
+        await core.summary.addRaw(markdown).addEOL().write();
+      }
+    } catch (error) {
+      core.warning(`Failed to attach the Markdown summary to the run: ${(error as Error).message}`);
+    }
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
