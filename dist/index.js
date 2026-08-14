@@ -24560,7 +24560,7 @@ async function main() {
       const summaryPath = import_path2.default.join(runDir, "doc-detective-summary.md");
       if (import_fs5.default.existsSync(summaryPath)) {
         const markdown = import_fs5.default.readFileSync(summaryPath, "utf-8");
-        await summary.addRaw(markdown).addEOL().write();
+        await summary.addRaw(markdown).write();
       }
     } catch (error2) {
       const message = error2 instanceof Error ? error2.message : String(error2);

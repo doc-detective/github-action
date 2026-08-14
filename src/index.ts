@@ -195,8 +195,13 @@ async function main(): Promise<void> {
     try {
       const summaryPath = path.join(runDir, "doc-detective-summary.md");
       if (fs.existsSync(summaryPath)) {
+        // No .addEOL(): the markdown reporter already ends its output in
+        // exactly one newline (both the normal and the 1-MiB-truncated
+        // path), and it caps the file at that same 1 MiB GitHub enforces
+        // per job summary — an extra byte here could push an at-the-cap
+        // summary over the limit and fail the write entirely.
         const markdown = fs.readFileSync(summaryPath, "utf-8");
-        await core.summary.addRaw(markdown).addEOL().write();
+        await core.summary.addRaw(markdown).write();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
