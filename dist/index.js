@@ -24536,12 +24536,12 @@ async function main() {
     } else {
       compiledCommand += " --reporters terminal json markdown";
     }
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
+    if (config) compiledCommand += ` --config "${config}"`;
+    if (input) compiledCommand += ` --input "${input}"`;
     const runnerTempRoot = import_path2.default.resolve(process.env.RUNNER_TEMP || import_os4.default.tmpdir());
     const runDir = import_fs5.default.mkdtempSync(import_path2.default.join(runnerTempRoot, "doc-detective-"));
     const outputPath = import_path2.default.join(runDir, "doc-detective-output.json");
-    compiledCommand += ` --output ${outputPath}`;
+    compiledCommand += ` --output "${outputPath}"`;
     info(`Running Doc Detective: ${compiledCommand}`);
     info(`Working directory: ${cwd}`);
     let commandOutputData = "";

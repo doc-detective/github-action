@@ -144,9 +144,13 @@ async function main(): Promise<void> {
       // sets its own `reporters` list is overridden by this flag.
       compiledCommand += " --reporters terminal json markdown";
     }
-    // Add the options
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
+    // Add the options. Quoted: compiledCommand is a single string that
+    // @actions/exec tokenizes into argv itself (no shell involved), so an
+    // unquoted value containing a space — a plausible self-hosted-runner
+    // working directory or RUNNER_TEMP path — would otherwise split into
+    // more than one argument.
+    if (config) compiledCommand += ` --config "${config}"`;
+    if (input) compiledCommand += ` --input "${input}"`;
     // A fresh subdirectory per invocation: `doc-detective-output.json` and
     // `doc-detective-summary.md` are fixed filenames, but RUNNER_TEMP is
     // shared by every step in the job — a workflow that invokes this action
@@ -157,7 +161,7 @@ async function main(): Promise<void> {
     const runnerTempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
     const runDir = fs.mkdtempSync(path.join(runnerTempRoot, "doc-detective-"));
     const outputPath = path.join(runDir, "doc-detective-output.json");
-    compiledCommand += ` --output ${outputPath}`;
+    compiledCommand += ` --output "${outputPath}"`;
 
     // Run Doc Detective
     core.info(`Running Doc Detective: ${compiledCommand}`);
