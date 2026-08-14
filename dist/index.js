@@ -24530,19 +24530,19 @@ async function main() {
     if (iosNotice.notify) {
       notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
-    let compiledCommand = `npx ${dd}`;
+    const ddArgs = [dd];
     if (version.startsWith("2")) {
-      compiledCommand += " runTests";
+      ddArgs.push("runTests");
     } else {
-      compiledCommand += " --reporters terminal json markdown";
+      ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
-    if (config) compiledCommand += ` --config "${config}"`;
-    if (input) compiledCommand += ` --input "${input}"`;
+    if (config) ddArgs.push("--config", config);
+    if (input) ddArgs.push("--input", input);
     const runnerTempRoot = import_path2.default.resolve(process.env.RUNNER_TEMP || import_os4.default.tmpdir());
     const runDir = import_fs5.default.mkdtempSync(import_path2.default.join(runnerTempRoot, "doc-detective-"));
     const outputPath = import_path2.default.join(runDir, "doc-detective-output.json");
-    compiledCommand += ` --output "${outputPath}"`;
-    info(`Running Doc Detective: ${compiledCommand}`);
+    ddArgs.push("--output", outputPath);
+    info(`Running Doc Detective: npx ${ddArgs.join(" ")}`);
     info(`Working directory: ${cwd}`);
     let commandOutputData = "";
     const options = {
@@ -24553,7 +24553,7 @@ async function main() {
         }
       }
     };
-    await exec(compiledCommand, [], options);
+    await exec("npx", ddArgs, options);
     const results = loadResults(outputPath, commandOutputData);
     setOutput("results", results);
     try {
@@ -24565,6 +24565,11 @@ async function main() {
     } catch (error2) {
       const message = error2 instanceof Error ? error2.message : String(error2);
       warning(`Failed to attach the Markdown summary to the run: ${message}`);
+    } finally {
+      try {
+        import_fs5.default.rmSync(runDir, { recursive: true, force: true });
+      } catch {
+      }
     }
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");

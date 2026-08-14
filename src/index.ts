@@ -128,11 +128,17 @@ async function main(): Promise<void> {
       core.notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
 
-    // Compile command
-    let compiledCommand = `npx ${dd}`;
+    // Compile the Doc Detective invocation as an argv array, not a single
+    // string @actions/exec would tokenize itself — that tokenizer treats a
+    // backslash before a closing quote as an escape, so a quoted, Windows
+    // self-hosted-runner path ending in `\` (e.g. `C:\temp\`) would consume
+    // the closing quote instead of terminating the argument. An array
+    // sidesteps quoting/escaping entirely: each element is already one
+    // argument, however it's spelled.
+    const ddArgs: string[] = [dd];
     // If v2, add the 'runTests' command
     if (version.startsWith("2")) {
-      compiledCommand += " runTests";
+      ddArgs.push("runTests");
     } else {
       // Request the markdown reporter (4.2x+) alongside the reporters Doc
       // Detective runs by default, so it writes a run summary we can attach
@@ -142,15 +148,10 @@ async function main(): Promise<void> {
       // An older Doc Detective without a markdown reporter just logs an
       // "unknown reporter" line and continues; a config file that already
       // sets its own `reporters` list is overridden by this flag.
-      compiledCommand += " --reporters terminal json markdown";
+      ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
-    // Add the options. Quoted: compiledCommand is a single string that
-    // @actions/exec tokenizes into argv itself (no shell involved), so an
-    // unquoted value containing a space — a plausible self-hosted-runner
-    // working directory or RUNNER_TEMP path — would otherwise split into
-    // more than one argument.
-    if (config) compiledCommand += ` --config "${config}"`;
-    if (input) compiledCommand += ` --input "${input}"`;
+    if (config) ddArgs.push("--config", config);
+    if (input) ddArgs.push("--input", input);
     // A fresh subdirectory per invocation: `doc-detective-output.json` and
     // `doc-detective-summary.md` are fixed filenames, but RUNNER_TEMP is
     // shared by every step in the job — a workflow that invokes this action
@@ -161,10 +162,10 @@ async function main(): Promise<void> {
     const runnerTempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
     const runDir = fs.mkdtempSync(path.join(runnerTempRoot, "doc-detective-"));
     const outputPath = path.join(runDir, "doc-detective-output.json");
-    compiledCommand += ` --output "${outputPath}"`;
+    ddArgs.push("--output", outputPath);
 
     // Run Doc Detective
-    core.info(`Running Doc Detective: ${compiledCommand}`);
+    core.info(`Running Doc Detective: npx ${ddArgs.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
 
     let commandOutputData = "";
@@ -176,7 +177,7 @@ async function main(): Promise<void> {
         },
       },
     };
-    await exec(compiledCommand, [], options);
+    await exec("npx", ddArgs, options);
 
     // Read results from the file we passed via `--output`, not from stdout.
     // Doc Detective's log text is human-facing and free to change (e.g. extra
@@ -206,6 +207,16 @@ async function main(): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       core.warning(`Failed to attach the Markdown summary to the run: ${message}`);
+    } finally {
+      // Best effort: RUNNER_TEMP is ephemeral on GitHub-hosted runners (wiped
+      // with the VM), but a self-hosted runner may persist it across jobs,
+      // where a per-invocation directory left behind on every run would
+      // accumulate.
+      try {
+        fs.rmSync(runDir, { recursive: true, force: true });
+      } catch {
+        // Not worth failing the run over a leftover temp directory.
+      }
     }
 
     // Create a pull request if there are changed files
