@@ -24539,7 +24539,8 @@ async function main() {
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
     const runnerTempRoot = import_path2.default.resolve(process.env.RUNNER_TEMP || import_os4.default.tmpdir());
-    const outputPath = import_path2.default.join(runnerTempRoot, "doc-detective-output.json");
+    const runDir = import_fs5.default.mkdtempSync(import_path2.default.join(runnerTempRoot, "doc-detective-"));
+    const outputPath = import_path2.default.join(runDir, "doc-detective-output.json");
     compiledCommand += ` --output ${outputPath}`;
     info(`Running Doc Detective: ${compiledCommand}`);
     info(`Working directory: ${cwd}`);
@@ -24556,13 +24557,14 @@ async function main() {
     const results = loadResults(outputPath, commandOutputData);
     setOutput("results", results);
     try {
-      const summaryPath = import_path2.default.join(runnerTempRoot, "doc-detective-summary.md");
+      const summaryPath = import_path2.default.join(runDir, "doc-detective-summary.md");
       if (import_fs5.default.existsSync(summaryPath)) {
         const markdown = import_fs5.default.readFileSync(summaryPath, "utf-8");
         await summary.addRaw(markdown).addEOL().write();
       }
     } catch (error2) {
-      warning(`Failed to attach the Markdown summary to the run: ${error2.message}`);
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      warning(`Failed to attach the Markdown summary to the run: ${message}`);
     }
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");

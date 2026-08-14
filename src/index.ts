@@ -147,8 +147,16 @@ async function main(): Promise<void> {
     // Add the options
     if (config) compiledCommand += ` --config ${config}`;
     if (input) compiledCommand += ` --input ${input}`;
+    // A fresh subdirectory per invocation: `doc-detective-output.json` and
+    // `doc-detective-summary.md` are fixed filenames, but RUNNER_TEMP is
+    // shared by every step in the job — a workflow that invokes this action
+    // more than once in one job (e.g. against two different doc sets) would
+    // otherwise risk reading back a file an earlier invocation left behind,
+    // e.g. attaching a stale prior summary when a later invocation's Doc
+    // Detective version doesn't produce one of its own.
     const runnerTempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
-    const outputPath = path.join(runnerTempRoot, "doc-detective-output.json");
+    const runDir = fs.mkdtempSync(path.join(runnerTempRoot, "doc-detective-"));
+    const outputPath = path.join(runDir, "doc-detective-output.json");
     compiledCommand += ` --output ${outputPath}`;
 
     // Run Doc Detective
@@ -181,13 +189,14 @@ async function main(): Promise<void> {
     // Detective, v2, or the reporter otherwise unavailable), and any failure
     // here is a warning, never a run failure.
     try {
-      const summaryPath = path.join(runnerTempRoot, "doc-detective-summary.md");
+      const summaryPath = path.join(runDir, "doc-detective-summary.md");
       if (fs.existsSync(summaryPath)) {
         const markdown = fs.readFileSync(summaryPath, "utf-8");
         await core.summary.addRaw(markdown).addEOL().write();
       }
     } catch (error) {
-      core.warning(`Failed to attach the Markdown summary to the run: ${(error as Error).message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      core.warning(`Failed to attach the Markdown summary to the run: ${message}`);
     }
 
     // Create a pull request if there are changed files

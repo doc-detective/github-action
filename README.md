@@ -20,7 +20,7 @@ jobs:
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-On every run, the action also attaches a Markdown summary (Doc Detective's own `markdown` reporter output) to the job summary page — no configuration required.
+The action also attaches a Markdown summary (Doc Detective's own `markdown` reporter output) to the job summary page — no configuration required. This needs Doc Detective 4.2x+ and doesn't apply to `version: 2.x`.
 
 **Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
 
