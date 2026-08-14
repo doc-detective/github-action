@@ -19821,6 +19821,7 @@ var Summary = class {
   }
 };
 var _summary = new Summary();
+var summary = _summary;
 
 // node_modules/@actions/core/lib/platform.js
 var import_os2 = __toESM(require("os"), 1);
@@ -24529,18 +24530,20 @@ async function main() {
     if (iosNotice.notify) {
       notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
-    let compiledCommand = `npx ${dd}`;
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
+    const ddArgs = [dd];
+    const isV2 = /^2(?!\d)/.test(version);
+    if (isV2) {
+      ddArgs.push("runTests");
+    } else if (version) {
+      ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
-    const outputPath = import_path2.default.resolve(
-      process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
-      "doc-detective-output.json"
-    );
-    compiledCommand += ` --output ${outputPath}`;
-    info(`Running Doc Detective: ${compiledCommand}`);
+    if (config) ddArgs.push("--config", config);
+    if (input) ddArgs.push("--input", input);
+    const runnerTempRoot = import_path2.default.resolve(process.env.RUNNER_TEMP || import_os4.default.tmpdir());
+    const runDir = import_fs5.default.mkdtempSync(import_path2.default.join(runnerTempRoot, "doc-detective-"));
+    const outputPath = import_path2.default.join(runDir, "doc-detective-output.json");
+    ddArgs.push("--output", outputPath);
+    info(`Running Doc Detective: npx ${ddArgs.join(" ")}`);
     info(`Working directory: ${cwd}`);
     let commandOutputData = "";
     const options = {
@@ -24551,9 +24554,27 @@ async function main() {
         }
       }
     };
-    await exec(compiledCommand, [], options);
-    const results = loadResults(outputPath, commandOutputData);
-    setOutput("results", results);
+    let results;
+    try {
+      await exec("npx", ddArgs, options);
+      results = loadResults(outputPath, commandOutputData);
+      setOutput("results", results);
+      try {
+        const summaryPath = import_path2.default.join(runDir, "doc-detective-summary.md");
+        if (import_fs5.default.existsSync(summaryPath)) {
+          const markdown = import_fs5.default.readFileSync(summaryPath, "utf-8");
+          await summary.addRaw(markdown).write();
+        }
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : String(error2);
+        warning(`Failed to attach the Markdown summary to the job summary: ${message}`);
+      }
+    } finally {
+      try {
+        import_fs5.default.rmSync(runDir, { recursive: true, force: true });
+      } catch {
+      }
+    }
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
       let hasGit = false;

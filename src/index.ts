@@ -128,23 +128,58 @@ async function main(): Promise<void> {
       core.notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
 
-    // Compile command
-    let compiledCommand = `npx ${dd}`;
-    // If v2, add the 'runTests' command
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
+    // Compile the Doc Detective invocation as an argv array, not a single
+    // string @actions/exec would tokenize itself — that tokenizer treats a
+    // backslash before a closing quote as an escape, so a quoted, Windows
+    // self-hosted-runner path ending in `\` (e.g. `C:\temp\`) would consume
+    // the closing quote instead of terminating the argument. An array
+    // sidesteps quoting/escaping entirely: each element is already one
+    // argument, however it's spelled.
+    const ddArgs: string[] = [dd];
+    // If v2, add the 'runTests' command. `version` can be a semver ("2.0.0")
+    // or an npm tag ("2-beta"), so this can't split on "." alone — that
+    // would wrongly reject a non-dotted v2 tag. A bare `startsWith("2")`
+    // over-matches the other way (treats "20.0.0" as v2). Requiring the
+    // leading "2" not be followed by another digit satisfies both: it still
+    // matches "2", "2.0.0", and "2-beta", but not "20.0.0" or "200-beta".
+    const isV2 = /^2(?!\d)/.test(version);
+    if (isV2) {
+      ddArgs.push("runTests");
+    } else if (version) {
+      // Request the markdown reporter (4.20+) alongside the reporters Doc
+      // Detective runs by default, so it writes a run summary we can attach
+      // to the job summary page below. `--reporters` replaces Doc Detective's
+      // default list rather than adding to it, so terminal/json are named
+      // explicitly to keep existing console output and `--output` writing.
+      // An older Doc Detective without a markdown reporter just logs an
+      // "unknown reporter" line and continues; a config file that already
+      // sets its own `reporters` list is overridden by this flag.
+      //
+      // Only added when `version` is a non-empty, explicitly non-v2 string:
+      // an empty `version` means "whatever's already resolvable locally"
+      // (see where `dd` is derived above), which could itself be a v2 build
+      // that doesn't understand --reporters. Skipping the flag there is a
+      // narrow, defensive precaution — not a fix for detecting the true
+      // resolved version — so that case just misses the markdown summary
+      // rather than risking a broken invocation.
+      ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
-    // Add the options
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
-    const outputPath = path.resolve(
-      process.env.RUNNER_TEMP || os.tmpdir(),
-      "doc-detective-output.json"
-    );
-    compiledCommand += ` --output ${outputPath}`;
+    if (config) ddArgs.push("--config", config);
+    if (input) ddArgs.push("--input", input);
+    // A fresh subdirectory per invocation: `doc-detective-output.json` and
+    // `doc-detective-summary.md` are fixed filenames, but RUNNER_TEMP is
+    // shared by every step in the job — a workflow that invokes this action
+    // more than once in one job (e.g. against two different doc sets) would
+    // otherwise risk reading back a file an earlier invocation left behind,
+    // e.g. attaching a stale prior summary when a later invocation's Doc
+    // Detective version doesn't produce one of its own.
+    const runnerTempRoot = path.resolve(process.env.RUNNER_TEMP || os.tmpdir());
+    const runDir = fs.mkdtempSync(path.join(runnerTempRoot, "doc-detective-"));
+    const outputPath = path.join(runDir, "doc-detective-output.json");
+    ddArgs.push("--output", outputPath);
 
     // Run Doc Detective
-    core.info(`Running Doc Detective: ${compiledCommand}`);
+    core.info(`Running Doc Detective: npx ${ddArgs.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
 
     let commandOutputData = "";
@@ -156,14 +191,54 @@ async function main(): Promise<void> {
         },
       },
     };
-    await exec(compiledCommand, [], options);
+    let results: any;
+    try {
+      await exec("npx", ddArgs, options);
 
-    // Read results from the file we passed via `--output`, not from stdout.
-    // Doc Detective's log text is human-facing and free to change (e.g. extra
-    // "See per-run ..." lines), and scraping the path back out of it coupled
-    // this action to that format and broke it. See doc-detective#346.
-    const results = loadResults(outputPath, commandOutputData);
-    core.setOutput("results", results);
+      // Read results from the file we passed via `--output`, not from
+      // stdout. Doc Detective's log text is human-facing and free to change
+      // (e.g. extra "See per-run ..." lines), and scraping the path back out
+      // of it coupled this action to that format and broke it. See
+      // doc-detective#346.
+      results = loadResults(outputPath, commandOutputData);
+      core.setOutput("results", results);
+
+      // Attach Doc Detective's own markdown-reporter output to the job
+      // summary page. `reportOutputDir` (Doc Detective) resolves a
+      // fixed-filename reporter's directory from `--output` when it names a
+      // file, exactly as it's set above, so this path is fully predictable —
+      // no need to parse it out of stdout. Best effort: only runs when the
+      // file exists (older Doc Detective, v2, an unset version, or the
+      // reporter otherwise unavailable), and any failure here is a warning,
+      // never a run failure.
+      try {
+        const summaryPath = path.join(runDir, "doc-detective-summary.md");
+        if (fs.existsSync(summaryPath)) {
+          // No .addEOL(): the markdown reporter already ends its output in
+          // exactly one newline (both the normal and the 1-MiB-truncated
+          // path), and it caps the file at that same 1 MiB GitHub enforces
+          // per job summary — an extra byte here could push an at-the-cap
+          // summary over the limit and fail the write entirely.
+          const markdown = fs.readFileSync(summaryPath, "utf-8");
+          await core.summary.addRaw(markdown).write();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        core.warning(`Failed to attach the Markdown summary to the job summary: ${message}`);
+      }
+    } finally {
+      // Best effort, and covers every exit from the block above — a failed
+      // exec, a failed loadResults, or the summary attachment — so the
+      // per-invocation directory is never left behind regardless of where
+      // this exits. RUNNER_TEMP is ephemeral on GitHub-hosted runners (wiped
+      // with the VM), but a self-hosted runner may persist it across jobs,
+      // where a leftover directory on every run would accumulate.
+      try {
+        fs.rmSync(runDir, { recursive: true, force: true });
+      } catch {
+        // Not worth failing the run over a leftover temp directory.
+      }
+    }
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
