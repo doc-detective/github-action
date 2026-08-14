@@ -24533,7 +24533,7 @@ async function main() {
     const ddArgs = [dd];
     if (version.startsWith("2")) {
       ddArgs.push("runTests");
-    } else {
+    } else if (version) {
       ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
     if (config) ddArgs.push("--config", config);

@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     // If v2, add the 'runTests' command
     if (version.startsWith("2")) {
       ddArgs.push("runTests");
-    } else {
+    } else if (version) {
       // Request the markdown reporter (4.2x+) alongside the reporters Doc
       // Detective runs by default, so it writes a run summary we can attach
       // to the job summary page below. `--reporters` replaces Doc Detective's
@@ -148,6 +148,14 @@ async function main(): Promise<void> {
       // An older Doc Detective without a markdown reporter just logs an
       // "unknown reporter" line and continues; a config file that already
       // sets its own `reporters` list is overridden by this flag.
+      //
+      // Only added when `version` is a non-empty, explicitly non-v2 string:
+      // an empty `version` means "whatever's already resolvable locally"
+      // (see where `dd` is derived above), which could itself be a v2 build
+      // that doesn't understand --reporters. Skipping the flag there is a
+      // narrow, defensive precaution — not a fix for detecting the true
+      // resolved version — so that case just misses the markdown summary
+      // rather than risking a broken invocation.
       ddArgs.push("--reporters", "terminal", "json", "markdown");
     }
     if (config) ddArgs.push("--config", config);
