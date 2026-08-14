@@ -136,11 +136,14 @@ async function main(): Promise<void> {
     // sidesteps quoting/escaping entirely: each element is already one
     // argument, however it's spelled.
     const ddArgs: string[] = [dd];
-    // If v2, add the 'runTests' command
-    if (version.startsWith("2")) {
+    // If v2, add the 'runTests' command. Matched on the leading dot-separated
+    // segment, not a bare prefix: `startsWith("2")` would also match a
+    // version like "20.0.0" (or a "2..."-prefixed tag) as v2.
+    const isV2 = version.split(".")[0] === "2";
+    if (isV2) {
       ddArgs.push("runTests");
     } else if (version) {
-      // Request the markdown reporter (4.2x+) alongside the reporters Doc
+      // Request the markdown reporter (4.20+) alongside the reporters Doc
       // Detective runs by default, so it writes a run summary we can attach
       // to the job summary page below. `--reporters` replaces Doc Detective's
       // default list rather than adding to it, so terminal/json are named
@@ -218,7 +221,7 @@ async function main(): Promise<void> {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        core.warning(`Failed to attach the Markdown summary to the run: ${message}`);
+        core.warning(`Failed to attach the Markdown summary to the job summary: ${message}`);
       }
     } finally {
       // Best effort, and covers every exit from the block above — a failed

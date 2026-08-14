@@ -24531,7 +24531,8 @@ async function main() {
       notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
     const ddArgs = [dd];
-    if (version.startsWith("2")) {
+    const isV2 = version.split(".")[0] === "2";
+    if (isV2) {
       ddArgs.push("runTests");
     } else if (version) {
       ddArgs.push("--reporters", "terminal", "json", "markdown");
@@ -24566,7 +24567,7 @@ async function main() {
         }
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
-        warning(`Failed to attach the Markdown summary to the run: ${message}`);
+        warning(`Failed to attach the Markdown summary to the job summary: ${message}`);
       }
     } finally {
       try {
