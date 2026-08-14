@@ -136,10 +136,13 @@ async function main(): Promise<void> {
     // sidesteps quoting/escaping entirely: each element is already one
     // argument, however it's spelled.
     const ddArgs: string[] = [dd];
-    // If v2, add the 'runTests' command. Matched on the leading dot-separated
-    // segment, not a bare prefix: `startsWith("2")` would also match a
-    // version like "20.0.0" (or a "2..."-prefixed tag) as v2.
-    const isV2 = version.split(".")[0] === "2";
+    // If v2, add the 'runTests' command. `version` can be a semver ("2.0.0")
+    // or an npm tag ("2-beta"), so this can't split on "." alone — that
+    // would wrongly reject a non-dotted v2 tag. A bare `startsWith("2")`
+    // over-matches the other way (treats "20.0.0" as v2). Requiring the
+    // leading "2" not be followed by another digit satisfies both: it still
+    // matches "2", "2.0.0", and "2-beta", but not "20.0.0" or "200-beta".
+    const isV2 = /^2(?!\d)/.test(version);
     if (isV2) {
       ddArgs.push("runTests");
     } else if (version) {

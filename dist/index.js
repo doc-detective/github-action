@@ -24531,7 +24531,7 @@ async function main() {
       notice(WDA_CACHE_RETIREMENT_NOTICE);
     }
     const ddArgs = [dd];
-    const isV2 = version.split(".")[0] === "2";
+    const isV2 = /^2(?!\d)/.test(version);
     if (isV2) {
       ddArgs.push("runTests");
     } else if (version) {
