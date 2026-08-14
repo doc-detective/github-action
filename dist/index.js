@@ -24553,18 +24553,21 @@ async function main() {
         }
       }
     };
-    await exec("npx", ddArgs, options);
-    const results = loadResults(outputPath, commandOutputData);
-    setOutput("results", results);
+    let results;
     try {
-      const summaryPath = import_path2.default.join(runDir, "doc-detective-summary.md");
-      if (import_fs5.default.existsSync(summaryPath)) {
-        const markdown = import_fs5.default.readFileSync(summaryPath, "utf-8");
-        await summary.addRaw(markdown).write();
+      await exec("npx", ddArgs, options);
+      results = loadResults(outputPath, commandOutputData);
+      setOutput("results", results);
+      try {
+        const summaryPath = import_path2.default.join(runDir, "doc-detective-summary.md");
+        if (import_fs5.default.existsSync(summaryPath)) {
+          const markdown = import_fs5.default.readFileSync(summaryPath, "utf-8");
+          await summary.addRaw(markdown).write();
+        }
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : String(error2);
+        warning(`Failed to attach the Markdown summary to the run: ${message}`);
       }
-    } catch (error2) {
-      const message = error2 instanceof Error ? error2.message : String(error2);
-      warning(`Failed to attach the Markdown summary to the run: ${message}`);
     } finally {
       try {
         import_fs5.default.rmSync(runDir, { recursive: true, force: true });

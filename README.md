@@ -20,7 +20,7 @@ jobs:
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-The action also attaches a Markdown summary (Doc Detective's own `markdown` reporter output) to the job summary page — no configuration required. This needs the Doc Detective 4.20+ series and doesn't apply to `version: 2.x`. To request it, the action passes `--reporters terminal json markdown`, which overrides (not merges with) a `reporters` list set in your own Doc Detective config file.
+The action also attaches a Markdown summary (Doc Detective's own `markdown` reporter output) to the job summary page — no configuration required. This needs the Doc Detective 4.20+ series and doesn't apply to `version: 2.x` **or to an unset/empty `version`** (which runs whatever Doc Detective is already resolvable locally, e.g. via `npm link` — the action can't tell in advance whether that build supports the flag it needs, so it skips requesting the summary rather than risk a broken invocation). To request it, the action passes `--reporters terminal json markdown`, which overrides (not merges with) a `reporters` list set in your own Doc Detective config file.
 
 **Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
 

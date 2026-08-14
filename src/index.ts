@@ -185,41 +185,48 @@ async function main(): Promise<void> {
         },
       },
     };
-    await exec("npx", ddArgs, options);
-
-    // Read results from the file we passed via `--output`, not from stdout.
-    // Doc Detective's log text is human-facing and free to change (e.g. extra
-    // "See per-run ..." lines), and scraping the path back out of it coupled
-    // this action to that format and broke it. See doc-detective#346.
-    const results = loadResults(outputPath, commandOutputData);
-    core.setOutput("results", results);
-
-    // Attach Doc Detective's own markdown-reporter output to the job summary
-    // page. `reportOutputDir` (Doc Detective) resolves a fixed-filename
-    // reporter's directory from `--output` when it names a file, exactly as
-    // it's set above, so this path is fully predictable — no need to parse it
-    // out of stdout. Best effort: only runs when the file exists (older Doc
-    // Detective, v2, or the reporter otherwise unavailable), and any failure
-    // here is a warning, never a run failure.
+    let results: any;
     try {
-      const summaryPath = path.join(runDir, "doc-detective-summary.md");
-      if (fs.existsSync(summaryPath)) {
-        // No .addEOL(): the markdown reporter already ends its output in
-        // exactly one newline (both the normal and the 1-MiB-truncated
-        // path), and it caps the file at that same 1 MiB GitHub enforces
-        // per job summary — an extra byte here could push an at-the-cap
-        // summary over the limit and fail the write entirely.
-        const markdown = fs.readFileSync(summaryPath, "utf-8");
-        await core.summary.addRaw(markdown).write();
+      await exec("npx", ddArgs, options);
+
+      // Read results from the file we passed via `--output`, not from
+      // stdout. Doc Detective's log text is human-facing and free to change
+      // (e.g. extra "See per-run ..." lines), and scraping the path back out
+      // of it coupled this action to that format and broke it. See
+      // doc-detective#346.
+      results = loadResults(outputPath, commandOutputData);
+      core.setOutput("results", results);
+
+      // Attach Doc Detective's own markdown-reporter output to the job
+      // summary page. `reportOutputDir` (Doc Detective) resolves a
+      // fixed-filename reporter's directory from `--output` when it names a
+      // file, exactly as it's set above, so this path is fully predictable —
+      // no need to parse it out of stdout. Best effort: only runs when the
+      // file exists (older Doc Detective, v2, an unset version, or the
+      // reporter otherwise unavailable), and any failure here is a warning,
+      // never a run failure.
+      try {
+        const summaryPath = path.join(runDir, "doc-detective-summary.md");
+        if (fs.existsSync(summaryPath)) {
+          // No .addEOL(): the markdown reporter already ends its output in
+          // exactly one newline (both the normal and the 1-MiB-truncated
+          // path), and it caps the file at that same 1 MiB GitHub enforces
+          // per job summary — an extra byte here could push an at-the-cap
+          // summary over the limit and fail the write entirely.
+          const markdown = fs.readFileSync(summaryPath, "utf-8");
+          await core.summary.addRaw(markdown).write();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        core.warning(`Failed to attach the Markdown summary to the run: ${message}`);
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      core.warning(`Failed to attach the Markdown summary to the run: ${message}`);
     } finally {
-      // Best effort: RUNNER_TEMP is ephemeral on GitHub-hosted runners (wiped
+      // Best effort, and covers every exit from the block above — a failed
+      // exec, a failed loadResults, or the summary attachment — so the
+      // per-invocation directory is never left behind regardless of where
+      // this exits. RUNNER_TEMP is ephemeral on GitHub-hosted runners (wiped
       // with the VM), but a self-hosted runner may persist it across jobs,
-      // where a per-invocation directory left behind on every run would
-      // accumulate.
+      // where a leftover directory on every run would accumulate.
       try {
         fs.rmSync(runDir, { recursive: true, force: true });
       } catch {
