@@ -24447,9 +24447,14 @@ function buildIssueBody({
 Results truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
   const tokens = template.match(/\$RESULTS/g)?.length ?? 0;
   const room = Math.floor((ISSUE_BODY_LIMIT - render("").length) / Math.max(tokens, 1)) - fence("").length - note.length;
-  let cut = results.slice(0, Math.max(room, 0));
+  if (room < 0) {
+    throw new Error(
+      `The issue_body and prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
+    );
+  }
+  let cut = results.slice(0, room);
   if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
-  return render(fence(cut) + note).slice(0, ISSUE_BODY_LIMIT);
+  return render(fence(cut) + note);
 }
 
 // src/scanSpecs.ts

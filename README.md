@@ -292,7 +292,7 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
 
 The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
 
-GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run.
+GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run. If `issue_body` and `prompt` leave no room for results, the action logs an error and doesn't create the issue.
 
 ```yaml
 - uses: doc-detective/github-action@v2

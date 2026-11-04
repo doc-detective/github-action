@@ -65,11 +65,31 @@ test("doesn't split a surrogate pair at the cut", () => {
   }
 });
 
-test("still fits when the template alone is too long", () => {
+test("refuses a template or suffix that leaves no room for the results", () => {
+  const big = "y".repeat(ISSUE_BODY_LIMIT);
+  const results = "x".repeat(100);
+  for (const input of [
+    { template: big + "$RESULTS", suffix: "" },
+    { template: "$RESULTS", suffix: big },
+    { template: big + "y", suffix: "" },
+  ]) {
+    assert.throws(
+      () => buildIssueBody({ ...base, ...input, results }),
+      /issue_body.*65536/
+    );
+  }
+});
+
+test("keeps the note, link, and suffix when results only just lose all their room", () => {
+  const note = `\n\nResults truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
+  const overhead = "\n\n```json\n\n```".length + note.length;
   const body = buildIssueBody({
     ...base,
-    template: "y".repeat(ISSUE_BODY_LIMIT) + "$RESULTS",
-    results: "x".repeat(100),
+    template: "y".repeat(ISSUE_BODY_LIMIT - overhead - "SUFFIX".length) + "$RESULTS",
+    suffix: "SUFFIX",
+    results: "x".repeat(1000),
   });
-  assert.ok(body.length <= ISSUE_BODY_LIMIT);
+  assert.equal(body.length, ISSUE_BODY_LIMIT);
+  assert.ok(body.includes(runUrl));
+  assert.ok(body.endsWith("SUFFIX"));
 });
