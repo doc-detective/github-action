@@ -338,6 +338,10 @@ The GitHub token to use for creating issues. Defaults to the token already avail
     token: ${{ secrets.MY_GITHUB_TOKEN }}
 ```
 
+## Run files
+
+The action writes the results file and Doc Detective's run folder (`.doc-detective/runs`) to the runner's temp directory (`RUNNER_TEMP`), so they stay out of your repository and out of `create_pr_on_change` pull requests. This overrides any `outputDir` in your config, and reports from reporters such as `junit` and `markdown` go there too. To keep those files, upload them from `${{ runner.temp }}` in a later step.
+
 ## Outputs
 
 The action sets the following outputs:

@@ -110,14 +110,16 @@ test("buildCliArgs keeps each value a single argument, so spaces survive", () =>
       "my docs",
       "--output",
       "/tmp/run dir/out.json",
+      "--output-dir",
+      "/tmp/run dir",
     ]
   );
 });
 
 test("buildCliArgs leaves out unset options, and the version for a local CLI", () => {
   assert.deepEqual(
-    buildCliArgs({ version: "", config: "", input: "", outputPath: "out.json" }),
-    ["doc-detective", "--output", "out.json"]
+    buildCliArgs({ version: "", config: "", input: "", outputPath: "/tmp/out.json" }),
+    ["doc-detective", "--output", "/tmp/out.json", "--output-dir", "/tmp"]
   );
 });
 

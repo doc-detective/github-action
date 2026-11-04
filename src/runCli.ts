@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import { loadResults } from "./loadResults.ts";
 
 type Exec = (
@@ -37,6 +38,11 @@ export function buildCliArgs({
     ...(input ? ["--input", input] : []),
     "--output",
     outputPath,
+    // CLI 5 otherwise writes `.doc-detective/runs` to the working directory,
+    // which dirties the checkout and trips `create_pr_on_change`. CLI 4 ignores
+    // this flag and already puts the run folder beside the results file.
+    "--output-dir",
+    path.dirname(outputPath),
   ];
 }
 
