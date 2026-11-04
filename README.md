@@ -342,6 +342,8 @@ The GitHub token to use for creating issues. Defaults to the token already avail
 
 The action writes the results file and Doc Detective's run folder (`.doc-detective/runs`) to the runner's temp directory (`RUNNER_TEMP`), so they stay out of your repository and out of `create_pr_on_change` pull requests. This overrides any `outputDir` in your config, and reports from reporters such as `junit` and `markdown` go there too. To keep those files, upload them from `${{ runner.temp }}` in a later step.
 
+The action passes `--output-dir` to do this, and leaves it out when `version` stays below 5, because Doc Detective 4 rejects the flag. An empty `version` always gets it, so a locally linked CLI needs to be version 5 or later.
+
 ## Outputs
 
 The action sets the following outputs:

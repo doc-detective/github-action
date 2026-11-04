@@ -24333,6 +24333,26 @@ ${cliOutput}`
   }
 }
 
+// src/cliVersion.ts
+var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
+function capsBelowFive(match) {
+  const [, op = "", major, minor = "0", patch = "0"] = match;
+  if (op === ">" || op === ">=") return false;
+  if (!/^\d+$/.test(major)) return false;
+  if (Number(major) < 5) return true;
+  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
+}
+function supportsOutputDir(version) {
+  if (version === "") return true;
+  const alternatives = version.split("||").map(
+    (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
+  );
+  if (alternatives.flat().includes(null)) return true;
+  return alternatives.some(
+    (comparators) => !comparators.some((c) => capsBelowFive(c))
+  );
+}
+
 // src/runCli.ts
 function buildCliArgs({
   version,
@@ -24347,10 +24367,9 @@ function buildCliArgs({
     "--output",
     outputPath,
     // CLI 5 otherwise writes `.doc-detective/runs` to the working directory,
-    // which dirties the checkout and trips `create_pr_on_change`. CLI 4 ignores
-    // this flag and already puts the run folder beside the results file.
-    "--output-dir",
-    import_path.default.dirname(outputPath)
+    // which dirties the checkout and trips `create_pr_on_change`. CLI 4 rejects
+    // this flag, and already puts the run folder beside the results file.
+    ...supportsOutputDir(version) ? ["--output-dir", import_path.default.dirname(outputPath)] : []
   ];
 }
 async function runCli({
