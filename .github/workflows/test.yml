@@ -47,6 +47,12 @@ jobs:
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
 
+      - name: Assert the failing fixture fails the action
+        if: steps.dd.outcome != 'failure'
+        run: |
+          echo "Expected the Doc Detective step to fail on the failing fixture."
+          exit 1
+
   fail-tests-with-integrations:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
