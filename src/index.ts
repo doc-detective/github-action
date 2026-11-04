@@ -5,15 +5,10 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import { runCli } from "./runCli.ts";
-import { failureMessage, resolveExitOnFail } from "./outcome.ts";
-import { checkVersion } from "./versionGuard.ts";
+import { buildCliArgs, runCli } from "./runCli.ts";
+import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
-import {
-  shouldNoticeRetiredWdaCache,
-  WDA_CACHE_RETIREMENT_NOTICE,
-} from "./iosSetup.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -77,21 +72,7 @@ async function main(): Promise<void> {
     }
     // Get the inputs
     const version = core.getInput("version");
-    const { refusal, warning } = checkVersion(version);
-    if (refusal) {
-      core.setFailed(refusal);
-      return;
-    }
-    if (warning) core.warning(warning);
-    const { exitOnFail, notice } = resolveExitOnFail(core.getInput("exit_on_fail"));
-    if (notice) core.notice(notice);
-    // An empty `version` means "use whatever doc-detective is already resolvable
-    // from the working directory" — e.g. a locally-built checkout exposed via
-    // `npm link`, so a repo can dog-food the action against its own build under
-    // review rather than the published package. Pinning `doc-detective@<tag>`
-    // (even `@latest`) makes npx resolve from the registry and ignore a linked
-    // local build, so omit the `@version` suffix entirely when version is blank.
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const exitOnFail = parseExitOnFail(core.getInput("exit_on_fail"));
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
@@ -122,40 +103,14 @@ async function main(): Promise<void> {
       });
     }
 
-    // The iOS WebDriverAgent build cache is RETIRED (see iosSetup.ts):
-    // Doc Detective v4.28+ prebuilds and manages WDA products itself
-    // (`install ios`), keyed by Xcode × driver version, which the
-    // action-side derivedData cache both duplicated (double builds when
-    // both ran) and undercut (its driver-blind key was the stale-cache
-    // session-timeout mode). The `ios` input is a deprecated no-op; runs
-    // that would have used the cache get a one-line migration notice.
-    const iosInput = core.getInput("ios");
-    const iosNotice = shouldNoticeRetiredWdaCache({
-      iosInput,
-      platform: os.platform(),
-      roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
-    });
-    if (iosNotice.notify) {
-      core.notice(WDA_CACHE_RETIREMENT_NOTICE);
-    }
-
-    // Compile command
-    let compiledCommand = `npx ${dd}`;
-    // If v2, add the 'runTests' command
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
-    }
-    // Add the options
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
       "doc-detective-output.json"
     );
-    compiledCommand += ` --output ${outputPath}`;
+    const args = buildCliArgs({ version, config, input, outputPath });
 
     // Run Doc Detective
-    core.info(`Running Doc Detective: ${compiledCommand}`);
+    core.info(`Running Doc Detective: npx ${args.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
 
     // Read results from the file we passed via `--output`, not from stdout, and
@@ -163,7 +118,8 @@ async function main(): Promise<void> {
     // before a non-zero exit fails the job.
     const { exitCode, results } = await runCli({
       exec,
-      command: compiledCommand,
+      command: "npx",
+      args,
       outputPath,
       cwd,
     });
@@ -229,12 +185,16 @@ async function main(): Promise<void> {
       }
     }
 
-    const failure = failureMessage({
-      exitCode,
-      exitOnFail,
-      failedSpecs: results?.summary?.specs?.fail ?? 0,
-    });
-    if (failure) core.setFailed(failure);
+    const failedSpecs = results?.summary?.specs?.fail ?? 0;
+    if (exitCode === 0 && failedSpecs > 0) {
+      core.warning(
+        `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
+      );
+    }
+
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    if (outcome.fail) core.setFailed(outcome.reason);
+    else core.info(outcome.reason);
   } catch (error) {
     core.setFailed((error as Error).message);
   }
@@ -288,7 +248,6 @@ async function createIssue(results: string) {
   }
 
   core.info(`Issue created: ${issue.data.html_url}`);
-  core.setOutput("issueUrl", issue.data.html_url);
   return issue;
 }
 

@@ -15,6 +15,32 @@ type Exec = (
 ) => Promise<number>;
 
 /**
+ * The `npx` arguments, as an array so paths with spaces stay one argument. An
+ * empty `version` means whatever doc-detective already resolves from the working
+ * directory, such as a local build exposed with `npm link`. Pinning any
+ * `doc-detective@<tag>` makes npx ignore that build.
+ */
+export function buildCliArgs({
+  version,
+  config,
+  input,
+  outputPath,
+}: {
+  version: string;
+  config: string;
+  input: string;
+  outputPath: string;
+}): string[] {
+  return [
+    version ? `doc-detective@${version}` : "doc-detective",
+    ...(config ? ["--config", config] : []),
+    ...(input ? ["--input", input] : []),
+    "--output",
+    outputPath,
+  ];
+}
+
+/**
  * Run the CLI and read its results, whatever it exits with. The caller decides
  * what the exit code means, after the results, issue, and PR steps have run.
  *
@@ -24,13 +50,13 @@ type Exec = (
 export async function runCli({
   exec,
   command,
-  args = [],
+  args,
   outputPath,
   cwd,
 }: {
   exec: Exec;
   command: string;
-  args?: string[];
+  args: string[];
   outputPath: string;
   cwd: string;
 }): Promise<{ exitCode: number; results: any }> {

@@ -3,19 +3,15 @@ description: Treat doc content as testable assertions to validate doc accuracy a
 author: Doc Detective
 inputs:
   version:
-    description: Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag. This major of the action supports Doc Detective 4 and earlier, so it refuses `latest` and any version or range that can install 5 or later. Use `doc-detective/github-action@v2` for Doc Detective 5. Set to an empty string ("") to run whatever `doc-detective` is already resolvable in the working directory (e.g. a locally-built checkout exposed via `npm link`) instead of installing from the registry — useful for a repo dog-fooding this action against its own build.
+    description: Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag (like `latest`). This major of the action expects Doc Detective 5's exit codes. Set to an empty string ("") to run whatever `doc-detective` is already resolvable in the working directory (e.g. a locally-built checkout exposed via `npm link`) instead of installing from the registry — useful for a repo dog-fooding this action against its own build.
     required: false
-    default: "4"
+    default: "5"
   working_directory:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
     default: "."
   android:
     description: 'Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). "auto" (default) scans your specs and only sets up KVM when an android platform is present; "true" always sets it up; "false" never does. No effect on macOS/Windows runners, which can''t accelerate the emulator. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.'
-    required: false
-    default: auto
-  ios:
-    description: 'DEPRECATED — no-op. Doc Detective (v4.28+) prebuilds and manages the WebDriverAgent build itself, keyed by Xcode and XCUITest driver versions. For fast iOS runs, execute `npx doc-detective install ios --yes` with a persisted cache directory (DOC_DETECTIVE_CACHE_DIR + actions/cache) before this action: https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. iOS tests still work without it — the first session builds WebDriverAgent in-session when no prebuilt products exist.'
     required: false
     default: auto
   config:
@@ -25,7 +21,7 @@ inputs:
     description: Path to the input file or directory. Overrides the "input" field in the config file.
     required: false
   create_pr_on_change:
-    description: Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Default is "false". Only valid for the "runTests" command.
+    description: Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Default is "false".
     required: false
     default: "false"
   pr_branch:
@@ -55,10 +51,11 @@ inputs:
     required: false
     default: ""
   exit_on_fail:
-    description: Fail the job if one or more tests fails. An empty value means "false", with a notice that `doc-detective/github-action@v2` defaults this to "true". Whatever this is set to, the job also fails if Doc Detective exits non-zero, after the results, issue, and pull request steps run.
+    description: Fail the job if one or more tests fails. Default is "true". If "false", a failing test leaves the job green. Whatever this is set to, the job fails when nothing valid was tested, Doc Detective couldn't proceed, or it didn't write results. The results, issue, and pull request steps run first whenever Doc Detective writes results.
     required: false
+    default: "true"
   create_issue_on_fail:
-    description: Create a GitHub issue if one or more tests fails. Default is "false". Only valid for the "runTests" command.
+    description: Create a GitHub issue if one or more tests fails. Default is "false".
     required: false
     default: "false"
   issue_title:
@@ -102,6 +99,10 @@ inputs:
 outputs:
   results:
     description: JSON-formatted results of the command.
+  issue_url:
+    description: URL of the created GitHub issue. Only set if `create_issue_on_fail` is "true" and a test failed.
+  pull_request_url:
+    description: URL of the created pull request. Only set if `create_pr_on_change` is "true" and files changed.
 runs:
   using: node24 # Specifies the node version
   main: dist/index.js # Path to the JavaScript file that will be executed

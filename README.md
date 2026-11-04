@@ -15,12 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: doc-detective/github-action@v1
+      - uses: doc-detective/github-action@v2
 ```
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
 **Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
+
+## Upgrade from v1
+
+`@v2` runs Doc Detective 5. It makes these breaking changes:
+
+- `exit_on_fail` defaults to `true`, so a failing test now fails the job. Set it to `false` to keep the old behavior.
+- `version` defaults to `5`.
+- The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
+- The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
+- CLI 2's `runTests` subcommand is no longer added for `2.x` versions.
 
 ## Inputs
 
@@ -29,23 +39,23 @@ You can customize the action with the following optional inputs.
 To add an input, edit your workflow file to include the `with` key to the `uses` block. For example:
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
-    version: 4
+    version: 5
 ```
 
-### `version` (default: `4`)
+### `version` (default: `5`)
 
 Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag.
 
-`@v1` of this action supports Doc Detective 4 and earlier. It refuses `latest` and any version or range that can install 5 or later, such as `5`, `^5`, or `>=4`. Use `doc-detective/github-action@v2` for Doc Detective 5. It warns about other tags, like `next`, because it can't tell what they install.
+`@v2` of this action expects Doc Detective 5, which exits non-zero when a test fails. If you set an older version, a failing test exits 0, so the job stays green and the action logs a warning. Use `doc-detective/github-action@v1` for Doc Detective 4.
 
 Set `version` to an empty string (`""`) to run whatever `doc-detective` already resolves in the working directory, such as a local build exposed with `npm link`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
-    version: 4.41.5
+    version: 5.0.0
 ```
 
 ### `working_directory` (default: Repository root)
@@ -53,19 +63,9 @@ Set `version` to an empty string (`""`) to run whatever `doc-detective` already 
 The working directory for the action, relative to the root of the repository. This is where the action looks for the configuration file and where it runs the command.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     working_directory: path/to/your/directory
-```
-
-### `command` (default: `runTests`)
-
-The command to run. Valid values are "runTests" and "runCoverage".
-
-```yaml
-- uses: doc-detective/github-action@v1
-  with:
-    command: runCoverage
 ```
 
 ### `config`
@@ -73,7 +73,7 @@ The command to run. Valid values are "runTests" and "runCoverage".
 The path to the configuration file.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     config: path/to/your/config.json
 ```
@@ -83,7 +83,7 @@ The path to the configuration file.
 Path to the input file or directory. Overrides the "input" field in the config file.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     input: path/to/your/tests
 ```
@@ -93,16 +93,14 @@ Path to the input file or directory. Overrides the "input" field in the config f
 Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present; `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     android: auto
 ```
 
-### `ios` (deprecated, no-op)
+### Speed up iOS tests
 
-**Deprecated.** This input used to cache the WebDriverAgent (WDA) build across runs. Doc Detective (v4.28+) now prebuilds and manages WDA itself — `doc-detective install ios --yes` compiles it once into the Doc Detective cache, keyed by your Xcode and XCUITest driver versions, and test sessions consume the products automatically. The action-side cache was redundant next to that (running both double-built WDA), so it was retired; the input is accepted for compatibility but does nothing beyond a migration notice.
-
-For fast iOS runs, persist the Doc Detective cache and prebuild before the action:
+Doc Detective prebuilds and manages the WebDriverAgent (WDA) build itself. For fast iOS runs, persist the Doc Detective cache and prebuild before the action:
 
 ```yaml
 jobs:
@@ -123,17 +121,17 @@ jobs:
           restore-keys: |
             dd-cache-${{ runner.os }}-
       - run: npx doc-detective install ios --yes
-      - uses: doc-detective/github-action@v1
+      - uses: doc-detective/github-action@v2
 ```
 
 Without the prebuild, iOS tests still work — the first XCUITest session builds WebDriverAgent in-session (~10 min on a cold runner). The managed prebuild requires Doc Detective v4.28 or later.
 
 ### `create_pr_on_change` (default: `false`)
 
-Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
 ```
@@ -157,7 +155,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: doc-detective/github-action@v1
+      - uses: doc-detective/github-action@v2
         with:
           create_pr_on_change: true
 ```
@@ -167,7 +165,7 @@ jobs:
 The name of the branch to create for the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_branch: doc-detective-changes
@@ -178,7 +176,7 @@ The name of the branch to create for the pull request. Only valid if `create_pr_
 The title of the created pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_title: Doc Detective found changes
@@ -189,7 +187,7 @@ The title of the created pull request. Only valid if `create_pr_on_change` is `t
 The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_body: |
@@ -203,7 +201,7 @@ The body of the created pull request. `$RUN_URL` inserts the URL of the workflow
 Comma-separated list of labels to apply to the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_labels: doc-detective,for-review
@@ -214,7 +212,7 @@ Comma-separated list of labels to apply to the pull request. Only valid if `crea
 Comma-separated list of GitHub usernames to assign to the pull request. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_assignees: octocat,monalisa
@@ -225,30 +223,37 @@ Comma-separated list of GitHub usernames to assign to the pull request. Only val
 Comma-separated list of GitHub usernames to request a review from. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_reviewers: octocat,monalisa
 ```
 
-### `exit_on_fail` (default: unset)
+### `exit_on_fail` (default: `true`)
 
-Fail the job if one or more tests fails. Leaving it unset means `false`, with a notice that `doc-detective/github-action@v2` defaults it to `true`.
+Fail the job if one or more tests fails. Set it to `false` to keep the job green when a test fails.
 
-Whatever this is set to, the job also fails if Doc Detective exits non-zero, such as when your config sets `exitOnFail: true`. The results output, issue, and pull request steps run first. If Doc Detective doesn't write a results file, the job fails right away.
+| Doc Detective exit code | Meaning | Job |
+|---|---|---|
+| `0` | Tests passed | Passes |
+| `1` | A spec failed | Fails, unless `exit_on_fail` is `false` |
+| `2` | Nothing valid was tested, or Doc Detective couldn't proceed | Always fails |
 
+Any other exit code, or a run that doesn't write a results file, also fails the job. The results output, issue, and pull request steps run first whenever Doc Detective writes results.
+
+If your config sets `exitOnFail: false`, Doc Detective exits `0` when a test fails. The job stays green, and the action logs a warning.
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
-    exit_on_fail: true
+    exit_on_fail: false
 ```
 
 ### `create_issue_on_fail` (default: `false`)
 
-Create a GitHub issue if one or more tests fails. Only valid if `command` is `runTests`.
+Create a GitHub issue if one or more tests fails.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
 ```
@@ -267,7 +272,7 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: doc-detective/github-action@v1
+      - uses: doc-detective/github-action@v2
         with:
           create_issue_on_fail: true
 ```
@@ -277,7 +282,7 @@ jobs:
 The title of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
     issue_title: Doc Detective found issues in the documentation
@@ -290,7 +295,7 @@ The body of the created GitHub issue. Use the `$RESULTS` variable to insert the 
 GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
     issue_body: |
@@ -305,7 +310,7 @@ GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$
 Comma-separated list of labels to apply to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
     issue_labels: doc-detective,documentation
@@ -316,7 +321,7 @@ Comma-separated list of labels to apply to the GitHub issue. Only valid if `crea
 Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if `create_issue_on_fail` is set to `true`.
   
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
     issue_assignees: octocat,monalisa
@@ -327,7 +332,7 @@ Comma-separated list of GitHub usernames to assign to the GitHub issue. Only val
 The GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   with:
     create_issue_on_fail: true
     token: ${{ secrets.MY_GITHUB_TOKEN }}
@@ -342,7 +347,7 @@ The action sets the following outputs:
 JSON-formatted results of the command. This can be used in subsequent steps in the same job.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   id: doc-detective
 - run: echo "${{ steps.doc-detective.outputs.results }}"
 ```
@@ -352,7 +357,7 @@ JSON-formatted results of the command. This can be used in subsequent steps in t
 URL of the created pull request. Only set if `create_pr_on_change` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   id: doc-detective
   with:
     create_pr_on_change: true
@@ -364,7 +369,7 @@ URL of the created pull request. Only set if `create_pr_on_change` is `true`.
 URL of the created GitHub issue. Only set if `create_issue_on_fail` is `true`.
 
 ```yaml
-- uses: doc-detective/github-action@v1
+- uses: doc-detective/github-action@v2
   id: doc-detective
   with:
     create_issue_on_fail: true

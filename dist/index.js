@@ -20578,9 +20578,6 @@ function error(message, properties = {}) {
 function warning(message, properties = {}) {
   issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
-function notice(message, properties = {}) {
-  issueCommand("notice", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
-}
 function info(message) {
   process.stdout.write(message + os5.EOL);
 }
@@ -24336,10 +24333,24 @@ ${cliOutput}`
 }
 
 // src/runCli.ts
+function buildCliArgs({
+  version,
+  config,
+  input,
+  outputPath
+}) {
+  return [
+    version ? `doc-detective@${version}` : "doc-detective",
+    ...config ? ["--config", config] : [],
+    ...input ? ["--input", input] : [],
+    "--output",
+    outputPath
+  ];
+}
 async function runCli({
   exec: exec2,
   command,
-  args = [],
+  args,
   outputPath,
   cwd
 }) {
@@ -24363,57 +24374,27 @@ async function runCli({
 }
 
 // src/outcome.ts
-function resolveExitOnFail(input) {
-  if (input === "") {
-    return {
-      exitOnFail: false,
-      notice: `exit_on_fail isn't set, so failing tests don't fail this job unless the CLI exits non-zero. doc-detective/github-action@v2 defaults exit_on_fail to "true". Set it explicitly to choose now.`
-    };
-  }
-  return { exitOnFail: input === "true" };
+function parseExitOnFail(input) {
+  return input.trim().toLowerCase() !== "false";
 }
-function failureMessage({
+function decideOutcome({
   exitCode,
-  exitOnFail,
-  failedSpecs
+  exitOnFail
 }) {
-  if (exitOnFail && failedSpecs > 0) return "Doc Detective found failing tests.";
-  if (exitCode !== 0) return `Doc Detective exited with code ${exitCode}.`;
-  return null;
-}
-
-// src/versionGuard.ts
-var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
-function capsBelowFive(match) {
-  const [, op = "", major, minor = "0", patch = "0"] = match;
-  if (op === ">" || op === ">=") return false;
-  if (!/^\d+$/.test(major)) return false;
-  if (Number(major) < 5) return true;
-  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
-}
-function canReachFive(version) {
-  const alternatives = version.split("||").map(
-    (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
-  );
-  if (alternatives.flat().includes(null)) return null;
-  return alternatives.some(
-    (comparators) => !comparators.some((c) => capsBelowFive(c))
-  );
-}
-function checkVersion(version) {
-  if (version === "") return {};
-  const reaches = version === "latest" ? true : canReachFive(version);
-  if (reaches === true) {
-    return {
-      refusal: `doc-detective/github-action@v1 supports Doc Detective 4 and earlier, but version "${version}" can install 5 or later. Use doc-detective/github-action@v2 for Doc Detective 5, or set version to 4.`
+  if (exitCode === 0) return { fail: false, reason: "Doc Detective passed." };
+  if (exitCode === 1) {
+    return exitOnFail ? { fail: true, reason: "Doc Detective found failing tests." } : {
+      fail: false,
+      reason: "Doc Detective found failing tests, but exit_on_fail is false."
     };
   }
-  if (reaches === null) {
+  if (exitCode === 2) {
     return {
-      warning: `Can't tell which Doc Detective version the "${version}" tag installs. doc-detective/github-action@v1 supports 4 and earlier. Use doc-detective/github-action@v2 for 5.`
+      fail: true,
+      reason: "Doc Detective exited with code 2: nothing valid was tested, or it couldn't proceed. See the log for details."
     };
   }
-  return {};
+  return { fail: true, reason: `Doc Detective exited with code ${exitCode}.` };
 }
 
 // src/issueBody.ts
@@ -24538,30 +24519,6 @@ async function enableLinuxKvm(deps) {
   }
 }
 
-// src/iosSetup.ts
-var IOS_PLATFORM_RE = /["']platforms?["']\s*:\s*(?:\[[^\]]*?)?["']ios["']/i;
-function textRequestsIos(text) {
-  return IOS_PLATFORM_RE.test(text);
-}
-function scanForIos(roots, deps = realScanDeps, maxDepth = 6) {
-  return scanSpecs(roots, textRequestsIos, deps, maxDepth);
-}
-function shouldNoticeRetiredWdaCache({
-  iosInput,
-  platform: platform2,
-  roots,
-  scan = scanForIos
-}) {
-  const value = (iosInput || "auto").trim().toLowerCase();
-  if (value === "false") return { notify: false, reason: "ios input is false" };
-  if (platform2 !== "darwin") {
-    return { notify: false, reason: "not a macOS runner" };
-  }
-  if (value === "true") return { notify: true, reason: "ios input is true" };
-  return scan(roots) ? { notify: true, reason: "auto-detected an ios platform in your specs" } : { notify: false, reason: "no ios platform detected in specs" };
-}
-var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
-
 // src/index.ts
 var meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -24612,15 +24569,7 @@ async function main() {
       );
     }
     const version = getInput("version");
-    const { refusal, warning: warning2 } = checkVersion(version);
-    if (refusal) {
-      setFailed(refusal);
-      return;
-    }
-    if (warning2) warning(warning2);
-    const { exitOnFail, notice: notice2 } = resolveExitOnFail(getInput("exit_on_fail"));
-    if (notice2) notice(notice2);
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const exitOnFail = parseExitOnFail(getInput("exit_on_fail"));
     const cwd = getInput("working_directory");
     const config = getInput("config");
     const input = getInput("input");
@@ -24637,36 +24586,22 @@ async function main() {
     if (androidDecision.setUp) {
       await enableLinuxKvm({
         existsSync: (p) => import_fs6.default.existsSync(p),
-        exec: (command, args) => exec(command, args),
+        exec: (command, args2) => exec(command, args2),
         info: (m) => info(m),
         warning: (m) => warning(m)
       });
     }
-    const iosInput = getInput("ios");
-    const iosNotice = shouldNoticeRetiredWdaCache({
-      iosInput,
-      platform: import_os4.default.platform(),
-      roots: scanRoots.length ? scanRoots : [import_path2.default.resolve(cwd || ".")]
-    });
-    if (iosNotice.notify) {
-      notice(WDA_CACHE_RETIREMENT_NOTICE);
-    }
-    let compiledCommand = `npx ${dd}`;
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
-    }
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
     const outputPath = import_path2.default.resolve(
       process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"
     );
-    compiledCommand += ` --output ${outputPath}`;
-    info(`Running Doc Detective: ${compiledCommand}`);
+    const args = buildCliArgs({ version, config, input, outputPath });
+    info(`Running Doc Detective: npx ${args.join(" ")}`);
     info(`Working directory: ${cwd}`);
     const { exitCode, results } = await runCli({
       exec,
-      command: compiledCommand,
+      command: "npx",
+      args,
       outputPath,
       cwd
     });
@@ -24719,12 +24654,15 @@ async function main() {
         }
       }
     }
-    const failure = failureMessage({
-      exitCode,
-      exitOnFail,
-      failedSpecs: results?.summary?.specs?.fail ?? 0
-    });
-    if (failure) setFailed(failure);
+    const failedSpecs = results?.summary?.specs?.fail ?? 0;
+    if (exitCode === 0 && failedSpecs > 0) {
+      warning(
+        `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
+      );
+    }
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    if (outcome.fail) setFailed(outcome.reason);
+    else info(outcome.reason);
   } catch (error2) {
     setFailed(error2.message);
   }
@@ -24773,7 +24711,6 @@ async function createIssue(results) {
     }
   }
   info(`Issue created: ${issue2.data.html_url}`);
-  setOutput("issueUrl", issue2.data.html_url);
   return issue2;
 }
 async function createPullRequest() {
