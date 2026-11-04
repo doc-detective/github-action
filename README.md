@@ -31,17 +31,21 @@ To add an input, edit your workflow file to include the `with` key to the `uses`
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
-    version: latest
+    version: 4
 ```
 
-### `version` (default: latest)
+### `version` (default: `4`)
 
-Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
+Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag.
+
+`@v1` of this action supports Doc Detective 4 and earlier. It refuses `latest` and any version or range that can install 5 or later, such as `5`, `^5`, or `>=4`. Use `doc-detective/github-action@v2` for Doc Detective 5. It warns about other tags, like `next`, because it can't tell what they install.
+
+Set `version` to an empty string (`""`) to run whatever `doc-detective` already resolves in the working directory, such as a local build exposed with `npm link`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
-    version: 2.15.0
+    version: 4.41.5
 ```
 
 ### `working_directory` (default: Repository root)
@@ -227,9 +231,11 @@ Comma-separated list of GitHub usernames to request a review from. Only valid if
     pr_reviewers: octocat,monalisa
 ```
 
-### `exit_on_fail` (default: `false`)
+### `exit_on_fail` (default: unset)
 
-Exit with a non-zero code if one or more tests fails. Only valid if `command` is `runTests`.
+Fail the job if one or more tests fails. Leaving it unset means `false`, with a notice that `doc-detective/github-action@v2` defaults it to `true`.
+
+Whatever this is set to, the job also fails if Doc Detective exits non-zero, such as when your config sets `exitOnFail: true`. The results output, issue, and pull request steps run first. If Doc Detective doesn't write a results file, the job fails right away.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -279,7 +285,9 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
 
 ### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
 
-he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+
+GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run.
 
 ```yaml
 - uses: doc-detective/github-action@v1
