@@ -21,6 +21,7 @@ jobs:
         uses: ./ # Uses an action in the root directory
         id: dd
         with:
+          version: v5-rc # Until 5.0.0 is on npm; `doc-detective@5` matches no prerelease. Drop at GA.
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests.md
 
@@ -41,6 +42,7 @@ jobs:
         id: dd
         continue-on-error: true
         with:
+          version: v5-rc # Until 5.0.0 is on npm; `doc-detective@5` matches no prerelease. Drop at GA.
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
@@ -59,6 +61,7 @@ jobs:
         id: dd
         continue-on-error: true
         with:
+          version: v5-rc # Until 5.0.0 is on npm; `doc-detective@5` matches no prerelease. Drop at GA.
           config: ./artifacts/.doc-detective.json
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
