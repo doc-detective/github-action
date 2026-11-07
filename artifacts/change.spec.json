@@ -1,34 +1,43 @@
 {
   "tests": [
     {
-      "contexts": [
+      "runOn": [
         {
-          "app": { "name": "chrome" },
-          "platforms": ["linux", "mac"]
+          "platforms": [
+            "linux",
+            "mac"
+          ],
+          "browsers": [
+            "chrome"
+          ]
         }
       ],
       "steps": [
         {
-          "action": "runShell",
-          "command": "touch $(uuidgen)"
+          "runShell": "touch $(uuidgen)"
         },
         {
-          "action": "runShell",
-          "command": "git status"
-        }        
+          "runShell": "git status"
+        }
       ]
     },
     {
-      "contexts": [
+      "runOn": [
         {
-          "app": { "name": "chrome" },
-          "platforms": ["windows"]
+          "platforms": [
+            "windows"
+          ],
+          "browsers": [
+            "chrome"
+          ]
         }
       ],
       "steps": [
         {
-          "action": "runShell",
-          "command": "echo.>\"%random%\""
+          "runShell": {
+            "command": "echo.>\"%random%\"",
+            "shell": "cmd"
+          }
         }
       ]
     }

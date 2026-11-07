@@ -9,6 +9,7 @@ import { buildCliArgs, runCli } from "./runCli.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
+import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -36,7 +37,7 @@ function parseIntegrations(integrationsInput: string): string[] {
       valid.push(name);
     } else {
       core.warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
       );
     }
   }
@@ -52,7 +53,7 @@ function buildIntegrationsAccordion(integrations: string[], prompt: string): str
 
   if (accordionEntries.length === 0) return "";
 
-  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
+  return `\n\n<details>\n<summary>AI issue mentions</summary>\n${accordionEntries.join("\n")}\n</details>`;
 }
 
 const repoOwner = github.context.repo.owner;
@@ -76,6 +77,11 @@ async function main(): Promise<void> {
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
+    // Read the renamed inputs up front, so setting both names fails before the run.
+    // (Passing `core` itself would keep all of @actions/core in the bundle.)
+    const io = { getInput: core.getInput, warning: core.warning };
+    const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
+    const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
 
     // Android emulator support: on Linux, grant KVM access so the emulator can
     // accelerate. Driven by the `android` input ("auto" | "true" | "false");
@@ -176,7 +182,7 @@ async function main(): Promise<void> {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
-          const issue = await createIssue(JSON.stringify(results, null, 2));
+          const issue = await createIssue(JSON.stringify(results, null, 2), issueMentions, issuePrompt);
           core.setOutput("issue_url", issue.data.html_url);
           core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
@@ -200,11 +206,10 @@ async function main(): Promise<void> {
   }
 }
 
-async function createIssue(results: string) {
+async function createIssue(results: string, mentions: string, prompt: string) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
-  const prompt = core.getInput("prompt");
-  const integrations = parseIntegrations(core.getInput("integrations"));
+  const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: core.getInput("issue_body"),

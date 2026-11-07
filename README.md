@@ -11,7 +11,7 @@ name: doc-detective
 on: [pull_request]
 
 jobs:
-  runTests:
+  doc-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
+**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests don't work in headless mode (like if you need the `record` step), use macOS or Windows.
 
 ## Upgrade from v1
 
@@ -30,6 +30,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 - `version` defaults to `5`.
 - The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
 - The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
+- `integrations` is renamed [`issue_mentions`](#issue_mentions), and `prompt` is renamed [`issue_prompt`](#issue_prompt). The old names still work and log a deprecation warning. Setting both the old and the new name fails the job.
 - CLI 2's `runTests` subcommand is no longer added for `2.x` versions.
 
 ## Inputs
@@ -58,9 +59,9 @@ Set `version` to an empty string (`""`) to run whatever `doc-detective` already 
     version: 5.0.0
 ```
 
-### `working_directory` (default: Repository root)
+### `working_directory` (default: `.`)
 
-The working directory for the action, relative to the root of the repository. This is where the action looks for the configuration file and where it runs the command.
+The working directory for the action, relative to the root of the repository. The default, `.`, is the repository root. The action runs Doc Detective here, and resolves `config` and `input` against it.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -70,7 +71,7 @@ The working directory for the action, relative to the root of the repository. Th
 
 ### `config`
 
-The path to the configuration file.
+The path to the configuration file. Relative to `working_directory`.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -80,7 +81,7 @@ The path to the configuration file.
 
 ### `input`
 
-Path to the input file or directory. Overrides the "input" field in the config file.
+Path to the input file or directory. Overrides the `input` field in the config file. Relative to `working_directory`.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -104,7 +105,7 @@ Doc Detective prebuilds and manages the WebDriverAgent (WDA) build itself. For f
 
 ```yaml
 jobs:
-  runTests:
+  doc-tests:
     runs-on: macos-latest
     env:
       DOC_DETECTIVE_CACHE_DIR: ${{ github.workspace }}/.dd-cache
@@ -147,7 +148,7 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
-  runTests:
+  doc-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -160,9 +161,9 @@ jobs:
           create_pr_on_change: true
 ```
 
-### `pr_branch` (default: `doc-detective-{DATE}`)
+### `pr_branch` (default: `doc-detective-<timestamp>`)
 
-The name of the branch to create for the pull request. Only valid if `create_pr_on_change` is `true`.
+The name of the branch to create for the pull request. By default, `<timestamp>` is the time in milliseconds since the Unix epoch. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -182,18 +183,26 @@ The title of the created pull request. Only valid if `create_pr_on_change` is `t
     pr_title: Doc Detective found changes
 ```
 
-### `pr_body` (default: See example)
+### `pr_body`
 
 The body of the created pull request. `$RUN_URL` inserts the URL of the workflow run that created the pull request. Only valid if `create_pr_on_change` is `true`.
+
+The default body is:
+
+```text
+A Doc Detective run ($RUN_URL) updated files.
+
+DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed or failed, only that files in the repository changed. Review the changes to make sure they're accurate.
+```
 
 ```yaml
 - uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
     pr_body: |
-      A Doc Detective run ($RUN_URL) updated files.
-~~~~
-      DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed for failed, only that files in the repository changed. Review the changes to make sure they're accurate.
+      Doc Detective updated files in run $RUN_URL.
+
+      Review the changes before you merge.
 ```
 
 ### `pr_labels` (default: `doc-detective`)
@@ -242,6 +251,9 @@ Fail the job if one or more tests fails. Set it to `false` to keep the job green
 Any other exit code, or a run that doesn't write a results file, also fails the job. The results output, issue, and pull request steps run first whenever Doc Detective writes results.
 
 If your config sets `exitOnFail: false`, Doc Detective exits `0` when a test fails. The job stays green, and the action logs a warning.
+
+Unlike the CLI's `exitOnFail: false`, this never turns exit `2` (nothing tested) green.
+
 ```yaml
 - uses: doc-detective/github-action@v2
   with:
@@ -265,7 +277,7 @@ name: doc-detective
 on: [pull_request]
 
 jobs:
-  runTests:
+  doc-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -288,11 +300,17 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
+### `issue_body` (default: `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`)
 
-The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+The body of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`. The action replaces these tokens:
 
-GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run. If `issue_body` and `prompt` leave no room for results, the action logs an error and doesn't create the issue.
+| Token | Replaced with |
+|---|---|
+| `$RESULTS` | The results object |
+| `$RUN_URL` | The URL of the workflow run that created the issue |
+| `$PROMPT` | The [`issue_prompt`](#issue_prompt) text |
+
+GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run. If `issue_body` and `issue_prompt` leave no room for results, the action logs an error and doesn't create the issue.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -326,6 +344,41 @@ Comma-separated list of GitHub usernames to assign to the GitHub issue. Only val
     create_issue_on_fail: true
     issue_assignees: octocat,monalisa
 ```
+
+### `issue_mentions`
+
+Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with [`issue_prompt`](#issue_prompt) where the tool takes one, in a collapsible "AI issue mentions" section appended to the issue body. Only valid if `create_issue_on_fail` is set to `true`.
+
+Supported values: `doc-sentinel`, `promptless`, `dosu`, `claude`, `opencode`, `copilot`, `cursor`. The action ignores other values with a warning.
+
+`copilot` assigns the issue to Copilot instead of adding a mention.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    create_issue_on_fail: true
+    issue_mentions: claude,copilot
+```
+
+### `issue_prompt` (default: `Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.`)
+
+The text that follows each mention from [`issue_mentions`](#issue_mentions). For example, if `issue_mentions` is `claude`, the issue includes `@claude <issue_prompt>`. `$PROMPT` inserts it in [`issue_body`](#issue_body). Only valid if `create_issue_on_fail` is set to `true`.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    create_issue_on_fail: true
+    issue_mentions: claude
+    issue_prompt: Investigate the Doc Detective test failures and suggest fixes for the documentation.
+```
+
+### `integrations`
+
+Deprecated: use [`issue_mentions`](#issue_mentions). The action still reads it and logs a warning. Setting both fails the job.
+
+### `prompt`
+
+Deprecated: use [`issue_prompt`](#issue_prompt). The action still reads it and logs a warning. Setting both fails the job.
 
 ### `token` (default: `${{ github.token }}`)
 

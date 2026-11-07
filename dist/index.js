@@ -24449,7 +24449,7 @@ Results truncated to fit GitHub's issue size limit. See the [workflow run](${run
   const room = Math.floor((ISSUE_BODY_LIMIT - render("").length) / Math.max(tokens, 1)) - fence("").length - note.length;
   if (room < 0) {
     throw new Error(
-      `The issue_body and prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
+      `The issue_body and issue_prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
     );
   }
   let cut = results.slice(0, room);
@@ -24549,6 +24549,16 @@ async function enableLinuxKvm(deps) {
   }
 }
 
+// src/actionInputs.ts
+var DEFAULT_ISSUE_PROMPT = "Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.";
+function getAliasedInput(name, alias, io) {
+  const value = io.getInput(name);
+  const old = io.getInput(alias);
+  if (value && old) throw new Error(`Set \`${name}\` or \`${alias}\`, not both.`);
+  if (old) io.warning(`The \`${alias}\` input is deprecated. Rename it to \`${name}\`.`);
+  return value || old;
+}
+
 // src/index.ts
 var meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
@@ -24570,7 +24580,7 @@ function parseIntegrations(integrationsInput) {
       valid.push(name);
     } else {
       warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
       );
     }
   }
@@ -24582,7 +24592,7 @@ function buildIntegrationsAccordion(integrations, prompt) {
   return `
 
 <details>
-<summary>Integrations</summary>
+<summary>AI issue mentions</summary>
 ${accordionEntries.join("\n")}
 </details>`;
 }
@@ -24603,6 +24613,9 @@ async function main() {
     const cwd = getInput("working_directory");
     const config = getInput("config");
     const input = getInput("input");
+    const io = { getInput, warning };
+    const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
+    const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
     const androidInput = getInput("android");
     const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path3.default.resolve(cwd || ".", p));
     const androidDecision = shouldSetUpAndroid({
@@ -24676,7 +24689,7 @@ async function main() {
     if (results?.summary?.specs?.fail > 0) {
       if (getInput("create_issue_on_fail") == "true") {
         try {
-          const issue2 = await createIssue(JSON.stringify(results, null, 2));
+          const issue2 = await createIssue(JSON.stringify(results, null, 2), issueMentions, issuePrompt);
           setOutput("issue_url", issue2.data.html_url);
           info(`Issue: ${JSON.stringify(issue2)}`);
         } catch (error2) {
@@ -24697,11 +24710,10 @@ async function main() {
     setFailed(error2.message);
   }
 }
-async function createIssue(results) {
+async function createIssue(results, mentions, prompt) {
   const token = getInput("token");
   const title = getInput("issue_title");
-  const prompt = getInput("prompt");
-  const integrations = parseIntegrations(getInput("integrations"));
+  const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: getInput("issue_body"),
