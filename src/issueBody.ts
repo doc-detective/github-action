@@ -37,7 +37,7 @@ export function buildIssueBody({
     note.length;
   if (room < 0) {
     throw new Error(
-      `The issue_body and prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
+      `The issue_body and issue_prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
     );
   }
   let cut = results.slice(0, room);
