@@ -5,57 +5,15 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import { loadResults } from "./loadResults.ts";
+import { buildCliArgs, runCli } from "./runCli.ts";
+import { decideOutcome, parseExitOnFail } from "./outcome.ts";
+import { buildIssueBody } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
-import {
-  shouldNoticeRetiredWdaCache,
-  WDA_CACHE_RETIREMENT_NOTICE,
-} from "./iosSetup.ts";
+import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
+import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-
-const INTEGRATION_MAP: Record<string, string> = {
-  "doc-sentinel": "\n/cc @reem-sab",
-  "promptless": "\n@promptless $PROMPT",
-  "dosu": "\n@dosu $PROMPT",
-  "claude": "\n@claude $PROMPT",
-  "opencode": "\n/opencode $PROMPT",
-  "cursor": "\n@cursor $PROMPT",
-};
-
-// All valid integration names (INTEGRATION_MAP keys + special-case integrations)
-const VALID_INTEGRATIONS = new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
-
-function parseIntegrations(integrationsInput: string): string[] {
-  if (!integrationsInput || !integrationsInput.trim()) return [];
-
-  const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
-  const valid: string[] = [];
-
-  for (const name of requested) {
-    if (VALID_INTEGRATIONS.has(name)) {
-      valid.push(name);
-    } else {
-      core.warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
-      );
-    }
-  }
-
-  return valid;
-}
-
-function buildIntegrationsAccordion(integrations: string[], prompt: string): string {
-  const accordionEntries = integrations
-    .filter((name) => name !== "copilot")
-    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
-    .filter(Boolean);
-
-  if (accordionEntries.length === 0) return "";
-
-  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
-}
 
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
@@ -74,16 +32,15 @@ async function main(): Promise<void> {
     }
     // Get the inputs
     const version = core.getInput("version");
-    // An empty `version` means "use whatever doc-detective is already resolvable
-    // from the working directory" — e.g. a locally-built checkout exposed via
-    // `npm link`, so a repo can dog-food the action against its own build under
-    // review rather than the published package. Pinning `doc-detective@<tag>`
-    // (even `@latest`) makes npx resolve from the registry and ignore a linked
-    // local build, so omit the `@version` suffix entirely when version is blank.
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const exitOnFail = parseExitOnFail(core.getInput("exit_on_fail"));
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
+    // Read the renamed inputs up front, so setting both names fails before the run.
+    // (Passing `core` itself would keep all of @actions/core in the bundle.)
+    const io = { getInput: core.getInput, warning: core.warning };
+    const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
+    const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
 
     // Android emulator support: on Linux, grant KVM access so the emulator can
     // accelerate. Driven by the `android` input ("auto" | "true" | "false");
@@ -111,58 +68,26 @@ async function main(): Promise<void> {
       });
     }
 
-    // The iOS WebDriverAgent build cache is RETIRED (see iosSetup.ts):
-    // Doc Detective v4.28+ prebuilds and manages WDA products itself
-    // (`install ios`), keyed by Xcode × driver version, which the
-    // action-side derivedData cache both duplicated (double builds when
-    // both ran) and undercut (its driver-blind key was the stale-cache
-    // session-timeout mode). The `ios` input is a deprecated no-op; runs
-    // that would have used the cache get a one-line migration notice.
-    const iosInput = core.getInput("ios");
-    const iosNotice = shouldNoticeRetiredWdaCache({
-      iosInput,
-      platform: os.platform(),
-      roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
-    });
-    if (iosNotice.notify) {
-      core.notice(WDA_CACHE_RETIREMENT_NOTICE);
-    }
-
-    // Compile command
-    let compiledCommand = `npx ${dd}`;
-    // If v2, add the 'runTests' command
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
-    }
-    // Add the options
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
       "doc-detective-output.json"
     );
-    compiledCommand += ` --output ${outputPath}`;
+    const args = buildCliArgs({ version, config, input, outputPath });
 
     // Run Doc Detective
-    core.info(`Running Doc Detective: ${compiledCommand}`);
+    core.info(`Running Doc Detective: npx ${args.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
 
-    let commandOutputData = "";
-    const options: Parameters<typeof exec>[2] = {
+    // Read results from the file we passed via `--output`, not from stdout, and
+    // whatever the exit code, so the results, issue, and PR steps still run
+    // before a non-zero exit fails the job.
+    const { exitCode, results } = await runCli({
+      exec,
+      command: "npx",
+      args,
+      outputPath,
       cwd,
-      listeners: {
-        stdout: (data: Buffer) => {
-          commandOutputData += data.toString();
-        },
-      },
-    };
-    await exec(compiledCommand, [], options);
-
-    // Read results from the file we passed via `--output`, not from stdout.
-    // Doc Detective's log text is human-facing and free to change (e.g. extra
-    // "See per-run ..." lines), and scraping the path back out of it coupled
-    // this action to that format and broke it. See doc-detective#346.
-    const results = loadResults(outputPath, commandOutputData);
+    });
     core.setOutput("results", results);
 
     // Create a pull request if there are changed files
@@ -216,35 +141,42 @@ async function main(): Promise<void> {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
-          const issue = await createIssue(JSON.stringify(results, null, 2));
+          const issue = await createIssue(JSON.stringify(results, null, 2), issueMentions, issuePrompt);
           core.setOutput("issue_url", issue.data.html_url);
           core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
           core.error(`Error creating issue: ${(error as Error).message}`);
         }
       }
-      if (core.getInput("exit_on_fail") == "true") {
-        // Fail the action if there are failing tests
-        core.setFailed("Doc Detective found failing tests.");
-      }
     }
+
+    const failedSpecs = results?.summary?.specs?.fail ?? 0;
+    if (exitCode === 0 && failedSpecs > 0) {
+      core.warning(
+        `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
+      );
+    }
+
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    if (outcome.fail) core.setFailed(outcome.reason);
+    else core.info(outcome.reason);
   } catch (error) {
     core.setFailed((error as Error).message);
   }
 }
 
-async function createIssue(results: string) {
+async function createIssue(results: string, mentions: string, prompt: string) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
-  const prompt = core.getInput("prompt");
-  const integrations = parseIntegrations(core.getInput("integrations"));
+  const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
-  const body = core
-    .getInput("issue_body")
-    .replaceAll("$RUN_URL", runURL)
-    .replaceAll("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
-    .replaceAll("$PROMPT", prompt)
-    + integrationsAccordion;
+  const body = buildIssueBody({
+    template: core.getInput("issue_body"),
+    results,
+    runUrl: runURL,
+    prompt,
+    suffix: integrationsAccordion,
+  });
   const labelsList = core.getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
   const assigneesList = core.getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
   if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
@@ -280,7 +212,6 @@ async function createIssue(results: string) {
   }
 
   core.info(`Issue created: ${issue.data.html_url}`);
-  core.setOutput("issueUrl", issue.data.html_url);
   return issue;
 }
 
@@ -303,17 +234,17 @@ async function createPullRequest() {
   const userEmail = `${userName}@users.noreply.github.com`;
 
   // Configure git with user email and name
-  await exec(`git config --global user.email "${userEmail}"`);
-  await exec(`git config --global user.name "${userName}"`);
+  await exec("git", ["config", "--global", "user.email", userEmail]);
+  await exec("git", ["config", "--global", "user.name", userName ?? ""]);
 
   // Create new branch
   core.info(`Creating branch: ${head}`);
-  await exec(`git checkout -b ${head}`);
+  await exec("git", ["checkout", "-b", head]);
 
   // Commit changes
-  await exec("git add .");
-  await exec(`git commit -m "Doc Detective results"`);
-  await exec(`git push origin ${head}`);
+  await exec("git", ["add", "."]);
+  await exec("git", ["commit", "-m", "Doc Detective results"]);
+  await exec("git", ["push", "origin", head]);
 
   // Create pull request
   const pr = await octokit.rest.pulls.create({
