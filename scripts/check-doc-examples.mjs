@@ -1,8 +1,9 @@
 // Validates the Doc Detective specs, tests, steps, and configs in README.md's
 // fenced ```json/```yaml blocks and in artifacts/*.{json,yaml,yml} against
-// doc-detective-common's schemas. Fences marked `invalid` are skipped. The
-// artifacts' Markdown files, including the intentionally failing
-// doc-content-inline-tests-fail.md, aren't read.
+// doc-detective-common's schemas. v2 forms, such as `action`-keyed steps, fail
+// too. Fences marked `invalid` are skipped. The artifacts' Markdown files,
+// including the intentionally failing doc-content-inline-tests-fail.md, aren't
+// read.
 import fs from "node:fs";
 import path from "node:path";
 import { parse } from "yaml";
@@ -14,7 +15,10 @@ const stepActions =
   schemas.step_v3.oneOf.flatMap((o) => (o.allOf ?? []).flatMap((a) => a.required ?? []));
 const configKeys = new Set(Object.keys(schemas.config_v3.properties));
 const isObject = (o) => o !== null && typeof o === "object" && !Array.isArray(o);
-const isStep = (o) => isObject(o) && Object.keys(o).filter((k) => stepActions.includes(k)).length === 1;
+const isStep = (o) =>
+  isObject(o) &&
+  (typeof o.action === "string" || // v2 step
+    Object.keys(o).filter((k) => stepActions.includes(k)).length === 1);
 
 function schemaKeyFor(o) {
   if (!isObject(o)) return null;
@@ -50,8 +54,15 @@ for (const { where, invalid, source } of blocks) {
     continue;
   }
   checked++;
-  const result = validate({ schemaKey, object });
+  // Without defaults, validate() hands back the same object unless it had to
+  // upgrade it from v2 to pass.
+  const result = validate({ schemaKey, object, addDefaults: false });
   if (!result.valid) failures.push(`${where} (${schemaKey}): ${result.errors}`);
+  else if (result.object !== object) {
+    failures.push(
+      `${where} (${schemaKey}): uses the v2 form (like \`"action": "goTo"\` steps), which passes only by upgrading to v3. Rewrite it in the v3 form, or mark a deliberate counter-example's fence \`invalid\`.`,
+    );
+  }
 }
 
 console.log(`Doc examples: ${checked} checked, ${skipped} skipped, ${failures.length} failed.`);
