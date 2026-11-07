@@ -7,7 +7,16 @@ import {
   textRequestsIos,
   scanForIos,
   shouldNoticeRetiredWdaCache,
+  WDA_CACHE_RETIREMENT_NOTICE,
 } from "./iosSetup.ts";
+
+test("the retirement notice links to the docs site, not the redirecting host", () => {
+  const url = WDA_CACHE_RETIREMENT_NOTICE.match(/https:\/\/\S+?(?=\.?\s|$)/)?.[0];
+  assert.equal(
+    url,
+    "https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos"
+  );
+});
 
 test("textRequestsIos matches the platform field forms", () => {
   assert.equal(textRequestsIos('{"platform": "ios"}'), true);

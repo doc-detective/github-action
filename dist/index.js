@@ -24560,7 +24560,7 @@ function shouldNoticeRetiredWdaCache({
   if (value === "true") return { notify: true, reason: "ios input is true" };
   return scan(roots) ? { notify: true, reason: "auto-detected an ios platform in your specs" } : { notify: false, reason: "no ios platform detected in specs" };
 }
-var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
+var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
 
 // src/index.ts
 var meta = { dist_interface: "github-actions" };
