@@ -20,7 +20,7 @@ jobs:
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
+**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the `record` step), use macOS or Windows.
 
 ## Inputs
 
@@ -56,16 +56,6 @@ The working directory for the action, relative to the root of the repository. Th
 - uses: doc-detective/github-action@v1
   with:
     working_directory: path/to/your/directory
-```
-
-### `command` (default: `runTests`)
-
-The command to run. Valid values are "runTests" and "runCoverage".
-
-```yaml
-- uses: doc-detective/github-action@v1
-  with:
-    command: runCoverage
 ```
 
 ### `config`
@@ -130,7 +120,7 @@ Without the prebuild, iOS tests still work — the first XCUITest session builds
 
 ### `create_pr_on_change` (default: `false`)
 
-Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -245,7 +235,7 @@ Whatever this is set to, the job also fails if Doc Detective exits non-zero, suc
 
 ### `create_issue_on_fail` (default: `false`)
 
-Create a GitHub issue if one or more tests fails. Only valid if `command` is `runTests`.
+Create a GitHub issue if one or more tests fails.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -283,9 +273,9 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
+### `issue_body` (default: `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`)
 
-The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object, and `$RUN_URL` to insert the URL of the workflow run that created the issue. Only valid if `create_issue_on_fail` is set to `true`.
 
 GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run.
 
