@@ -24583,7 +24583,7 @@ function parseIntegrations(integrationsInput, warn = warning) {
   return valid;
 }
 function buildIntegrationsAccordion(integrations, prompt) {
-  const accordionEntries = integrations.filter((name) => name !== "copilot").map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt)).filter(Boolean);
+  const accordionEntries = integrations.filter((name) => name !== "copilot").map((name) => INTEGRATION_MAP[name].replace("$PROMPT", () => prompt)).filter(Boolean);
   if (accordionEntries.length === 0) return "";
   return `
 

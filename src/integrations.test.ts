@@ -29,3 +29,7 @@ test("buildIntegrationsAccordion is empty with only copilot or nothing", () => {
   assert.equal(buildIntegrationsAccordion(["copilot"], "x"), "");
   assert.equal(buildIntegrationsAccordion([], "x"), "");
 });
+
+test("buildIntegrationsAccordion inserts the prompt literally, even with $&", () => {
+  assert.match(buildIntegrationsAccordion(["claude"], "Fix $& and $$"), /@claude Fix \$& and \$\$/);
+});

@@ -35,7 +35,7 @@ export function parseIntegrations(
 export function buildIntegrationsAccordion(integrations: string[], prompt: string): string {
   const accordionEntries = integrations
     .filter((name) => name !== "copilot")
-    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
+    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", () => prompt))
     .filter(Boolean);
 
   if (accordionEntries.length === 0) return "";
