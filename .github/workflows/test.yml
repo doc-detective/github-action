@@ -47,10 +47,11 @@ jobs:
           input: ./artifacts/doc-content-inline-tests-fail.md
           exit_on_fail: true
 
-      - name: Assert the failing fixture fails the action
-        if: steps.dd.outcome != 'failure'
+      - name: Assert the failing fixture fails the action on a failed spec
+        # A failed spec, not exit 2 (nothing tested) or a crash with no results.
+        if: steps.dd.outcome != 'failure' || !steps.dd.outputs.results || fromJSON(steps.dd.outputs.results).summary.specs.fail < 1
         run: |
-          echo "Expected the Doc Detective step to fail on the failing fixture."
+          echo "Expected the Doc Detective step to fail because a spec in the failing fixture failed."
           exit 1
 
   fail-tests-with-issue-mentions:
