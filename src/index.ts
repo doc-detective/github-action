@@ -10,51 +10,10 @@ import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
+import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-
-const INTEGRATION_MAP: Record<string, string> = {
-  "doc-sentinel": "\n/cc @reem-sab",
-  "promptless": "\n@promptless $PROMPT",
-  "dosu": "\n@dosu $PROMPT",
-  "claude": "\n@claude $PROMPT",
-  "opencode": "\n/opencode $PROMPT",
-  "cursor": "\n@cursor $PROMPT",
-};
-
-// All valid integration names (INTEGRATION_MAP keys + special-case integrations)
-const VALID_INTEGRATIONS = new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
-
-function parseIntegrations(integrationsInput: string): string[] {
-  if (!integrationsInput || !integrationsInput.trim()) return [];
-
-  const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
-  const valid: string[] = [];
-
-  for (const name of requested) {
-    if (VALID_INTEGRATIONS.has(name)) {
-      valid.push(name);
-    } else {
-      core.warning(
-        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
-      );
-    }
-  }
-
-  return valid;
-}
-
-function buildIntegrationsAccordion(integrations: string[], prompt: string): string {
-  const accordionEntries = integrations
-    .filter((name) => name !== "copilot")
-    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
-    .filter(Boolean);
-
-  if (accordionEntries.length === 0) return "";
-
-  return `\n\n<details>\n<summary>AI issue mentions</summary>\n${accordionEntries.join("\n")}\n</details>`;
-}
 
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
@@ -275,17 +234,17 @@ async function createPullRequest() {
   const userEmail = `${userName}@users.noreply.github.com`;
 
   // Configure git with user email and name
-  await exec(`git config --global user.email "${userEmail}"`);
-  await exec(`git config --global user.name "${userName}"`);
+  await exec("git", ["config", "--global", "user.email", userEmail]);
+  await exec("git", ["config", "--global", "user.name", userName ?? ""]);
 
   // Create new branch
   core.info(`Creating branch: ${head}`);
-  await exec(`git checkout -b ${head}`);
+  await exec("git", ["checkout", "-b", head]);
 
   // Commit changes
-  await exec("git add .");
-  await exec(`git commit -m "Doc Detective results"`);
-  await exec(`git push origin ${head}`);
+  await exec("git", ["add", "."]);
+  await exec("git", ["commit", "-m", "Doc Detective results"]);
+  await exec("git", ["push", "origin", head]);
 
   // Create pull request
   const pr = await octokit.rest.pulls.create({

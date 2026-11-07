@@ -24559,9 +24559,7 @@ function getAliasedInput(name, alias, io) {
   return value || old;
 }
 
-// src/index.ts
-var meta = { dist_interface: "github-actions" };
-process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
+// src/integrations.ts
 var INTEGRATION_MAP = {
   "doc-sentinel": "\n/cc @reem-sab",
   "promptless": "\n@promptless $PROMPT",
@@ -24571,7 +24569,7 @@ var INTEGRATION_MAP = {
   "cursor": "\n@cursor $PROMPT"
 };
 var VALID_INTEGRATIONS = /* @__PURE__ */ new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
-function parseIntegrations(integrationsInput) {
+function parseIntegrations(integrationsInput, warn = warning) {
   if (!integrationsInput || !integrationsInput.trim()) return [];
   const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
   const valid = [];
@@ -24579,9 +24577,7 @@ function parseIntegrations(integrationsInput) {
     if (VALID_INTEGRATIONS.has(name)) {
       valid.push(name);
     } else {
-      warning(
-        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
-      );
+      warn(`Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`);
     }
   }
   return valid;
@@ -24596,6 +24592,10 @@ function buildIntegrationsAccordion(integrations, prompt) {
 ${accordionEntries.join("\n")}
 </details>`;
 }
+
+// src/index.ts
+var meta = { dist_interface: "github-actions" };
+process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 var repoOwner = context2.repo.owner;
 var repoName = context2.repo.repo;
 var runId = process.env.GITHUB_RUN_ID;
@@ -24767,13 +24767,13 @@ async function createPullRequest() {
   const octokit = getOctokit(token);
   const userName = process.env.GITHUB_ACTOR;
   const userEmail = `${userName}@users.noreply.github.com`;
-  await exec(`git config --global user.email "${userEmail}"`);
-  await exec(`git config --global user.name "${userName}"`);
+  await exec("git", ["config", "--global", "user.email", userEmail]);
+  await exec("git", ["config", "--global", "user.name", userName ?? ""]);
   info(`Creating branch: ${head}`);
-  await exec(`git checkout -b ${head}`);
-  await exec("git add .");
-  await exec(`git commit -m "Doc Detective results"`);
-  await exec(`git push origin ${head}`);
+  await exec("git", ["checkout", "-b", head]);
+  await exec("git", ["add", "."]);
+  await exec("git", ["commit", "-m", "Doc Detective results"]);
+  await exec("git", ["push", "origin", head]);
   const pr = await octokit.rest.pulls.create({
     owner: context2.repo.owner,
     repo: context2.repo.repo,
