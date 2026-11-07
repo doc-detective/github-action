@@ -10,7 +10,7 @@ on:
       version:
         description: version
         required: false
-        default: latest
+        default: '4'
       config:
         description: config
         required: false
