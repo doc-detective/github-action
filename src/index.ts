@@ -37,7 +37,7 @@ function parseIntegrations(integrationsInput: string): string[] {
       valid.push(name);
     } else {
       core.warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
       );
     }
   }
@@ -53,7 +53,7 @@ function buildIntegrationsAccordion(integrations: string[], prompt: string): str
 
   if (accordionEntries.length === 0) return "";
 
-  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
+  return `\n\n<details>\n<summary>AI issue mentions</summary>\n${accordionEntries.join("\n")}\n</details>`;
 }
 
 const repoOwner = github.context.repo.owner;

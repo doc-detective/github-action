@@ -24580,7 +24580,7 @@ function parseIntegrations(integrationsInput) {
       valid.push(name);
     } else {
       warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
+        `Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`
       );
     }
   }
@@ -24592,7 +24592,7 @@ function buildIntegrationsAccordion(integrations, prompt) {
   return `
 
 <details>
-<summary>Integrations</summary>
+<summary>AI issue mentions</summary>
 ${accordionEntries.join("\n")}
 </details>`;
 }

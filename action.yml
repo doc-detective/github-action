@@ -76,7 +76,7 @@ inputs:
     default: ""
   issue_mentions:
     description: >-
-      Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with `issue_prompt` where the tool takes one, in a collapsible section appended to the issue body.
+      Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with `issue_prompt` where the tool takes one, in a collapsible "AI issue mentions" section appended to the issue body.
 
       Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot", "cursor". Invalid values are ignored with a warning.
 

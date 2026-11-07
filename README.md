@@ -347,7 +347,7 @@ Comma-separated list of GitHub usernames to assign to the GitHub issue. Only val
 
 ### `issue_mentions`
 
-Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with [`issue_prompt`](#issue_prompt) where the tool takes one, in a collapsible section appended to the issue body. Only valid if `create_issue_on_fail` is set to `true`.
+Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with [`issue_prompt`](#issue_prompt) where the tool takes one, in a collapsible "AI issue mentions" section appended to the issue body. Only valid if `create_issue_on_fail` is set to `true`.
 
 Supported values: `doc-sentinel`, `promptless`, `dosu`, `claude`, `opencode`, `copilot`, `cursor`. The action ignores other values with a warning.
 
