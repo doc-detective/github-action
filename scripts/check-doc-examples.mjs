@@ -47,7 +47,14 @@ for (const { where, invalid, source } of blocks) {
   let object;
   try {
     object = parse(source); // YAML is a superset of JSON.
-  } catch {}
+  } catch (error) {
+    // README fences may hold partial snippets; an artifact must parse.
+    if (where.startsWith("artifacts/")) {
+      checked++;
+      failures.push(`${where}: doesn't parse: ${error.message}`);
+      continue;
+    }
+  }
   const schemaKey = invalid ? null : schemaKeyFor(object);
   if (!schemaKey) {
     skipped++;
