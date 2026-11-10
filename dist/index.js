@@ -1049,14 +1049,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path7 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path7 && path7[0] !== "/") {
-          path7 = `/${path7}`;
+        if (path8 && path8[0] !== "/") {
+          path8 = `/${path8}`;
         }
-        return new URL(`${origin}${path7}`);
+        return new URL(`${origin}${path8}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1507,39 +1507,39 @@ var require_diagnostics = __commonJS({
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
         const {
-          request: { method, path: path7, origin }
+          request: { method, path: path8, origin }
         } = evt;
-        debuglog("sending request to %s %s/%s", method, origin, path7);
+        debuglog("sending request to %s %s/%s", method, origin, path8);
       });
       diagnosticsChannel.channel("undici:request:headers").subscribe((evt) => {
         const {
-          request: { method, path: path7, origin },
+          request: { method, path: path8, origin },
           response: { statusCode }
         } = evt;
         debuglog(
           "received response to %s %s/%s - HTTP %d",
           method,
           origin,
-          path7,
+          path8,
           statusCode
         );
       });
       diagnosticsChannel.channel("undici:request:trailers").subscribe((evt) => {
         const {
-          request: { method, path: path7, origin }
+          request: { method, path: path8, origin }
         } = evt;
-        debuglog("trailers received from %s %s/%s", method, origin, path7);
+        debuglog("trailers received from %s %s/%s", method, origin, path8);
       });
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
-          request: { method, path: path7, origin },
+          request: { method, path: path8, origin },
           error: error2
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
-          path7,
+          path8,
           error2.message
         );
       });
@@ -1588,9 +1588,9 @@ var require_diagnostics = __commonJS({
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
           const {
-            request: { method, path: path7, origin }
+            request: { method, path: path8, origin }
           } = evt;
-          debuglog("sending request to %s %s/%s", method, origin, path7);
+          debuglog("sending request to %s %s/%s", method, origin, path8);
         });
       }
       diagnosticsChannel.channel("undici:websocket:open").subscribe((evt) => {
@@ -1653,7 +1653,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path7,
+        path: path8,
         method,
         body,
         headers,
@@ -1668,11 +1668,11 @@ var require_request = __commonJS({
         expectContinue,
         servername
       }, handler2) {
-        if (typeof path7 !== "string") {
+        if (typeof path8 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path7[0] !== "/" && !(path7.startsWith("http://") || path7.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path7)) {
+        } else if (invalidPathRegex.test(path8)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -1735,7 +1735,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? buildURL(path7, query) : path7;
+        this.path = query ? buildURL(path8, query) : path8;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -6248,7 +6248,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request2) {
-      const { method, path: path7, host, upgrade, blocking, reset } = request2;
+      const { method, path: path8, host, upgrade, blocking, reset } = request2;
       let { body, headers, contentLength } = request2;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util.isFormDataLike(body)) {
@@ -6314,7 +6314,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path7} HTTP/1.1\r
+      let header = `${method} ${path8} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -6840,7 +6840,7 @@ var require_client_h2 = __commonJS({
     }
     function writeH2(client, request2) {
       const session = client[kHTTP2Session];
-      const { method, path: path7, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
+      const { method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
       let { body } = request2;
       if (upgrade) {
         util.errorRequest(client, request2, new Error("Upgrade not supported for H2"));
@@ -6907,7 +6907,7 @@ var require_client_h2 = __commonJS({
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path7;
+      headers[HTTP2_HEADER_PATH] = path8;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -7260,9 +7260,9 @@ var require_redirect_handler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path7 = search ? `${pathname}${search}` : pathname;
+        const path8 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path7;
+        this.opts.path = path8;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -8496,10 +8496,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path7 = "/",
+          path: path8 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path7;
+        opts.path = origin + path8;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL2(origin);
           headers.host = host;
@@ -10420,20 +10420,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path7) {
-      if (typeof path7 !== "string") {
-        return path7;
+    function safeUrl(path8) {
+      if (typeof path8 !== "string") {
+        return path8;
       }
-      const pathSegments = path7.split("?");
+      const pathSegments = path8.split("?");
       if (pathSegments.length !== 2) {
-        return path7;
+        return path8;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path7, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path7);
+    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path8);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -10455,7 +10455,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path7 }) => matchValue(safeUrl(path7), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -10493,9 +10493,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path7, method, body, headers, query } = opts;
+      const { path: path8, method, body, headers, query } = opts;
       return {
-        path: path7,
+        path: path8,
         method,
         body,
         headers,
@@ -10958,10 +10958,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path7, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path7,
+            Path: path8,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -15842,9 +15842,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path7) {
-      for (let i = 0; i < path7.length; ++i) {
-        const code = path7.charCodeAt(i);
+    function validateCookiePath(path8) {
+      for (let i = 0; i < path8.length; ++i) {
+        const code = path8.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code === 127 || // DEL
         code === 59) {
@@ -18438,11 +18438,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path7 = opts.path;
+          let path8 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path7 = `/${path7}`;
+            path8 = `/${path8}`;
           }
-          url = new URL(util.parseOrigin(url).origin + path7);
+          url = new URL(util.parseOrigin(url).origin + path8);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -20596,8 +20596,8 @@ var Context = class {
       if ((0, import_fs2.existsSync)(process.env.GITHUB_EVENT_PATH)) {
         this.payload = JSON.parse((0, import_fs2.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
       } else {
-        const path7 = process.env.GITHUB_EVENT_PATH;
-        process.stdout.write(`GITHUB_EVENT_PATH ${path7} does not exist${import_os3.EOL}`);
+        const path8 = process.env.GITHUB_EVENT_PATH;
+        process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${import_os3.EOL}`);
       }
     }
     this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -24289,8 +24289,8 @@ function getOctokit(token, options, ...additionalPlugins) {
 
 // src/index.ts
 var import_os4 = __toESM(require("os"));
-var import_path3 = __toESM(require("path"));
-var import_fs6 = __toESM(require("fs"));
+var import_path4 = __toESM(require("path"));
+var import_fs7 = __toESM(require("fs"));
 var import_child_process = require("child_process");
 
 // src/runCli.ts
@@ -24423,54 +24423,76 @@ function decideOutcome({
 }
 
 // src/issueBody.ts
+var import_fs5 = __toESM(require("fs"));
+var import_path2 = __toESM(require("path"));
 var ISSUE_BODY_LIMIT = 65536;
 var fence = (results) => `
 
 \`\`\`json
 ${results}
 \`\`\``;
+function readRunSummary(runDir, runUrl) {
+  if (typeof runDir === "string" && runDir) {
+    try {
+      return import_fs5.default.readFileSync(import_path2.default.join(runDir, "testResults.md"), "utf8").trimEnd();
+    } catch {
+    }
+  }
+  return `Doc Detective wrote no summary for this run. See the [workflow run](${runUrl}).`;
+}
 function buildIssueBody({
   template,
+  summary: summary2,
   results,
   runUrl,
   prompt,
   suffix
 }) {
-  const render = (filled) => template.replace(
-    /\$(RUN_URL|PROMPT|RESULTS)/g,
-    (_, token) => token === "RUN_URL" ? runUrl : token === "PROMPT" ? prompt : filled
+  const render = (filledSummary, filledResults) => template.replace(
+    /\$(RUN_URL|PROMPT|RESULTS|SUMMARY)/g,
+    (_, token) => token === "RUN_URL" ? runUrl : token === "PROMPT" ? prompt : token === "SUMMARY" ? filledSummary : filledResults
   ) + suffix;
-  const full = render(fence(results));
+  const full = render(summary2, fence(results));
   if (full.length <= ISSUE_BODY_LIMIT) return full;
   const note = `
 
-Results truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
-  const tokens = template.match(/\$RESULTS/g)?.length ?? 0;
-  const room = Math.floor((ISSUE_BODY_LIMIT - render("").length) / Math.max(tokens, 1)) - fence("").length - note.length;
+Truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
+  const tokens = template.match(/\$(RESULTS|SUMMARY)/g)?.length ?? 0;
+  const room = Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) - fence("").length - note.length;
   if (room < 0) {
     throw new Error(
-      `The issue_body and issue_prompt inputs leave no room for results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
+      `The issue_body and issue_prompt inputs leave no room for the summary or results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
     );
   }
-  let cut = results.slice(0, room);
-  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
-  return render(fence(cut) + note);
+  const cut = (text) => {
+    let kept = text.slice(0, room);
+    if (/[\uD800-\uDBFF]$/.test(kept)) kept = kept.slice(0, -1);
+    return kept;
+  };
+  const fitSummary = () => {
+    if (summary2.length <= room) return summary2;
+    const kept = cut(summary2);
+    const lineEnd = kept.lastIndexOf("\n");
+    return (lineEnd > 0 ? kept.slice(0, lineEnd) : kept) + note;
+  };
+  const fitResults = () => results.length <= room ? fence(results) : fence(cut(results)) + note;
+  return render(fitSummary(), fitResults());
 }
 
 // src/scanSpecs.ts
-var import_fs5 = __toESM(require("fs"));
-var import_path2 = __toESM(require("path"));
+var import_fs6 = __toESM(require("fs"));
+var import_path3 = __toESM(require("path"));
 var SCANNABLE = /* @__PURE__ */ new Set([".json", ".md", ".mdx", ".markdown", ".yaml", ".yml"]);
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git", ".github"]);
 var realScanDeps = {
-  readFileSync: (p, enc) => import_fs5.default.readFileSync(p, enc),
-  readdirSync: (p) => import_fs5.default.readdirSync(p, { withFileTypes: true }),
-  existsSync: (p) => import_fs5.default.existsSync(p)
+  readFileSync: (p, enc) => import_fs6.default.readFileSync(p, enc),
+  readdirSync: (p) => import_fs6.default.readdirSync(p, { withFileTypes: true }),
+  existsSync: (p) => import_fs6.default.existsSync(p)
 };
 function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   const seen = /* @__PURE__ */ new Set();
   const scanFile = (file) => {
-    if (!SCANNABLE.has(import_path2.default.extname(file).toLowerCase())) return false;
+    if (!SCANNABLE.has(import_path3.default.extname(file).toLowerCase())) return false;
     try {
       return matches(deps.readFileSync(file, "utf8"));
     } catch {
@@ -24488,7 +24510,7 @@ function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
       return scanFile(target);
     }
     for (const entry of entries) {
-      const child2 = import_path2.default.join(target, entry.name);
+      const child2 = import_path3.default.join(target, entry.name);
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
         if (walk(child2, depth + 1)) return true;
@@ -24617,24 +24639,24 @@ async function main() {
     const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
     const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
     const androidInput = getInput("android");
-    const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path3.default.resolve(cwd || ".", p));
+    const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path4.default.resolve(cwd || ".", p));
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: import_os4.default.platform(),
-      roots: scanRoots.length ? scanRoots : [import_path3.default.resolve(cwd || ".")]
+      roots: scanRoots.length ? scanRoots : [import_path4.default.resolve(cwd || ".")]
     });
     info(
       `Android setup: ${androidDecision.setUp ? "enabled" : "skipped"} (${androidDecision.reason}).`
     );
     if (androidDecision.setUp) {
       await enableLinuxKvm({
-        existsSync: (p) => import_fs6.default.existsSync(p),
+        existsSync: (p) => import_fs7.default.existsSync(p),
         exec: (command, args2) => exec(command, args2),
         info: (m) => info(m),
         warning: (m) => warning(m)
       });
     }
-    const outputPath = import_path3.default.resolve(
+    const outputPath = import_path4.default.resolve(
       process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"
     );
@@ -24689,7 +24711,12 @@ async function main() {
     if (results?.summary?.specs?.fail > 0) {
       if (getInput("create_issue_on_fail") == "true") {
         try {
-          const issue2 = await createIssue(JSON.stringify(results, null, 2), issueMentions, issuePrompt);
+          const issue2 = await createIssue(
+            JSON.stringify(results, null, 2),
+            readRunSummary(results.runDir, runURL),
+            issueMentions,
+            issuePrompt
+          );
           setOutput("issue_url", issue2.data.html_url);
           info(`Issue: ${JSON.stringify(issue2)}`);
         } catch (error2) {
@@ -24710,13 +24737,14 @@ async function main() {
     setFailed(error2.message);
   }
 }
-async function createIssue(results, mentions, prompt) {
+async function createIssue(results, summary2, mentions, prompt) {
   const token = getInput("token");
   const title = getInput("issue_title");
   const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: getInput("issue_body"),
+    summary: summary2,
     results,
     runUrl: runURL,
     prompt,

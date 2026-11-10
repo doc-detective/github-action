@@ -7,7 +7,7 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
-import { buildIssueBody } from "./issueBody.ts";
+import { buildIssueBody, readRunSummary } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
 import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
@@ -141,7 +141,12 @@ async function main(): Promise<void> {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
-          const issue = await createIssue(JSON.stringify(results, null, 2), issueMentions, issuePrompt);
+          const issue = await createIssue(
+            JSON.stringify(results, null, 2),
+            readRunSummary(results.runDir, runURL),
+            issueMentions,
+            issuePrompt
+          );
           core.setOutput("issue_url", issue.data.html_url);
           core.info(`Issue: ${JSON.stringify(issue)}`);
         } catch (error) {
@@ -165,13 +170,14 @@ async function main(): Promise<void> {
   }
 }
 
-async function createIssue(results: string, mentions: string, prompt: string) {
+async function createIssue(results: string, summary: string, mentions: string, prompt: string) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
   const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: core.getInput("issue_body"),
+    summary,
     results,
     runUrl: runURL,
     prompt,

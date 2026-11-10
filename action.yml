@@ -63,9 +63,12 @@ inputs:
     required: false
     default: "Doc Detective Failure"
   issue_body:
-    description: The body of the created GitHub issue. `$RESULTS` inserts the results object, cut to fit GitHub's 65,536-character limit on issue bodies, with a link to the run when it's cut. `$RUN_URL` inserts the URL of the workflow that created the issue. `$PROMPT` inserts the `issue_prompt` text. Only valid if "create_issue_on_fail" is set to "true".
+    description: The body of the created GitHub issue. `$SUMMARY` inserts the Markdown summary Doc Detective wrote to the run folder (`testResults.md`). `$RESULTS` inserts the results object as JSON. Both get cut to fit GitHub's 65,536-character limit on issue bodies, with a link to the run when they're cut. `$RUN_URL` inserts the URL of the workflow that created the issue. `$PROMPT` inserts the `issue_prompt` text. Only valid if "create_issue_on_fail" is set to "true".
     required: false
-    default: "A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS"
+    default: |-
+      A Doc Detective run ($RUN_URL) failed:
+
+      $SUMMARY
   issue_labels:
     description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false

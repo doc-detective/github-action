@@ -28,6 +28,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 
 - `exit_on_fail` defaults to `true`, so a failing test now fails the job. Set it to `false` to keep the old behavior.
 - `version` defaults to `5`.
+- The default [`issue_body`](#issue_body) holds the run's Markdown summary (`$SUMMARY`) instead of the results JSON. To keep the JSON, set `issue_body` to `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`.
 - The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
 - The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
 - `integrations` is renamed [`issue_mentions`](#issue_mentions), and `prompt` is renamed [`issue_prompt`](#issue_prompt). The old names still work and log a deprecation warning. Setting both the old and the new name fails the job.
@@ -300,17 +301,26 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`)
+### `issue_body`
 
 The body of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`. The action replaces these tokens:
 
 | Token | Replaced with |
 |---|---|
-| `$RESULTS` | The results object |
+| `$SUMMARY` | The Markdown summary Doc Detective wrote to the run folder, `testResults.md`. If the run has no summary, a line that points to the workflow run |
+| `$RESULTS` | The results object, as JSON |
 | `$RUN_URL` | The URL of the workflow run that created the issue |
 | `$PROMPT` | The [`issue_prompt`](#issue_prompt) text |
 
-GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run. If `issue_body` and `issue_prompt` leave no room for results, the action logs an error and doesn't create the issue.
+The default body is:
+
+```text
+A Doc Detective run ($RUN_URL) failed:
+
+$SUMMARY
+```
+
+GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$SUMMARY` and `$RESULTS` get cut to fit, and a note links to the workflow run. If `issue_body` and `issue_prompt` leave no room for them, the action logs an error and doesn't create the issue.
 
 ```yaml
 - uses: doc-detective/github-action@v2
