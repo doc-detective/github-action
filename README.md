@@ -15,16 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: doc-detective/github-action@v2
 ```
 
+Doc Detective 5 needs Node.js 24.15 or later, and `npx` runs it on the job's Node.js, so set that up with `actions/setup-node`. If the job's Node.js is older, the action logs a warning and runs anyway.
+
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests don't work in headless mode (like if you need the `record` step), use macOS or Windows.
+**Note:** On Linux runners, Chrome and Firefox contexts run headless when there's no display. Doc Detective records headless Chrome, but not headless Firefox. To run headed or record Firefox, install Xvfb, or use a macOS or Windows runner.
 
 ## Upgrade from v1
 
-`@v2` runs Doc Detective 5. It makes these breaking changes:
+`@v2` runs Doc Detective 5, which needs Node.js 24.15 or later. Add `actions/setup-node` with `node-version: 24` before the action, as in [Usage](#usage). `@v2` also makes these breaking changes:
 
 - `exit_on_fail` defaults to `true`, so a failing test now fails the job. Set it to `false` to keep the old behavior.
 - `version` defaults to `5`.
@@ -115,6 +120,9 @@ jobs:
       DOC_DETECTIVE_CACHE_DIR: ${{ github.workspace }}/.dd-cache
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       # Rotating key + restore-keys: an exact cache hit never re-uploads, so a
       # static key would strand WDA products built for a NEW Xcode/driver
       # toolchain. The run-scoped key always saves; restore-keys pulls the
@@ -162,6 +170,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: doc-detective/github-action@v2
         with:
           create_pr_on_change: true
@@ -305,6 +316,9 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: doc-detective/github-action@v2
         with:
           create_issue_on_fail: true

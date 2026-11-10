@@ -24445,6 +24445,16 @@ ${missing.join("\n")}
   return true;
 }
 
+// src/nodeVersion.ts
+function nodeVersionWarning(version) {
+  const shown = version.trim();
+  const match = shown.match(/^v?(\d+)\.(\d+)/);
+  if (!match) return void 0;
+  const [major, minor] = [Number(match[1]), Number(match[2])];
+  if (major > 24 || major === 24 && minor >= 15) return void 0;
+  return `Doc Detective 5 needs Node.js 24.15 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
+}
+
 // src/pullRequest.ts
 function prBase(env) {
   return env.GITHUB_BASE_REF || env.GITHUB_REF_NAME || "";
@@ -24808,7 +24818,7 @@ async function main() {
   try {
     if (import_os4.default.platform() === "linux") {
       warning(
-        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
+        "On Linux runners, Chrome and Firefox contexts run headless when there's no display. Doc Detective records headless Chrome, but not headless Firefox. To run headed or record Firefox, install Xvfb, or use a macOS or Windows runner."
       );
     }
     const version = getInput("version");
@@ -24837,6 +24847,13 @@ async function main() {
         warning: (m) => warning(m)
       });
     }
+    const node = await getExecOutput("node", ["--version"], {
+      cwd,
+      silent: true,
+      ignoreReturnCode: true
+    }).catch(() => void 0);
+    const nodeWarning = node && nodeVersionWarning(node.stdout);
+    if (nodeWarning) warning(nodeWarning);
     const outputPath = import_path4.default.resolve(
       process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"

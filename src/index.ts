@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { excludeRunArtifacts, makeGit, type Git } from "./git.ts";
+import { nodeVersionWarning } from "./nodeVersion.ts";
 import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
     // Post warning if running on Linux
     if (os.platform() === "linux") {
       core.warning(
-        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
+        "On Linux runners, Chrome and Firefox contexts run headless when there's no display. Doc Detective records headless Chrome, but not headless Firefox. To run headed or record Firefox, install Xvfb, or use a macOS or Windows runner."
       );
     }
     // Get the inputs
@@ -69,6 +70,15 @@ async function main(): Promise<void> {
         warning: (m) => core.warning(m),
       });
     }
+
+    // npx runs Doc Detective on the job's Node.js, not the action's.
+    const node = await getExecOutput("node", ["--version"], {
+      cwd,
+      silent: true,
+      ignoreReturnCode: true,
+    }).catch(() => undefined);
+    const nodeWarning = node && nodeVersionWarning(node.stdout);
+    if (nodeWarning) core.warning(nodeWarning);
 
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
