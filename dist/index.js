@@ -24480,6 +24480,53 @@ Truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) fo
   return render(fitSummary(), fitResults());
 }
 
+// src/issue.ts
+async function fileIssue({
+  octokit,
+  owner,
+  repo,
+  title,
+  body,
+  labels,
+  assignees,
+  warning: warning2
+}) {
+  const open2 = await octokit.paginate(octokit.rest.issues.listForRepo, {
+    owner,
+    repo,
+    state: "open",
+    per_page: 100,
+    ...labels[0] ? { labels: labels[0] } : {}
+  });
+  const existing = open2.find((issue2) => !issue2.pull_request && issue2.title === title);
+  if (existing) {
+    const { data } = await octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: existing.number,
+      body
+    });
+    return { url: data.html_url, updated: true };
+  }
+  const create = (withAssignees) => octokit.rest.issues.create({
+    owner,
+    repo,
+    title,
+    body,
+    labels,
+    ...withAssignees ? { assignees } : {}
+  });
+  try {
+    return { url: (await create(true)).data.html_url, updated: false };
+  } catch (error2) {
+    if (error2.status !== 422) throw error2;
+    warning2(
+      `Couldn't create the issue with assignees (${assignees.join(", ")}). Retrying without assignees.`
+    );
+    return { url: (await create(false)).data.html_url, updated: false };
+  }
+}
+
 // src/scanSpecs.ts
 var import_fs6 = __toESM(require("fs"));
 var import_path3 = __toESM(require("path"));
@@ -24718,10 +24765,10 @@ async function main() {
             issueMentions,
             issuePrompt
           );
-          setOutput("issue_url", issue2.data.html_url);
-          info(`Issue: ${JSON.stringify(issue2)}`);
+          setOutput("issue_url", issue2.url);
+          info(`Issue ${issue2.updated ? "updated" : "created"}: ${issue2.url}`);
         } catch (error2) {
-          error(`Error creating issue: ${error2.message}`);
+          error(`Error creating or updating the issue: ${error2.message}`);
         }
       }
     }
@@ -24756,33 +24803,16 @@ async function createIssue(results, summary2, mentions, prompt) {
   if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
     assigneesList.push("copilot-swe-agent");
   }
-  const octokit = getOctokit(token);
-  let issue2;
-  try {
-    issue2 = await octokit.rest.issues.create({
-      owner: context2.repo.owner,
-      repo: context2.repo.repo,
-      title,
-      body,
-      labels: labelsList,
-      assignees: assigneesList
-    });
-  } catch (error2) {
-    if (error2.status === 422) {
-      warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
-      issue2 = await octokit.rest.issues.create({
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        title,
-        body,
-        labels: labelsList
-      });
-    } else {
-      throw error2;
-    }
-  }
-  info(`Issue created: ${issue2.data.html_url}`);
-  return issue2;
+  return fileIssue({
+    octokit: getOctokit(token),
+    owner: repoOwner,
+    repo: repoName,
+    title,
+    body,
+    labels: labelsList,
+    assignees: assigneesList,
+    warning
+  });
 }
 async function createPullRequest() {
   const token = getInput("token");

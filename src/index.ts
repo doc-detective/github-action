@@ -8,6 +8,7 @@ import { execSync } from "child_process";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
+import { fileIssue } from "./issue.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
 import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
@@ -147,10 +148,10 @@ async function main(): Promise<void> {
             issueMentions,
             issuePrompt
           );
-          core.setOutput("issue_url", issue.data.html_url);
-          core.info(`Issue: ${JSON.stringify(issue)}`);
+          core.setOutput("issue_url", issue.url);
+          core.info(`Issue ${issue.updated ? "updated" : "created"}: ${issue.url}`);
         } catch (error) {
-          core.error(`Error creating issue: ${(error as Error).message}`);
+          core.error(`Error creating or updating the issue: ${(error as Error).message}`);
         }
       }
     }
@@ -189,36 +190,16 @@ async function createIssue(results: string, summary: string, mentions: string, p
     assigneesList.push("copilot-swe-agent");
   }
 
-  const octokit = github.getOctokit(token);
-
-  // Try creating the issue; if assignees cause a 422, retry without them
-  let issue;
-  try {
-    issue = await octokit.rest.issues.create({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      title,
-      body,
-      labels: labelsList,
-      assignees: assigneesList,
-    });
-  } catch (error) {
-    if ((error as { status?: number }).status === 422) {
-      core.warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
-      issue = await octokit.rest.issues.create({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        title,
-        body,
-        labels: labelsList,
-      });
-    } else {
-      throw error;
-    }
-  }
-
-  core.info(`Issue created: ${issue.data.html_url}`);
-  return issue;
+  return fileIssue({
+    octokit: github.getOctokit(token),
+    owner: repoOwner,
+    repo: repoName,
+    title,
+    body,
+    labels: labelsList,
+    assignees: assigneesList,
+    warning: core.warning,
+  });
 }
 
 async function createPullRequest() {

@@ -29,6 +29,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 - `exit_on_fail` defaults to `true`, so a failing test now fails the job. Set it to `false` to keep the old behavior.
 - `version` defaults to `5`.
 - The default [`issue_body`](#issue_body) holds the run's Markdown summary (`$SUMMARY`) instead of the results JSON. To keep the JSON, set `issue_body` to `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`.
+- [`create_issue_on_fail`](#create_issue_on_fail) updates the open issue with the same title and first label instead of opening a new issue on every failing run.
 - The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
 - The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
 - `integrations` is renamed [`issue_mentions`](#issue_mentions), and `prompt` is renamed [`issue_prompt`](#issue_prompt). The old names still work and log a deprecation warning. Setting both the old and the new name fails the job.
@@ -263,7 +264,9 @@ Unlike the CLI's `exitOnFail: false`, this never turns exit `2` (nothing tested)
 
 ### `create_issue_on_fail` (default: `false`)
 
-Create a GitHub issue if one or more tests fails.
+File a GitHub issue if one or more tests fails.
+
+If an open issue already has the same [`issue_title`](#issue_title) and the first label in [`issue_labels`](#issue_labels), the action replaces that issue's body with the latest run instead of opening another issue. A failing scheduled run keeps one issue current. Close the issue once it's fixed, and the next failure opens a new one. With no `issue_labels`, the title alone has to match.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -435,7 +438,7 @@ URL of the created pull request. Only set if `create_pr_on_change` is `true`.
 
 ### `issue_url`
 
-URL of the created GitHub issue. Only set if `create_issue_on_fail` is `true`.
+URL of the created or updated GitHub issue. Only set if `create_issue_on_fail` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v2
