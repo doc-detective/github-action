@@ -24458,24 +24458,25 @@ function buildIssueBody({
 
 Truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
   const tokens = template.match(/\$(RESULTS|SUMMARY)/g)?.length ?? 0;
-  const room = Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) - fence("").length - note.length;
-  if (room < 0) {
+  const summaryRoom = Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) - note.length;
+  const resultsRoom = summaryRoom - fence("").length;
+  if ((/\$RESULTS/.test(template) ? resultsRoom : summaryRoom) < 0) {
     throw new Error(
       `The issue_body and issue_prompt inputs leave no room for the summary or results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
     );
   }
-  const cut = (text) => {
+  const cut = (text, room) => {
     let kept = text.slice(0, room);
     if (/[\uD800-\uDBFF]$/.test(kept)) kept = kept.slice(0, -1);
     return kept;
   };
   const fitSummary = () => {
-    if (summary2.length <= room) return summary2;
-    const kept = cut(summary2);
+    if (summary2.length <= summaryRoom) return summary2;
+    const kept = cut(summary2, summaryRoom);
     const lineEnd = kept.lastIndexOf("\n");
     return (lineEnd > 0 ? kept.slice(0, lineEnd) : kept) + note;
   };
-  const fitResults = () => results.length <= room ? fence(results) : fence(cut(results)) + note;
+  const fitResults = () => results.length <= resultsRoom ? fence(results) : fence(cut(results, resultsRoom)) + note;
   return render(fitSummary(), fitResults());
 }
 

@@ -149,3 +149,22 @@ test("keeps the note, link, and suffix when results only just lose all their roo
   assert.ok(body.includes(runUrl));
   assert.ok(body.endsWith("SUFFIX"));
 });
+
+test("cuts both $SUMMARY and $RESULTS when both overflow", () => {
+  const body = buildIssueBody({
+    ...base,
+    template: "$SUMMARY\n$RESULTS",
+    summary: "s\n".repeat(ISSUE_BODY_LIMIT),
+    results: "x".repeat(ISSUE_BODY_LIMIT),
+  });
+  assert.ok(body.length <= ISSUE_BODY_LIMIT, `length ${body.length}`);
+  assert.equal(body.split("Truncated").length - 1, 2);
+});
+
+test("a $SUMMARY-only body doesn't reserve room for a JSON fence", () => {
+  const note = `\n\nTruncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
+  const template = "y".repeat(ISSUE_BODY_LIMIT - note.length - 5) + "$SUMMARY";
+  const body = buildIssueBody({ ...base, template, summary: "line\n".repeat(100), results: "{}" });
+  assert.equal(body.length, ISSUE_BODY_LIMIT - 1);
+  assert.ok(body.endsWith(`line${note}`));
+});

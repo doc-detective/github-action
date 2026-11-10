@@ -60,29 +60,29 @@ export function buildIssueBody({
   // Every $SUMMARY and $RESULTS gets an equal share of the room that's left.
   const note = `\n\nTruncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
   const tokens = template.match(/\$(RESULTS|SUMMARY)/g)?.length ?? 0;
-  const room =
-    Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) -
-    fence("").length -
-    note.length;
-  if (room < 0) {
+  const summaryRoom =
+    Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) - note.length;
+  // Only $RESULTS sits in a JSON fence.
+  const resultsRoom = summaryRoom - fence("").length;
+  if ((/\$RESULTS/.test(template) ? resultsRoom : summaryRoom) < 0) {
     throw new Error(
       `The issue_body and issue_prompt inputs leave no room for the summary or results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
     );
   }
-  const cut = (text: string) => {
+  const cut = (text: string, room: number) => {
     let kept = text.slice(0, room);
     // Don't leave half a surrogate pair at the cut.
     if (/[\uD800-\uDBFF]$/.test(kept)) kept = kept.slice(0, -1);
     return kept;
   };
   const fitSummary = () => {
-    if (summary.length <= room) return summary;
-    const kept = cut(summary);
+    if (summary.length <= summaryRoom) return summary;
+    const kept = cut(summary, summaryRoom);
     // End Markdown on a whole line, so a half table row doesn't swallow the note.
     const lineEnd = kept.lastIndexOf("\n");
     return (lineEnd > 0 ? kept.slice(0, lineEnd) : kept) + note;
   };
   const fitResults = () =>
-    results.length <= room ? fence(results) : fence(cut(results)) + note;
+    results.length <= resultsRoom ? fence(results) : fence(cut(results, resultsRoom)) + note;
   return render(fitSummary(), fitResults());
 }
