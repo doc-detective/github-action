@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { makeGit, type Git } from "./git.ts";
+import { openPullRequest, prBase } from "./pullRequest.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
 import { fileIssue } from "./issue.ts";
@@ -109,10 +110,10 @@ async function main(): Promise<void> {
         core.info(`Changed files:\n${status}`);
         try {
           const pr = await createPullRequest(git);
-          core.setOutput("pull_request_url", pr.data.html_url);
-          core.info(`Pull Request: ${JSON.stringify(pr)}`);
+          core.setOutput("pull_request_url", pr.url);
+          core.info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error) {
-          core.error(`Error creating pull request: ${(error as Error).message}`);
+          core.error(`Error creating or updating the pull request: ${(error as Error).message}`);
         }
       }
     }
@@ -182,86 +183,24 @@ async function createIssue(results: string, summary: string, mentions: string, p
   });
 }
 
-async function createPullRequest(git: Git) {
-  const token = core.getInput("token");
-  const title = core.getInput("pr_title");
-  const body = core.getInput("pr_body").replace("$RUN_URL", runURL);
-  const labels = core.getInput("pr_labels");
-  const reviewers = core.getInput("pr_reviewers");
-  const assignees = core.getInput("pr_assignees");
-  const base = (await git(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
-  const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
+/** A comma-separated input, as a list. */
+const listInput = (name: string) =>
+  core.getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
 
-  const octokit = github.getOctokit(token);
-
-  // Infer user email and name
-  const userName = process.env.GITHUB_ACTOR;
-  const userEmail = `${userName}@users.noreply.github.com`;
-
-  // Configure git with user email and name
-  await git(["config", "--global", "user.email", userEmail]);
-  await git(["config", "--global", "user.name", userName ?? ""]);
-
-  // Create new branch
-  core.info(`Creating branch: ${head}`);
-  await git(["checkout", "-b", head]);
-
-  // Commit every change in the checkout, wherever working_directory points.
-  await git(["add", "-A"]);
-  await git(["commit", "-m", "Doc Detective results"]);
-  await git(["push", "origin", head]);
-
-  // Create pull request
-  const pr = await octokit.rest.pulls.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    title,
-    body,
-    head,
-    base,
+function createPullRequest(git: Git) {
+  return openPullRequest({
+    git,
+    octokit: github.getOctokit(core.getInput("token")),
+    owner: repoOwner,
+    repo: repoName,
+    branch: core.getInput("pr_branch") || "doc-detective-changes",
+    base: prBase(process.env),
+    title: core.getInput("pr_title"),
+    body: core.getInput("pr_body").replace("$RUN_URL", runURL),
+    actor: process.env.GITHUB_ACTOR ?? "",
+    labels: listInput("pr_labels"),
+    assignees: listInput("pr_assignees"),
+    reviewers: listInput("pr_reviewers"),
+    error: core.error,
   });
-
-  try {
-    // Add labels, reviewers, and assignees
-    core.info(`Adding labels.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        issue_number: pr.data.number,
-        labels: labels.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-    core.info(`Adding assignees.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        issue_number: pr.data.number,
-        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-    core.info(`Adding reviewers.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: pr.data.number,
-        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-  } catch (error) {
-    if ((error as { status?: number }).status === 403) {
-      core.error(
-        "Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests."
-      );
-    } else {
-      core.error(error as Error);
-    }
-  }
-
-  return pr;
 }

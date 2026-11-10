@@ -30,6 +30,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 - `version` defaults to `5`.
 - The default [`issue_body`](#issue_body) holds the run's Markdown summary (`$SUMMARY`) instead of the results JSON. To keep the JSON, set `issue_body` to `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`.
 - [`create_issue_on_fail`](#create_issue_on_fail) updates the open issue with the same title and first label instead of opening a new issue on every failing run.
+- [`create_pr_on_change`](#create_pr_on_change) force-pushes one branch, `doc-detective-changes` by default, and updates its open pull request instead of opening a new branch and pull request on every run. The pull request targets `GITHUB_BASE_REF`, else `GITHUB_REF_NAME`, instead of the checked-out branch. Its `git` commands run in [`working_directory`](#working_directory).
 - The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
 - The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
 - `integrations` is renamed [`issue_mentions`](#issue_mentions), and `prompt` is renamed [`issue_prompt`](#issue_prompt). The old names still work and log a deprecation warning. Setting both the old and the new name fails the job.
@@ -131,7 +132,9 @@ Without the prebuild, iOS tests still work — the first XCUITest session builds
 
 ### `create_pr_on_change` (default: `false`)
 
-Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+Open or update a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+
+The action commits the changes to [`pr_branch`](#pr_branch) and force-pushes it. If that branch already has an open pull request, the action updates its title and body. Otherwise it opens one. The pull request targets the base branch of the pull request that triggered the run (`GITHUB_BASE_REF`), or else the branch that triggered it (`GITHUB_REF_NAME`).
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -163,15 +166,15 @@ jobs:
           create_pr_on_change: true
 ```
 
-### `pr_branch` (default: `doc-detective-<timestamp>`)
+### `pr_branch` (default: `doc-detective-changes`)
 
-The name of the branch to create for the pull request. By default, `<timestamp>` is the time in milliseconds since the Unix epoch. Only valid if `create_pr_on_change` is `true`.
+The branch for the pull request. Each run resets it to the checked-out commit plus that run's changes, and force-pushes it, so one pull request carries the latest changes. Don't commit to this branch by hand, because the next run overwrites it. Only valid if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v2
   with:
     create_pr_on_change: true
-    pr_branch: doc-detective-changes
+    pr_branch: docs-screenshots
 ```
 
 ### `pr_title` (default: `Doc Detective Changes`)
@@ -426,7 +429,7 @@ JSON-formatted results of the command. This can be used in subsequent steps in t
 
 ### `pull_request_url`
 
-URL of the created pull request. Only set if `create_pr_on_change` is `true`.
+URL of the created or updated pull request. Only set if `create_pr_on_change` is `true`.
 
 ```yaml
 - uses: doc-detective/github-action@v2

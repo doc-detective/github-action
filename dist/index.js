@@ -24445,6 +24445,70 @@ function makeGit(getExecOutput2, cwd) {
   };
 }
 
+// src/pullRequest.ts
+function prBase(env) {
+  return env.GITHUB_BASE_REF || env.GITHUB_REF_NAME || "";
+}
+async function openPullRequest({
+  git,
+  octokit,
+  owner,
+  repo,
+  branch,
+  base,
+  title,
+  body,
+  actor,
+  labels,
+  assignees,
+  reviewers,
+  error: error2
+}) {
+  await git(["checkout", "-B", branch]);
+  await git(["add", "-A"]);
+  await git([
+    "-c",
+    `user.name=${actor}`,
+    "-c",
+    `user.email=${actor}@users.noreply.github.com`,
+    "commit",
+    "-m",
+    "Doc Detective results"
+  ]);
+  await git(["push", "--force", "origin", branch]);
+  const { data: open2 } = await octokit.rest.pulls.list({
+    owner,
+    repo,
+    state: "open",
+    head: `${owner}:${branch}`,
+    base
+  });
+  if (open2[0]) {
+    const { data } = await octokit.rest.pulls.update({
+      owner,
+      repo,
+      pull_number: open2[0].number,
+      title,
+      body
+    });
+    return { url: data.html_url, updated: true };
+  }
+  const { data: pr } = await octokit.rest.pulls.create({ owner, repo, title, body, head: branch, base });
+  try {
+    if (labels.length)
+      await octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
+    if (assignees.length)
+      await octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees });
+    if (reviewers.length)
+      await octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
+  } catch (e) {
+    error2(
+      e.status === 403 ? "Doc Detective doesn't have permissions to label or assign the pull request. Give the job `pull-requests: write`, and allow GitHub Actions to create pull requests in the repository settings." : `Couldn't label the pull request or assign people to it: ${e.message}`
+    );
+  }
+  return { url: pr.html_url, updated: false };
+}
+
 // src/outcome.ts
 function parseExitOnFail(input) {
   return input.trim().toLowerCase() !== "false";
@@ -24782,10 +24846,10 @@ async function main() {
 ${status}`);
         try {
           const pr = await createPullRequest(git);
-          setOutput("pull_request_url", pr.data.html_url);
-          info(`Pull Request: ${JSON.stringify(pr)}`);
+          setOutput("pull_request_url", pr.url);
+          info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error2) {
-          error(`Error creating pull request: ${error2.message}`);
+          error(`Error creating or updating the pull request: ${error2.message}`);
         }
       }
     }
@@ -24847,74 +24911,23 @@ async function createIssue(results, summary2, mentions, prompt) {
     warning
   });
 }
-async function createPullRequest(git) {
-  const token = getInput("token");
-  const title = getInput("pr_title");
-  const body = getInput("pr_body").replace("$RUN_URL", runURL);
-  const labels = getInput("pr_labels");
-  const reviewers = getInput("pr_reviewers");
-  const assignees = getInput("pr_assignees");
-  const base = (await git(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
-  const head = getInput("pr_branch") || `doc-detective-${Date.now()}`;
-  const octokit = getOctokit(token);
-  const userName = process.env.GITHUB_ACTOR;
-  const userEmail = `${userName}@users.noreply.github.com`;
-  await git(["config", "--global", "user.email", userEmail]);
-  await git(["config", "--global", "user.name", userName ?? ""]);
-  info(`Creating branch: ${head}`);
-  await git(["checkout", "-b", head]);
-  await git(["add", "-A"]);
-  await git(["commit", "-m", "Doc Detective results"]);
-  await git(["push", "origin", head]);
-  const pr = await octokit.rest.pulls.create({
-    owner: context2.repo.owner,
-    repo: context2.repo.repo,
-    title,
-    body,
-    head,
-    base
+var listInput = (name) => getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+function createPullRequest(git) {
+  return openPullRequest({
+    git,
+    octokit: getOctokit(getInput("token")),
+    owner: repoOwner,
+    repo: repoName,
+    branch: getInput("pr_branch") || "doc-detective-changes",
+    base: prBase(process.env),
+    title: getInput("pr_title"),
+    body: getInput("pr_body").replace("$RUN_URL", runURL),
+    actor: process.env.GITHUB_ACTOR ?? "",
+    labels: listInput("pr_labels"),
+    assignees: listInput("pr_assignees"),
+    reviewers: listInput("pr_reviewers"),
+    error
   });
-  try {
-    info(`Adding labels.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        issue_number: pr.data.number,
-        labels: labels.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-    info(`Adding assignees.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        issue_number: pr.data.number,
-        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-    info(`Adding reviewers.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        pull_number: pr.data.number,
-        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-  } catch (error2) {
-    if (error2.status === 403) {
-      error(
-        "Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests."
-      );
-    } else {
-      error(error2);
-    }
-  }
-  return pr;
 }
 /*! Bundled license information:
 
