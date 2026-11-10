@@ -102,36 +102,21 @@ test("buildCliArgs keeps each value a single argument, so spaces survive", () =>
       input: "my docs",
       outputPath: "/tmp/run dir/out.json",
     }),
-    [
-      "doc-detective@5",
-      "--config",
-      "my config.json",
-      "--input",
-      "my docs",
-      "--output",
-      "/tmp/run dir/out.json",
-      "--output-dir",
-      "/tmp/run dir",
-    ]
+    ["doc-detective@5", "--config", "my config.json", "--input", "my docs", "--output", "/tmp/run dir/out.json"]
   );
 });
 
 test("buildCliArgs leaves out unset options, and the version for a local CLI", () => {
   assert.deepEqual(
     buildCliArgs({ version: "", config: "", input: "", outputPath: "/tmp/out.json" }),
-    ["doc-detective", "--output", "/tmp/out.json", "--output-dir", "/tmp"]
+    ["doc-detective", "--output", "/tmp/out.json"]
   );
 });
 
-test("CLI 4 gets no --output-dir, since its strict parser rejects the flag", () => {
-  const args = buildCliArgs({ version: "4", config: "", input: "", outputPath: "/tmp/out.json" });
-  assert.deepEqual(args, ["doc-detective@4", "--output", "/tmp/out.json"]);
-});
-
-test("an empty version and a tag both get --output-dir", () => {
-  for (const version of ["", "latest"]) {
+test("no version gets --output-dir, so the config's outputDir applies", () => {
+  for (const version of ["", "4", "5", "latest"]) {
     const args = buildCliArgs({ version, config: "", input: "", outputPath: "/tmp/out.json" });
-    assert.deepEqual(args.slice(-2), ["--output-dir", "/tmp"], version);
+    assert.ok(!args.includes("--output-dir"), version);
   }
 });
 

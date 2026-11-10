@@ -31,6 +31,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 - The default [`issue_body`](#issue_body) holds the run's Markdown summary (`$SUMMARY`) instead of the results JSON. To keep the JSON, set `issue_body` to `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`.
 - [`create_issue_on_fail`](#create_issue_on_fail) updates the open issue with the same title and first label instead of opening a new issue on every failing run.
 - [`create_pr_on_change`](#create_pr_on_change) force-pushes one branch, `doc-detective-changes` by default, and updates its open pull request instead of opening a new branch and pull request on every run. The pull request targets `GITHUB_BASE_REF`, else `GITHUB_REF_NAME`, instead of the checked-out branch. Its `git` commands run in [`working_directory`](#working_directory).
+- Doc Detective's run folder and reports go under the `outputDir` in your config, instead of the runner's temp directory. The action keeps them out of git. See [Run files](#run-files).
 - The `ios` input is gone. See [Speed up iOS tests](#speed-up-ios-tests).
 - The undocumented `issueUrl` output is gone. Use [`issue_url`](#issue_url).
 - `integrations` is renamed [`issue_mentions`](#issue_mentions), and `prompt` is renamed [`issue_prompt`](#issue_prompt). The old names still work and log a deprecation warning. Setting both the old and the new name fails the job.
@@ -422,9 +423,21 @@ The GitHub token to use for creating issues. Defaults to the token already avail
 
 ## Run files
 
-The action writes the results file and Doc Detective's run folder (`.doc-detective/runs`) to the runner's temp directory (`RUNNER_TEMP`), so they stay out of your repository and out of `create_pr_on_change` pull requests. This overrides any `outputDir` in your config, and reports from reporters such as `junit` and `markdown` go there too. To keep those files, upload them from `${{ runner.temp }}` in a later step.
+The action writes the results file, which sets the [`results`](#results) output, to the runner's temp directory (`RUNNER_TEMP`).
 
-The action passes `--output-dir` to do this, and leaves it out when `version` stays below 5, because Doc Detective 4 rejects the flag. An empty `version` always gets it, so a locally linked CLI needs to be version 5 or later.
+Doc Detective writes the rest under the `outputDir` in your config, which defaults to the working directory. That's the run folder, `.doc-detective/runs/<runId>/`, with the run's summary and automatic screenshots, and reports such as `junit.xml` and `doc-detective-summary.md`. A `screenshot` step saves where the step says, so it compares against the image in your repository, and an updated image reaches the `create_pr_on_change` pull request.
+
+To keep run artifacts out of `git status` and pull requests, the action adds these patterns to the checkout's `.git/info/exclude`, which git reads but never commits: `.doc-detective/`, `junit.xml`, `doc-detective-summary.md`, and `testResults-*`. Outside a git checkout, it skips this step.
+
+To keep the run folder after the job, upload it in a later step:
+
+```yaml
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: doc-detective-run
+    path: .doc-detective/runs/
+```
 
 ## Outputs
 

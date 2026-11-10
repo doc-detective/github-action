@@ -5,7 +5,7 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { buildCliArgs, runCli } from "./runCli.ts";
-import { makeGit, type Git } from "./git.ts";
+import { excludeRunArtifacts, makeGit, type Git } from "./git.ts";
 import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
@@ -76,6 +76,11 @@ async function main(): Promise<void> {
     );
     const args = buildCliArgs({ version, config, input, outputPath });
 
+    // Git runs in working_directory, like Doc Detective. The run folder and
+    // reports land under the config's outputDir, so keep them out of git.
+    const git = makeGit(getExecOutput, cwd);
+    await excludeRunArtifacts(git, cwd);
+
     // Run Doc Detective
     core.info(`Running Doc Detective: npx ${args.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
@@ -95,8 +100,6 @@ async function main(): Promise<void> {
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
       core.info("Checking for changed files.");
-      // Git runs in working_directory, like Doc Detective.
-      const git = makeGit(getExecOutput, cwd);
       const prPaths = listInput("pr_paths");
       let status = "";
       try {

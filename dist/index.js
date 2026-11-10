@@ -24325,11 +24325,10 @@ function getOctokit(token, options, ...additionalPlugins) {
 // src/index.ts
 var import_os4 = __toESM(require("os"));
 var import_path4 = __toESM(require("path"));
-var import_fs7 = __toESM(require("fs"));
+var import_fs8 = __toESM(require("fs"));
 
 // src/runCli.ts
 var import_fs4 = __toESM(require("fs"));
-var import_path = __toESM(require("path"));
 
 // src/loadResults.ts
 var import_fs3 = __toESM(require("fs"));
@@ -24367,26 +24366,6 @@ ${cliOutput}`
   }
 }
 
-// src/cliVersion.ts
-var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
-function capsBelowFive(match) {
-  const [, op = "", major, minor = "0", patch = "0"] = match;
-  if (op === ">" || op === ">=") return false;
-  if (!/^\d+$/.test(major)) return false;
-  if (Number(major) < 5) return true;
-  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
-}
-function supportsOutputDir(version) {
-  if (version === "") return true;
-  const alternatives = version.split("||").map(
-    (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
-  );
-  if (alternatives.flat().includes(null)) return true;
-  return alternatives.some(
-    (comparators) => !comparators.some((c) => capsBelowFive(c))
-  );
-}
-
 // src/runCli.ts
 function buildCliArgs({
   version,
@@ -24399,11 +24378,10 @@ function buildCliArgs({
     ...config ? ["--config", config] : [],
     ...input ? ["--input", input] : [],
     "--output",
-    outputPath,
-    // CLI 5 otherwise writes `.doc-detective/runs` to the working directory,
-    // which dirties the checkout and trips `create_pr_on_change`. CLI 4 rejects
-    // this flag, and already puts the run folder beside the results file.
-    ...supportsOutputDir(version) ? ["--output-dir", import_path.default.dirname(outputPath)] : []
+    outputPath
+    // No `--output-dir`: the config's `outputDir` places the run folder and
+    // reports, so `screenshot` baselines compare across runs. The action keeps
+    // them out of git through `info/exclude` instead.
   ];
 }
 async function runCli({
@@ -24433,6 +24411,9 @@ async function runCli({
 }
 
 // src/git.ts
+var import_fs5 = __toESM(require("fs"));
+var import_path = __toESM(require("path"));
+var RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "doc-detective-summary.md", "testResults-*"];
 function makeGit(getExecOutput2, cwd) {
   return async (args) => {
     const { exitCode, stdout, stderr } = await getExecOutput2("git", args, {
@@ -24443,6 +24424,25 @@ function makeGit(getExecOutput2, cwd) {
     if (exitCode !== 0) throw new Error(`\`git ${args.join(" ")}\` failed: ${stderr.trim()}`);
     return stdout;
   };
+}
+async function excludeRunArtifacts(git, cwd) {
+  let file;
+  try {
+    file = import_path.default.resolve(cwd, (await git(["rev-parse", "--git-path", "info/exclude"])).trim());
+  } catch {
+    return false;
+  }
+  const current = import_fs5.default.existsSync(file) ? import_fs5.default.readFileSync(file, "utf8") : "";
+  const lines = new Set(current.split(/\r?\n/).map((line) => line.trim()));
+  const missing = RUN_ARTIFACTS.filter((pattern) => !lines.has(pattern));
+  if (missing.length) {
+    import_fs5.default.mkdirSync(import_path.default.dirname(file), { recursive: true });
+    const separator = current && !current.endsWith("\n") ? "\n" : "";
+    import_fs5.default.appendFileSync(file, `${separator}# Doc Detective run artifacts
+${missing.join("\n")}
+`);
+  }
+  return true;
 }
 
 // src/pullRequest.ts
@@ -24556,7 +24556,7 @@ function decideOutcome({
 }
 
 // src/issueBody.ts
-var import_fs5 = __toESM(require("fs"));
+var import_fs6 = __toESM(require("fs"));
 var import_path2 = __toESM(require("path"));
 var ISSUE_BODY_LIMIT = 65536;
 var fence = (results) => `
@@ -24567,7 +24567,7 @@ ${results}
 function readRunSummary(runDir, runUrl) {
   if (typeof runDir === "string" && runDir) {
     try {
-      return import_fs5.default.readFileSync(import_path2.default.join(runDir, "testResults.md"), "utf8").trimEnd();
+      return import_fs6.default.readFileSync(import_path2.default.join(runDir, "testResults.md"), "utf8").trimEnd();
     } catch {
     }
   }
@@ -24661,14 +24661,14 @@ async function fileIssue({
 }
 
 // src/scanSpecs.ts
-var import_fs6 = __toESM(require("fs"));
+var import_fs7 = __toESM(require("fs"));
 var import_path3 = __toESM(require("path"));
 var SCANNABLE = /* @__PURE__ */ new Set([".json", ".md", ".mdx", ".markdown", ".yaml", ".yml"]);
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git", ".github"]);
 var realScanDeps = {
-  readFileSync: (p, enc) => import_fs6.default.readFileSync(p, enc),
-  readdirSync: (p) => import_fs6.default.readdirSync(p, { withFileTypes: true }),
-  existsSync: (p) => import_fs6.default.existsSync(p)
+  readFileSync: (p, enc) => import_fs7.default.readFileSync(p, enc),
+  readdirSync: (p) => import_fs7.default.readdirSync(p, { withFileTypes: true }),
+  existsSync: (p) => import_fs7.default.existsSync(p)
 };
 function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   const seen = /* @__PURE__ */ new Set();
@@ -24831,7 +24831,7 @@ async function main() {
     );
     if (androidDecision.setUp) {
       await enableLinuxKvm({
-        existsSync: (p) => import_fs7.default.existsSync(p),
+        existsSync: (p) => import_fs8.default.existsSync(p),
         exec: (command, args2) => exec(command, args2),
         info: (m) => info(m),
         warning: (m) => warning(m)
@@ -24842,6 +24842,8 @@ async function main() {
       "doc-detective-output.json"
     );
     const args = buildCliArgs({ version, config, input, outputPath });
+    const git = makeGit(getExecOutput, cwd);
+    await excludeRunArtifacts(git, cwd);
     info(`Running Doc Detective: npx ${args.join(" ")}`);
     info(`Working directory: ${cwd}`);
     const { exitCode, results } = await runCli({
@@ -24854,7 +24856,6 @@ async function main() {
     setOutput("results", results);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
-      const git = makeGit(getExecOutput, cwd);
       const prPaths = listInput("pr_paths");
       let status = "";
       try {

@@ -1,7 +1,5 @@
 import fs from "fs";
-import path from "path";
 import { loadResults } from "./loadResults.ts";
-import { supportsOutputDir } from "./cliVersion.ts";
 
 type Exec = (
   command: string,
@@ -39,10 +37,9 @@ export function buildCliArgs({
     ...(input ? ["--input", input] : []),
     "--output",
     outputPath,
-    // CLI 5 otherwise writes `.doc-detective/runs` to the working directory,
-    // which dirties the checkout and trips `create_pr_on_change`. CLI 4 rejects
-    // this flag, and already puts the run folder beside the results file.
-    ...(supportsOutputDir(version) ? ["--output-dir", path.dirname(outputPath)] : []),
+    // No `--output-dir`: the config's `outputDir` places the run folder and
+    // reports, so `screenshot` baselines compare across runs. The action keeps
+    // them out of git through `info/exclude` instead.
   ];
 }
 
