@@ -134,7 +134,7 @@ Without the prebuild, iOS tests still work — the first XCUITest session builds
 
 Open or update a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
 
-The action commits the changes to [`pr_branch`](#pr_branch) and force-pushes it. If that branch already has an open pull request, the action updates its title and body. Otherwise it opens one. The pull request targets the base branch of the pull request that triggered the run (`GITHUB_BASE_REF`), or else the branch that triggered it (`GITHUB_REF_NAME`).
+The action commits the changes to [`pr_branch`](#pr_branch) and force-pushes it. If that branch already has an open pull request, the action updates its title and body. Otherwise it opens one, with [`pr_labels`](#pr_labels), [`pr_assignees`](#pr_assignees), and [`pr_reviewers`](#pr_reviewers). Those three apply only when the pull request opens. The pull request targets the base branch of the pull request that triggered the run (`GITHUB_BASE_REF`), or else the branch that triggered it (`GITHUB_REF_NAME`).
 
 ```yaml
 - uses: doc-detective/github-action@v2

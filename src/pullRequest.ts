@@ -46,6 +46,11 @@ export async function openPullRequest({
   reviewers: string[];
   error: (message: string) => void;
 }): Promise<{ url: string; updated: boolean }> {
+  if (!base) {
+    throw new Error(
+      "Couldn't tell which branch the pull request targets: `GITHUB_BASE_REF` and `GITHUB_REF_NAME` are both empty."
+    );
+  }
   await git(["checkout", "-B", branch]);
   await git(["add", "-A"]);
   await git([
@@ -67,6 +72,8 @@ export async function openPullRequest({
     base,
   });
   if (open[0]) {
+    // Labels, assignees, and reviewers are set once, when the pull request
+    // opens, so later runs don't undo a reviewer's edits or re-request reviews.
     const { data } = await octokit.rest.pulls.update({
       owner,
       repo,
@@ -78,19 +85,29 @@ export async function openPullRequest({
   }
 
   const { data: pr } = await octokit.rest.pulls.create({ owner, repo, title, body, head: branch, base });
-  try {
-    if (labels.length)
-      await octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
-    if (assignees.length)
-      await octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees });
-    if (reviewers.length)
-      await octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
-  } catch (e) {
-    error(
-      (e as { status?: number }).status === 403
-        ? "Doc Detective doesn't have permissions to label or assign the pull request. Give the job `pull-requests: write`, and allow GitHub Actions to create pull requests in the repository settings."
-        : `Couldn't label the pull request or assign people to it: ${(e as Error).message}`
+  // Each one on its own, so a failure doesn't skip the rest.
+  const decorate = async (what: string, call: () => Promise<unknown>) => {
+    try {
+      await call();
+    } catch (e) {
+      error(
+        (e as { status?: number }).status === 403
+          ? `Couldn't ${what}: the token lacks permission. Give the job \`pull-requests: write\`, and allow GitHub Actions to create pull requests in the repository settings.`
+          : `Couldn't ${what}: ${(e as Error).message}`
+      );
+    }
+  };
+  if (labels.length)
+    await decorate("label the pull request", () =>
+      octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels })
     );
-  }
+  if (assignees.length)
+    await decorate("assign the pull request", () =>
+      octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees })
+    );
+  if (reviewers.length)
+    await decorate("request reviewers", () =>
+      octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers })
+    );
   return { url: pr.html_url, updated: false };
 }

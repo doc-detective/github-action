@@ -105,6 +105,7 @@ test("opens a pull request when the branch has none open", async () => {
   ]);
 });
 
+// Labels, assignees, and reviewers are set once, when the pull request opens.
 test("updates the branch's open pull request instead of opening another", async () => {
   const m = mocks([{ number: 4 }]);
   const out = await openPullRequest({ ...base, octokit: m.octokit, git: m.git });
@@ -129,5 +130,16 @@ test("a 403 adding labels logs the permissions fix and keeps the pull request", 
     error: (message: string) => errors.push(message),
   });
   assert.equal(out.url, "https://github.com/o/r/pull/12");
-  assert.match(errors[0], /permissions/);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /^Couldn't label the pull request: .*`pull-requests: write`/);
+  assert.equal(m.calls.reviewers.length, 1, "a labels failure doesn't skip reviewers");
+});
+
+test("refuses an empty base before touching git", async () => {
+  const m = mocks([]);
+  await assert.rejects(
+    openPullRequest({ ...base, base: "", octokit: m.octokit, git: m.git }),
+    /^Error: Couldn't tell which branch the pull request targets: `GITHUB_BASE_REF` and `GITHUB_REF_NAME` are both empty\.$/
+  );
+  assert.equal(m.gitCalls.length, 0);
 });

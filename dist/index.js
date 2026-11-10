@@ -24464,6 +24464,11 @@ async function openPullRequest({
   reviewers,
   error: error2
 }) {
+  if (!base) {
+    throw new Error(
+      "Couldn't tell which branch the pull request targets: `GITHUB_BASE_REF` and `GITHUB_REF_NAME` are both empty."
+    );
+  }
   await git(["checkout", "-B", branch]);
   await git(["add", "-A"]);
   await git([
@@ -24494,18 +24499,30 @@ async function openPullRequest({
     return { url: data.html_url, updated: true };
   }
   const { data: pr } = await octokit.rest.pulls.create({ owner, repo, title, body, head: branch, base });
-  try {
-    if (labels.length)
-      await octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels });
-    if (assignees.length)
-      await octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees });
-    if (reviewers.length)
-      await octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers });
-  } catch (e) {
-    error2(
-      e.status === 403 ? "Doc Detective doesn't have permissions to label or assign the pull request. Give the job `pull-requests: write`, and allow GitHub Actions to create pull requests in the repository settings." : `Couldn't label the pull request or assign people to it: ${e.message}`
+  const decorate2 = async (what, call) => {
+    try {
+      await call();
+    } catch (e) {
+      error2(
+        e.status === 403 ? `Couldn't ${what}: the token lacks permission. Give the job \`pull-requests: write\`, and allow GitHub Actions to create pull requests in the repository settings.` : `Couldn't ${what}: ${e.message}`
+      );
+    }
+  };
+  if (labels.length)
+    await decorate2(
+      "label the pull request",
+      () => octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels })
     );
-  }
+  if (assignees.length)
+    await decorate2(
+      "assign the pull request",
+      () => octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees })
+    );
+  if (reviewers.length)
+    await decorate2(
+      "request reviewers",
+      () => octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers })
+    );
   return { url: pr.html_url, updated: false };
 }
 
