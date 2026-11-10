@@ -79,7 +79,11 @@ async function main(): Promise<void> {
     // Git runs in working_directory, like Doc Detective. The run folder and
     // reports land under the config's outputDir, so keep them out of git.
     const git = makeGit(getExecOutput, cwd);
-    await excludeRunArtifacts(git, cwd);
+    await excludeRunArtifacts(git, cwd).catch((error) =>
+      core.warning(
+        `Couldn't keep the run artifacts out of git, so they can show up in \`git status\` and pull requests. ${(error as Error).message}`
+      )
+    );
 
     // Run Doc Detective
     core.info(`Running Doc Detective: npx ${args.join(" ")}`);

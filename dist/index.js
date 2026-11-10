@@ -24426,22 +24426,23 @@ function makeGit(getExecOutput2, cwd) {
   };
 }
 async function excludeRunArtifacts(git, cwd) {
+  let file;
   try {
-    const file = import_path.default.resolve(cwd, (await git(["rev-parse", "--git-path", "info/exclude"])).trim());
-    const current = import_fs5.default.existsSync(file) ? import_fs5.default.readFileSync(file, "utf8") : "";
-    const lines = new Set(current.split(/\r?\n/).map((line) => line.trim()));
-    const missing = RUN_ARTIFACTS.filter((pattern) => !lines.has(pattern));
-    if (missing.length) {
-      import_fs5.default.mkdirSync(import_path.default.dirname(file), { recursive: true });
-      const separator = current && !current.endsWith("\n") ? "\n" : "";
-      import_fs5.default.appendFileSync(file, `${separator}# Doc Detective run artifacts
-${missing.join("\n")}
-`);
-    }
-    return true;
+    file = import_path.default.resolve(cwd, (await git(["rev-parse", "--git-path", "info/exclude"])).trim());
   } catch {
     return false;
   }
+  const current = import_fs5.default.existsSync(file) ? import_fs5.default.readFileSync(file, "utf8") : "";
+  const lines = new Set(current.split(/\r?\n/).map((line) => line.trim()));
+  const missing = RUN_ARTIFACTS.filter((pattern) => !lines.has(pattern));
+  if (missing.length) {
+    import_fs5.default.mkdirSync(import_path.default.dirname(file), { recursive: true });
+    const separator = current && !current.endsWith("\n") ? "\n" : "";
+    import_fs5.default.appendFileSync(file, `${separator}# Doc Detective run artifacts
+${missing.join("\n")}
+`);
+  }
+  return true;
 }
 
 // src/pullRequest.ts
@@ -24842,7 +24843,11 @@ async function main() {
     );
     const args = buildCliArgs({ version, config, input, outputPath });
     const git = makeGit(getExecOutput, cwd);
-    await excludeRunArtifacts(git, cwd);
+    await excludeRunArtifacts(git, cwd).catch(
+      (error2) => warning(
+        `Couldn't keep the run artifacts out of git, so they can show up in \`git status\` and pull requests. ${error2.message}`
+      )
+    );
     info(`Running Doc Detective: npx ${args.join(" ")}`);
     info(`Working directory: ${cwd}`);
     const { exitCode, results } = await runCli({

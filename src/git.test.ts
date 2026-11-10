@@ -62,8 +62,8 @@ test("excludeRunArtifacts skips a directory outside a checkout", async () => {
   assert.equal(await excludeRunArtifacts(git, tmpDir()), false);
 });
 
-test("excludeRunArtifacts doesn't fail the run when it can't write the file", async () => {
+test("excludeRunArtifacts throws when it can't write the file, so the caller can warn", async () => {
   // A directory where the file should be stands in for a read-only .git.
   const git = async () => tmpDir();
-  assert.equal(await excludeRunArtifacts(git, tmpDir()), false);
+  await assert.rejects(excludeRunArtifacts(git, tmpDir()), /EISDIR/);
 });
