@@ -63,7 +63,7 @@ Set `version` to an empty string (`""`) to run whatever `doc-detective` already 
 
 ### `working_directory` (default: `.`)
 
-The working directory for the action, relative to the root of the repository. The default, `.`, is the repository root. The action runs Doc Detective here, and resolves `config` and `input` against it.
+The working directory for the action, relative to the root of the repository. The default, `.`, is the repository root. The action runs Doc Detective and its `git` commands here, and resolves `config` and `input` against it. A directory inside a different checkout, such as a second repository checked out to a subfolder, gets its pull request from that checkout.
 
 ```yaml
 - uses: doc-detective/github-action@v2

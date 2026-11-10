@@ -14644,7 +14644,7 @@ var require_util4 = __commonJS({
     var { getEncoding } = require_encoding();
     var { serializeAMimeType, parseMIMEType } = require_data_url();
     var { types } = require("node:util");
-    var { StringDecoder } = require("string_decoder");
+    var { StringDecoder: StringDecoder2 } = require("string_decoder");
     var { btoa } = require("node:buffer");
     var staticPropertyDescriptors = {
       enumerable: true,
@@ -14735,7 +14735,7 @@ var require_util4 = __commonJS({
             dataURL += serializeAMimeType(parsed);
           }
           dataURL += ";base64,";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             dataURL += btoa(decoder.write(chunk));
           }
@@ -14764,7 +14764,7 @@ var require_util4 = __commonJS({
         }
         case "BinaryString": {
           let binaryString = "";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             binaryString += decoder.write(chunk);
           }
@@ -19825,6 +19825,9 @@ var _summary = new Summary();
 // node_modules/@actions/core/lib/platform.js
 var import_os2 = __toESM(require("os"), 1);
 
+// node_modules/@actions/exec/lib/exec.js
+var import_string_decoder = require("string_decoder");
+
 // node_modules/@actions/exec/lib/toolrunner.js
 var os3 = __toESM(require("os"), 1);
 var events = __toESM(require("events"), 1);
@@ -20537,6 +20540,38 @@ function exec(commandLine, args, options) {
     args = commandArgs.slice(1).concat(args || []);
     const runner = new ToolRunner(toolPath, args, options);
     return runner.exec();
+  });
+}
+function getExecOutput(commandLine, args, options) {
+  return __awaiter5(this, void 0, void 0, function* () {
+    var _a, _b;
+    let stdout = "";
+    let stderr = "";
+    const stdoutDecoder = new import_string_decoder.StringDecoder("utf8");
+    const stderrDecoder = new import_string_decoder.StringDecoder("utf8");
+    const originalStdoutListener = (_a = options === null || options === void 0 ? void 0 : options.listeners) === null || _a === void 0 ? void 0 : _a.stdout;
+    const originalStdErrListener = (_b = options === null || options === void 0 ? void 0 : options.listeners) === null || _b === void 0 ? void 0 : _b.stderr;
+    const stdErrListener = (data) => {
+      stderr += stderrDecoder.write(data);
+      if (originalStdErrListener) {
+        originalStdErrListener(data);
+      }
+    };
+    const stdOutListener = (data) => {
+      stdout += stdoutDecoder.write(data);
+      if (originalStdoutListener) {
+        originalStdoutListener(data);
+      }
+    };
+    const listeners = Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
+    const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
+    stdout += stdoutDecoder.end();
+    stderr += stderrDecoder.end();
+    return {
+      exitCode,
+      stdout,
+      stderr
+    };
   });
 }
 
@@ -24291,7 +24326,6 @@ function getOctokit(token, options, ...additionalPlugins) {
 var import_os4 = __toESM(require("os"));
 var import_path4 = __toESM(require("path"));
 var import_fs7 = __toESM(require("fs"));
-var import_child_process = require("child_process");
 
 // src/runCli.ts
 var import_fs4 = __toESM(require("fs"));
@@ -24396,6 +24430,19 @@ async function runCli({
       `Doc Detective exited with code ${exitCode}. ${error2.message}`
     );
   }
+}
+
+// src/git.ts
+function makeGit(getExecOutput2, cwd) {
+  return async (args) => {
+    const { exitCode, stdout, stderr } = await getExecOutput2("git", args, {
+      cwd,
+      silent: true,
+      ignoreReturnCode: true
+    });
+    if (exitCode !== 0) throw new Error(`\`git ${args.join(" ")}\` failed: ${stderr.trim()}`);
+    return stdout;
+  };
 }
 
 // src/outcome.ts
@@ -24721,38 +24768,24 @@ async function main() {
     setOutput("results", results);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
-      let hasGit = false;
+      const git = makeGit(getExecOutput, cwd);
+      let status = "";
       try {
-        const gitVersionCheck = (0, import_child_process.execSync)("git --version");
-        if (gitVersionCheck.toString()) hasGit = true;
-      } catch {
-        warning("Git isn't available. Skipping change checking.");
+        status = await git(["status", "--porcelain"]);
+      } catch (error2) {
+        warning(
+          `Couldn't check ${import_path4.default.resolve(cwd)} for changed files, so the action opens no pull request. ${error2.message}`
+        );
       }
-      if (hasGit) {
-        let changedFiles = false;
-        let status = "";
+      if (status.trim()) {
+        info(`Changed files:
+${status}`);
         try {
-          const statusResponse = (0, import_child_process.execSync)("git status");
-          status = statusResponse.toString();
-          if (!status.includes("working tree clean")) changedFiles = true;
-          if (status.includes("not a git repository")) {
-            warning(
-              `${process.cwd()} isn't a git repository. Skipping change checking.`
-            );
-          }
+          const pr = await createPullRequest(git);
+          setOutput("pull_request_url", pr.data.html_url);
+          info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error2) {
-          warning(`Error checking for changed files: ${error2.message}`);
-        }
-        if (changedFiles) {
-          info("Changed files found.");
-          info(`Git status: ${status}`);
-          try {
-            const pr = await createPullRequest();
-            setOutput("pull_request_url", pr.data.html_url);
-            info(`Pull Request: ${JSON.stringify(pr)}`);
-          } catch (error2) {
-            error(`Error creating pull request: ${error2.message}`);
-          }
+          error(`Error creating pull request: ${error2.message}`);
         }
       }
     }
@@ -24814,25 +24847,25 @@ async function createIssue(results, summary2, mentions, prompt) {
     warning
   });
 }
-async function createPullRequest() {
+async function createPullRequest(git) {
   const token = getInput("token");
   const title = getInput("pr_title");
   const body = getInput("pr_body").replace("$RUN_URL", runURL);
   const labels = getInput("pr_labels");
   const reviewers = getInput("pr_reviewers");
   const assignees = getInput("pr_assignees");
-  const base = (0, import_child_process.execSync)("git rev-parse --abbrev-ref HEAD").toString().replace("\n", "");
+  const base = (await git(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   const head = getInput("pr_branch") || `doc-detective-${Date.now()}`;
   const octokit = getOctokit(token);
   const userName = process.env.GITHUB_ACTOR;
   const userEmail = `${userName}@users.noreply.github.com`;
-  await exec("git", ["config", "--global", "user.email", userEmail]);
-  await exec("git", ["config", "--global", "user.name", userName ?? ""]);
+  await git(["config", "--global", "user.email", userEmail]);
+  await git(["config", "--global", "user.name", userName ?? ""]);
   info(`Creating branch: ${head}`);
-  await exec("git", ["checkout", "-b", head]);
-  await exec("git", ["add", "."]);
-  await exec("git", ["commit", "-m", "Doc Detective results"]);
-  await exec("git", ["push", "origin", head]);
+  await git(["checkout", "-b", head]);
+  await git(["add", "-A"]);
+  await git(["commit", "-m", "Doc Detective results"]);
+  await git(["push", "origin", head]);
   const pr = await octokit.rest.pulls.create({
     owner: context2.repo.owner,
     repo: context2.repo.repo,

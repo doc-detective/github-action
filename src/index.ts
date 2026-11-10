@@ -1,11 +1,11 @@
 import * as core from "@actions/core";
-import { exec } from "@actions/exec";
+import { exec, getExecOutput } from "@actions/exec";
 import * as github from "@actions/github";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { execSync } from "child_process";
 import { buildCliArgs, runCli } from "./runCli.ts";
+import { makeGit, type Git } from "./git.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
 import { fileIssue } from "./issue.ts";
@@ -94,45 +94,25 @@ async function main(): Promise<void> {
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
       core.info("Checking for changed files.");
-      // Check if git is available
-      let hasGit = false;
+      // Git runs in working_directory, like Doc Detective.
+      const git = makeGit(getExecOutput, cwd);
+      let status = "";
       try {
-        const gitVersionCheck = execSync("git --version");
-        if (gitVersionCheck.toString()) hasGit = true;
-      } catch {
-        core.warning("Git isn't available. Skipping change checking.");
+        status = await git(["status", "--porcelain"]);
+      } catch (error) {
+        core.warning(
+          `Couldn't check ${path.resolve(cwd)} for changed files, so the action opens no pull request. ${(error as Error).message}`
+        );
       }
 
-      if (hasGit) {
-        let changedFiles = false;
-        let status = "";
-
-        // Check if there are changed files
+      if (status.trim()) {
+        core.info(`Changed files:\n${status}`);
         try {
-          const statusResponse = execSync("git status");
-          status = statusResponse.toString();
-          if (!status.includes("working tree clean")) changedFiles = true;
-          if (status.includes("not a git repository")) {
-            core.warning(
-              `${process.cwd()} isn't a git repository. Skipping change checking.`
-            );
-          }
+          const pr = await createPullRequest(git);
+          core.setOutput("pull_request_url", pr.data.html_url);
+          core.info(`Pull Request: ${JSON.stringify(pr)}`);
         } catch (error) {
-          core.warning(`Error checking for changed files: ${(error as Error).message}`);
-        }
-
-        if (changedFiles) {
-          core.info("Changed files found.");
-          core.info(`Git status: ${status}`);
-
-          // Create a pull request if there are changed files
-          try {
-            const pr = await createPullRequest();
-            core.setOutput("pull_request_url", pr.data.html_url);
-            core.info(`Pull Request: ${JSON.stringify(pr)}`);
-          } catch (error) {
-            core.error(`Error creating pull request: ${(error as Error).message}`);
-          }
+          core.error(`Error creating pull request: ${(error as Error).message}`);
         }
       }
     }
@@ -202,16 +182,14 @@ async function createIssue(results: string, summary: string, mentions: string, p
   });
 }
 
-async function createPullRequest() {
+async function createPullRequest(git: Git) {
   const token = core.getInput("token");
   const title = core.getInput("pr_title");
   const body = core.getInput("pr_body").replace("$RUN_URL", runURL);
   const labels = core.getInput("pr_labels");
   const reviewers = core.getInput("pr_reviewers");
   const assignees = core.getInput("pr_assignees");
-  const base = execSync("git rev-parse --abbrev-ref HEAD")
-    .toString()
-    .replace("\n", "");
+  const base = (await git(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
   const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
 
   const octokit = github.getOctokit(token);
@@ -221,17 +199,17 @@ async function createPullRequest() {
   const userEmail = `${userName}@users.noreply.github.com`;
 
   // Configure git with user email and name
-  await exec("git", ["config", "--global", "user.email", userEmail]);
-  await exec("git", ["config", "--global", "user.name", userName ?? ""]);
+  await git(["config", "--global", "user.email", userEmail]);
+  await git(["config", "--global", "user.name", userName ?? ""]);
 
   // Create new branch
   core.info(`Creating branch: ${head}`);
-  await exec("git", ["checkout", "-b", head]);
+  await git(["checkout", "-b", head]);
 
-  // Commit changes
-  await exec("git", ["add", "."]);
-  await exec("git", ["commit", "-m", "Doc Detective results"]);
-  await exec("git", ["push", "origin", head]);
+  // Commit every change in the checkout, wherever working_directory points.
+  await git(["add", "-A"]);
+  await git(["commit", "-m", "Doc Detective results"]);
+  await git(["push", "origin", head]);
 
   // Create pull request
   const pr = await octokit.rest.pulls.create({
