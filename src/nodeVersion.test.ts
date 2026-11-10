@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { nodeVersionWarning } from "./nodeVersion.ts";
+import { canInstallCli5, nodeVersionWarning } from "./nodeVersion.ts";
 
 test("warns when the job's Node.js is older than 24.15", () => {
   assert.equal(
@@ -19,5 +19,23 @@ test("stays quiet on 24.15 or later", () => {
 test("stays quiet when the version can't be read", () => {
   for (const version of ["", "not a version"]) {
     assert.equal(nodeVersionWarning(version), undefined, version);
+  }
+});
+
+test("the preflight runs for latest and versions or ranges that can install CLI 5", () => {
+  for (const version of ["latest", "5", "5.0.0", "v5", "^5", "5.x", ">=4", "4 || 5", "*", "v5-rc", "6"]) {
+    assert.equal(canInstallCli5(version), true, version);
+  }
+});
+
+test("the preflight skips versions and ranges that stay on CLI 4", () => {
+  for (const version of ["4", "4.x", "^4", "~4.2", "4.41.5", "v4", "<5", ">=4 <5"]) {
+    assert.equal(canInstallCli5(version), false, version);
+  }
+});
+
+test("the preflight skips an empty version and dist-tags it can't resolve", () => {
+  for (const version of ["", "next", "my-feature"]) {
+    assert.equal(canInstallCli5(version), false, version);
   }
 });

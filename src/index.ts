@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { excludeRunArtifacts, makeGit, type Git } from "./git.ts";
-import { nodeVersionWarning } from "./nodeVersion.ts";
+import { canInstallCli5, nodeVersionWarning } from "./nodeVersion.ts";
 import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
@@ -71,14 +71,17 @@ async function main(): Promise<void> {
       });
     }
 
-    // npx runs Doc Detective on the job's Node.js, not the action's.
-    const node = await getExecOutput("node", ["--version"], {
-      cwd,
-      silent: true,
-      ignoreReturnCode: true,
-    }).catch(() => undefined);
-    const nodeWarning = node && nodeVersionWarning(node.stdout);
-    if (nodeWarning) core.warning(nodeWarning);
+    // npx runs Doc Detective on the job's Node.js, not the action's. Only CLI 5
+    // needs 24.15, so the check skips a version that stays on 4.
+    if (canInstallCli5(version)) {
+      const node = await getExecOutput("node", ["--version"], {
+        cwd,
+        silent: true,
+        ignoreReturnCode: true,
+      }).catch(() => undefined);
+      const nodeWarning = node && nodeVersionWarning(node.stdout);
+      if (nodeWarning) core.warning(nodeWarning);
+    }
 
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),

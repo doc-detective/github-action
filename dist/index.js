@@ -24454,6 +24454,22 @@ function nodeVersionWarning(version) {
   if (major > 24 || major === 24 && minor >= 15) return void 0;
   return `Doc Detective 5 needs Node.js 24.15 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
 }
+var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
+function capsBelowFive([, op = "", major, minor = "0", patch = "0"]) {
+  if (op === ">" || op === ">=") return false;
+  if (!/^\d+$/.test(major)) return false;
+  if (Number(major) < 5) return true;
+  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
+}
+function canInstallCli5(version) {
+  if (version === "latest") return true;
+  if (version === "") return false;
+  const alternatives = version.split("||").map(
+    (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
+  );
+  if (alternatives.flat().includes(null)) return false;
+  return alternatives.some((comparators) => !comparators.some((c) => capsBelowFive(c)));
+}
 
 // src/pullRequest.ts
 function prBase(env) {
@@ -24847,13 +24863,15 @@ async function main() {
         warning: (m) => warning(m)
       });
     }
-    const node = await getExecOutput("node", ["--version"], {
-      cwd,
-      silent: true,
-      ignoreReturnCode: true
-    }).catch(() => void 0);
-    const nodeWarning = node && nodeVersionWarning(node.stdout);
-    if (nodeWarning) warning(nodeWarning);
+    if (canInstallCli5(version)) {
+      const node = await getExecOutput("node", ["--version"], {
+        cwd,
+        silent: true,
+        ignoreReturnCode: true
+      }).catch(() => void 0);
+      const nodeWarning = node && nodeVersionWarning(node.stdout);
+      if (nodeWarning) warning(nodeWarning);
+    }
     const outputPath = import_path4.default.resolve(
       process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"

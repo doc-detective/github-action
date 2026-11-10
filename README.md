@@ -21,7 +21,7 @@ jobs:
       - uses: doc-detective/github-action@v2
 ```
 
-Doc Detective 5 needs Node.js 24.15 or later, and `npx` runs it on the job's Node.js, so set that up with `actions/setup-node`. If the job's Node.js is older, the action logs a warning and runs anyway.
+Doc Detective 5 needs Node.js 24.15 or later, and `npx` runs it on the job's Node.js, so set that up with `actions/setup-node`. When `version` is `latest`, or a version or range that can install 5, and the job's Node.js is older, the action logs a warning and runs anyway.
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
