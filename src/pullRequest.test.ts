@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { openPullRequest, prBase } from "./pullRequest.ts";
+import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
 
 function mocks(openPrs: any[]) {
   const gitCalls: string[][] = [];
@@ -45,6 +45,7 @@ const base = {
   repo: "r",
   branch: "doc-detective-changes",
   base: "main",
+  paths: [] as string[],
   title: "Doc Detective Changes",
   body: "run body",
   actor: "octocat",
@@ -76,6 +77,26 @@ test("resets the branch to this checkout, commits, and force-pushes it", async (
       "Doc Detective results",
     ],
     ["push", "--force", "origin", "doc-detective-changes"],
+  ]);
+});
+
+test("pr_paths limits what gets staged", async () => {
+  const m = mocks([]);
+  await openPullRequest({ ...base, paths: ["docs/images", "my file.md"], octokit: m.octokit, git: m.git });
+  assert.deepEqual(m.gitCalls[1], ["add", "-A", "--", "docs/images", "my file.md"]);
+});
+
+test("changedFiles checks the whole checkout, or only pr_paths", async () => {
+  const seen: string[][] = [];
+  const git = async (args: string[]) => {
+    seen.push(args);
+    return " M docs/a.png\n";
+  };
+  assert.equal(await changedFiles(git, []), " M docs/a.png\n");
+  await changedFiles(git, ["docs"]);
+  assert.deepEqual(seen, [
+    ["status", "--porcelain"],
+    ["status", "--porcelain", "--", "docs"],
   ]);
 });
 

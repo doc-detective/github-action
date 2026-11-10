@@ -24449,6 +24449,10 @@ function makeGit(getExecOutput2, cwd) {
 function prBase(env) {
   return env.GITHUB_BASE_REF || env.GITHUB_REF_NAME || "";
 }
+var pathspec = (paths) => paths.length ? ["--", ...paths] : [];
+function changedFiles(git, paths) {
+  return git(["status", "--porcelain", ...pathspec(paths)]);
+}
 async function openPullRequest({
   git,
   octokit,
@@ -24456,6 +24460,7 @@ async function openPullRequest({
   repo,
   branch,
   base,
+  paths,
   title,
   body,
   actor,
@@ -24470,7 +24475,7 @@ async function openPullRequest({
     );
   }
   await git(["checkout", "-B", branch]);
-  await git(["add", "-A"]);
+  await git(["add", "-A", ...pathspec(paths)]);
   await git([
     "-c",
     `user.name=${actor}`,
@@ -24850,9 +24855,10 @@ async function main() {
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
       const git = makeGit(getExecOutput, cwd);
+      const prPaths = listInput("pr_paths");
       let status = "";
       try {
-        status = await git(["status", "--porcelain"]);
+        status = await changedFiles(git, prPaths);
       } catch (error2) {
         warning(
           `Couldn't check ${import_path4.default.resolve(cwd)} for changed files, so the action opens no pull request. ${error2.message}`
@@ -24862,7 +24868,7 @@ async function main() {
         info(`Changed files:
 ${status}`);
         try {
-          const pr = await createPullRequest(git);
+          const pr = await createPullRequest(git, prPaths);
           setOutput("pull_request_url", pr.url);
           info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error2) {
@@ -24928,8 +24934,10 @@ async function createIssue(results, summary2, mentions, prompt) {
     warning
   });
 }
-var listInput = (name) => getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
-function createPullRequest(git) {
+function listInput(name) {
+  return getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+}
+function createPullRequest(git, paths) {
   return openPullRequest({
     git,
     octokit: getOctokit(getInput("token")),
@@ -24937,6 +24945,7 @@ function createPullRequest(git) {
     repo: repoName,
     branch: getInput("pr_branch") || "doc-detective-changes",
     base: prBase(process.env),
+    paths,
     title: getInput("pr_title"),
     body: getInput("pr_body").replace("$RUN_URL", runURL),
     actor: process.env.GITHUB_ACTOR ?? "",

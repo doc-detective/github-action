@@ -177,6 +177,19 @@ The branch for the pull request. Each run resets it to the checked-out commit pl
     pr_branch: docs-screenshots
 ```
 
+### `pr_paths`
+
+Comma-separated list of paths to commit to the pull request, relative to [`working_directory`](#working_directory). Only changes under these paths open a pull request, and other changes stay out of it. Only valid if `create_pr_on_change` is `true`.
+
+By default, the pull request includes every changed file in the checkout. That includes screenshots Doc Detective captured, which can show unreleased UI or customer data. Review what your tests capture before you turn on `create_pr_on_change`, or set `pr_paths` to the folders you mean to update.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    create_pr_on_change: true
+    pr_paths: docs/images,docs/snippets
+```
+
 ### `pr_title` (default: `Doc Detective Changes`)
 
 The title of the created pull request. Only valid if `create_pr_on_change` is `true`.

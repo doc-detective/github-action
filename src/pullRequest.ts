@@ -12,6 +12,14 @@ export function prBase(env: Record<string, string | undefined>): string {
   return env.GITHUB_BASE_REF || env.GITHUB_REF_NAME || "";
 }
 
+/** Pathspec arguments for `pr_paths`. None means the whole checkout. */
+const pathspec = (paths: string[]) => (paths.length ? ["--", ...paths] : []);
+
+/** `git status --porcelain` for `pr_paths`, or for the whole checkout. Empty means no changes. */
+export function changedFiles(git: Git, paths: string[]): Promise<string> {
+  return git(["status", "--porcelain", ...pathspec(paths)]);
+}
+
 /**
  * Commit the checkout's changes to `branch`, force-push it, and update its open
  * pull request, or open one. Each run replaces the branch, so one pull request
@@ -24,6 +32,7 @@ export async function openPullRequest({
   repo,
   branch,
   base,
+  paths,
   title,
   body,
   actor,
@@ -38,6 +47,8 @@ export async function openPullRequest({
   repo: string;
   branch: string;
   base: string;
+  /** `pr_paths`: what to stage. Empty stages the whole checkout. */
+  paths: string[];
   title: string;
   body: string;
   actor: string;
@@ -52,7 +63,7 @@ export async function openPullRequest({
     );
   }
   await git(["checkout", "-B", branch]);
-  await git(["add", "-A"]);
+  await git(["add", "-A", ...pathspec(paths)]);
   await git([
     "-c",
     `user.name=${actor}`,

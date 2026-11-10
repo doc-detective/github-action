@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { buildCliArgs, runCli } from "./runCli.ts";
 import { makeGit, type Git } from "./git.ts";
-import { openPullRequest, prBase } from "./pullRequest.ts";
+import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
 import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 import { buildIssueBody, readRunSummary } from "./issueBody.ts";
 import { fileIssue } from "./issue.ts";
@@ -97,9 +97,10 @@ async function main(): Promise<void> {
       core.info("Checking for changed files.");
       // Git runs in working_directory, like Doc Detective.
       const git = makeGit(getExecOutput, cwd);
+      const prPaths = listInput("pr_paths");
       let status = "";
       try {
-        status = await git(["status", "--porcelain"]);
+        status = await changedFiles(git, prPaths);
       } catch (error) {
         core.warning(
           `Couldn't check ${path.resolve(cwd)} for changed files, so the action opens no pull request. ${(error as Error).message}`
@@ -109,7 +110,7 @@ async function main(): Promise<void> {
       if (status.trim()) {
         core.info(`Changed files:\n${status}`);
         try {
-          const pr = await createPullRequest(git);
+          const pr = await createPullRequest(git, prPaths);
           core.setOutput("pull_request_url", pr.url);
           core.info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error) {
@@ -184,10 +185,11 @@ async function createIssue(results: string, summary: string, mentions: string, p
 }
 
 /** A comma-separated input, as a list. */
-const listInput = (name: string) =>
-  core.getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+function listInput(name: string): string[] {
+  return core.getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+}
 
-function createPullRequest(git: Git) {
+function createPullRequest(git: Git, paths: string[]) {
   return openPullRequest({
     git,
     octokit: github.getOctokit(core.getInput("token")),
@@ -195,6 +197,7 @@ function createPullRequest(git: Git) {
     repo: repoName,
     branch: core.getInput("pr_branch") || "doc-detective-changes",
     base: prBase(process.env),
+    paths,
     title: core.getInput("pr_title"),
     body: core.getInput("pr_body").replace("$RUN_URL", runURL),
     actor: process.env.GITHUB_ACTOR ?? "",
