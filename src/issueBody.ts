@@ -38,5 +38,6 @@ export function buildIssueBody({
   let cut = results.slice(0, Math.max(room, 0));
   // Don't leave half a surrogate pair at the cut.
   if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  // Every `$RESULTS` slot gets the cut results and the note, so each reads on its own.
   return render(fence(cut) + note).slice(0, ISSUE_BODY_LIMIT);
 }

@@ -17,7 +17,7 @@ function capsBelowFive(match: RegExpMatchArray): boolean {
 /**
  * Whether a version or npm range can resolve to CLI 5 or later, or null if the
  * value isn't a version or range at all, which makes it a dist-tag.
- * ponytail: handles npm range syntax, not exotic prerelease bounds. `<5.0.0-rc.1` refuses.
+ * ponytail: handles npm range syntax, not exotic prerelease bounds. `<5.0.0-rc.1` is read as `<5.0.0` and accepted.
  */
 function canReachFive(version: string): boolean | null {
   const alternatives = version
