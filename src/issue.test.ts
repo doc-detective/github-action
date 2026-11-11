@@ -83,5 +83,8 @@ test("retries without assignees when GitHub rejects them", async () => {
   assert.equal(out.updated, false);
   assert.equal(calls.create.length, 2);
   assert.equal("assignees" in calls.create[1], false);
+  assert.equal(calls.create[1].title, base.title);
+  assert.equal(calls.create[1].body, base.body);
+  assert.deepEqual(calls.create[1].labels, base.labels);
   assert.equal(warnings.length, 1);
 });
