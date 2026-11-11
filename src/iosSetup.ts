@@ -65,4 +65,4 @@ export function shouldNoticeRetiredWdaCache({
 
 /** The migration notice shown once per run in place of the retired cache. */
 export const WDA_CACHE_RETIREMENT_NOTICE =
-  "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action — see https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
+  "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action — see https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";

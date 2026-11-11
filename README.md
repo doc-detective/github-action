@@ -20,7 +20,7 @@ jobs:
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
-**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'startRecording' action), use macOS or Windows.
+**Note:** On Ubuntu, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the `record` step), use macOS or Windows.
 
 ## Inputs
 
@@ -31,17 +31,21 @@ To add an input, edit your workflow file to include the `with` key to the `uses`
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
-    version: latest
+    version: 4
 ```
 
-### `version` (default: latest)
+### `version` (default: `4`)
 
-Specify the version of Doc Detective to use. This can be a specific version number or an NPM tag (like `latest`).
+Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag.
+
+`@v1` of this action supports Doc Detective 4 and earlier. It refuses `latest` and any version or range that can install 5 or later, such as `5`, `^5`, or `>=4`. Use `doc-detective/github-action@v2` for Doc Detective 5. It warns about other tags, like `next`, because it can't tell what they install.
+
+Set `version` to an empty string (`""`) to run whatever `doc-detective` already resolves in the working directory, such as a local build exposed with `npm link`.
 
 ```yaml
 - uses: doc-detective/github-action@v1
   with:
-    version: 2.15.0
+    version: 4.41.5
 ```
 
 ### `working_directory` (default: Repository root)
@@ -52,16 +56,6 @@ The working directory for the action, relative to the root of the repository. Th
 - uses: doc-detective/github-action@v1
   with:
     working_directory: path/to/your/directory
-```
-
-### `command` (default: `runTests`)
-
-The command to run. Valid values are "runTests" and "runCoverage".
-
-```yaml
-- uses: doc-detective/github-action@v1
-  with:
-    command: runCoverage
 ```
 
 ### `config`
@@ -126,7 +120,7 @@ Without the prebuild, iOS tests still work — the first XCUITest session builds
 
 ### `create_pr_on_change` (default: `false`)
 
-Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Only valid if `command` is `runTests`. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
+Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Commits, branches, and pull requests are created with the credentials of the workflow run that triggered the action.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -227,9 +221,11 @@ Comma-separated list of GitHub usernames to request a review from. Only valid if
     pr_reviewers: octocat,monalisa
 ```
 
-### `exit_on_fail` (default: `false`)
+### `exit_on_fail` (default: unset)
 
-Exit with a non-zero code if one or more tests fails. Only valid if `command` is `runTests`.
+Fail the job if one or more tests fails. Leaving it unset means `false`, with a notice that `doc-detective/github-action@v2` defaults it to `true`.
+
+Whatever this is set to, the job also fails if Doc Detective exits non-zero, such as when your config sets `exitOnFail: true`. The results output, issue, and pull request steps run first. If Doc Detective doesn't write a results file, the job fails right away.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -239,7 +235,7 @@ Exit with a non-zero code if one or more tests fails. Only valid if `command` is
 
 ### `create_issue_on_fail` (default: `false`)
 
-Create a GitHub issue if one or more tests fails. Only valid if `command` is `runTests`.
+Create a GitHub issue if one or more tests fails.
 
 ```yaml
 - uses: doc-detective/github-action@v1
@@ -277,9 +273,11 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
-### `issue_body` (default: `Doc Detective run failed with the following results:$RESULTS`)
+### `issue_body` (default: `A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS`)
 
-he body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object. Only valid if `create_issue_on_fail` is set to `true`.
+The body of the created GitHub issue. Use the `$RESULTS` variable to insert the results object, and `$RUN_URL` to insert the URL of the workflow run that created the issue. Only valid if `create_issue_on_fail` is set to `true`.
+
+GitHub limits issue bodies to 65,536 characters. If the body would be longer, `$RESULTS` gets cut to fit, and a note links to the workflow run.
 
 ```yaml
 - uses: doc-detective/github-action@v1

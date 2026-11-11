@@ -5,7 +5,10 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import { loadResults } from "./loadResults.ts";
+import { runCli } from "./runCli.ts";
+import { failureMessage, resolveExitOnFail } from "./outcome.ts";
+import { checkVersion } from "./versionGuard.ts";
+import { buildIssueBody } from "./issueBody.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
 import {
   shouldNoticeRetiredWdaCache,
@@ -74,6 +77,14 @@ async function main(): Promise<void> {
     }
     // Get the inputs
     const version = core.getInput("version");
+    const { refusal, warning } = checkVersion(version);
+    if (refusal) {
+      core.setFailed(refusal);
+      return;
+    }
+    if (warning) core.warning(warning);
+    const { exitOnFail, notice } = resolveExitOnFail(core.getInput("exit_on_fail"));
+    if (notice) core.notice(notice);
     // An empty `version` means "use whatever doc-detective is already resolvable
     // from the working directory" — e.g. a locally-built checkout exposed via
     // `npm link`, so a repo can dog-food the action against its own build under
@@ -147,22 +158,15 @@ async function main(): Promise<void> {
     core.info(`Running Doc Detective: ${compiledCommand}`);
     core.info(`Working directory: ${cwd}`);
 
-    let commandOutputData = "";
-    const options: Parameters<typeof exec>[2] = {
+    // Read results from the file we passed via `--output`, not from stdout, and
+    // whatever the exit code, so the results, issue, and PR steps still run
+    // before a non-zero exit fails the job.
+    const { exitCode, results } = await runCli({
+      exec,
+      command: compiledCommand,
+      outputPath,
       cwd,
-      listeners: {
-        stdout: (data: Buffer) => {
-          commandOutputData += data.toString();
-        },
-      },
-    };
-    await exec(compiledCommand, [], options);
-
-    // Read results from the file we passed via `--output`, not from stdout.
-    // Doc Detective's log text is human-facing and free to change (e.g. extra
-    // "See per-run ..." lines), and scraping the path back out of it coupled
-    // this action to that format and broke it. See doc-detective#346.
-    const results = loadResults(outputPath, commandOutputData);
+    });
     core.setOutput("results", results);
 
     // Create a pull request if there are changed files
@@ -223,11 +227,14 @@ async function main(): Promise<void> {
           core.error(`Error creating issue: ${(error as Error).message}`);
         }
       }
-      if (core.getInput("exit_on_fail") == "true") {
-        // Fail the action if there are failing tests
-        core.setFailed("Doc Detective found failing tests.");
-      }
     }
+
+    const failure = failureMessage({
+      exitCode,
+      exitOnFail,
+      failedSpecs: results?.summary?.specs?.fail ?? 0,
+    });
+    if (failure) core.setFailed(failure);
   } catch (error) {
     core.setFailed((error as Error).message);
   }
@@ -239,12 +246,13 @@ async function createIssue(results: string) {
   const prompt = core.getInput("prompt");
   const integrations = parseIntegrations(core.getInput("integrations"));
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
-  const body = core
-    .getInput("issue_body")
-    .replaceAll("$RUN_URL", runURL)
-    .replaceAll("$RESULTS", `\n\n\`\`\`json\n${results}\n\`\`\``)
-    .replaceAll("$PROMPT", prompt)
-    + integrationsAccordion;
+  const body = buildIssueBody({
+    template: core.getInput("issue_body"),
+    results,
+    runUrl: runURL,
+    prompt,
+    suffix: integrationsAccordion,
+  });
   const labelsList = core.getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
   const assigneesList = core.getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
   if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {

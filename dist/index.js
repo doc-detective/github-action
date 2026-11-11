@@ -24293,12 +24293,15 @@ function getOctokit(token, options, ...additionalPlugins) {
 // src/index.ts
 var import_os4 = __toESM(require("os"));
 var import_path2 = __toESM(require("path"));
-var import_fs5 = __toESM(require("fs"));
+var import_fs6 = __toESM(require("fs"));
 var import_child_process = require("child_process");
+
+// src/runCli.ts
+var import_fs4 = __toESM(require("fs"));
 
 // src/loadResults.ts
 var import_fs3 = __toESM(require("fs"));
-function loadResults(outputPath, stdout = "") {
+function loadResults(outputPath, cliOutput = "") {
   if (!outputPath) {
     throw new Error(
       "No output path was provided to load Doc Detective results from."
@@ -24307,8 +24310,8 @@ function loadResults(outputPath, stdout = "") {
   if (!import_fs3.default.existsSync(outputPath)) {
     throw new Error(
       `Doc Detective did not write results to ${outputPath}. The run may have exited before writing output, or a custom config disabled the JSON reporter.
-stdout:
-${stdout}`
+CLI output:
+${cliOutput}`
     );
   }
   let raw;
@@ -24317,8 +24320,8 @@ ${stdout}`
   } catch (error2) {
     throw new Error(
       `Failed to read Doc Detective results at ${outputPath}: ${error2.message}
-stdout:
-${stdout}`
+CLI output:
+${cliOutput}`
     );
   }
   try {
@@ -24326,21 +24329,132 @@ ${stdout}`
   } catch (error2) {
     throw new Error(
       `Failed to parse Doc Detective results at ${outputPath}: ${error2.message}
-stdout:
-${stdout}`
+CLI output:
+${cliOutput}`
     );
   }
 }
 
+// src/runCli.ts
+async function runCli({
+  exec: exec2,
+  command,
+  args = [],
+  outputPath,
+  cwd
+}) {
+  import_fs4.default.rmSync(outputPath, { force: true });
+  let cliOutput = "";
+  const capture = (data) => {
+    cliOutput += data.toString();
+  };
+  const exitCode = await exec2(command, args, {
+    cwd,
+    ignoreReturnCode: true,
+    listeners: { stdout: capture, stderr: capture }
+  });
+  try {
+    return { exitCode, results: loadResults(outputPath, cliOutput) };
+  } catch (error2) {
+    throw new Error(
+      `Doc Detective exited with code ${exitCode}. ${error2.message}`
+    );
+  }
+}
+
+// src/outcome.ts
+function resolveExitOnFail(input) {
+  if (input === "") {
+    return {
+      exitOnFail: false,
+      notice: `exit_on_fail isn't set, so failing tests don't fail this job unless the CLI exits non-zero. doc-detective/github-action@v2 defaults exit_on_fail to "true". Set it explicitly to choose now.`
+    };
+  }
+  return { exitOnFail: input === "true" };
+}
+function failureMessage({
+  exitCode,
+  exitOnFail,
+  failedSpecs
+}) {
+  if (exitOnFail && failedSpecs > 0) return "Doc Detective found failing tests.";
+  if (exitCode !== 0) return `Doc Detective exited with code ${exitCode}.`;
+  return null;
+}
+
+// src/versionGuard.ts
+var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(-[\w.-]+)?(?:\+[\w.-]+)?$/i;
+function capsBelowFive(match) {
+  const [, op = "", major, minor = "0", patch = "0", prerelease] = match;
+  if (op === ">" || op === ">=") return false;
+  if (!/^\d+$/.test(major)) return false;
+  if (Number(major) < 5) return true;
+  return op === "<" && !prerelease && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
+}
+function canReachFive(version) {
+  const alternatives = version.split("||").map(
+    (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
+  );
+  if (alternatives.flat().includes(null)) return null;
+  return alternatives.some(
+    (comparators) => !comparators.some((c) => capsBelowFive(c))
+  );
+}
+function checkVersion(version) {
+  if (version === "") return {};
+  const reaches = version === "latest" ? true : canReachFive(version);
+  if (reaches === true) {
+    return {
+      refusal: `doc-detective/github-action@v1 supports Doc Detective 4 and earlier, but version "${version}" can install 5 or later. Use doc-detective/github-action@v2 for Doc Detective 5, or set version to 4.`
+    };
+  }
+  if (reaches === null) {
+    return {
+      warning: `Can't tell which Doc Detective version the "${version}" tag installs. doc-detective/github-action@v1 supports 4 and earlier. Use doc-detective/github-action@v2 for 5.`
+    };
+  }
+  return {};
+}
+
+// src/issueBody.ts
+var ISSUE_BODY_LIMIT = 65536;
+var fence = (results) => `
+
+\`\`\`json
+${results}
+\`\`\``;
+function buildIssueBody({
+  template,
+  results,
+  runUrl,
+  prompt,
+  suffix
+}) {
+  const render = (filled) => template.replace(
+    /\$(RUN_URL|PROMPT|RESULTS)/g,
+    (_, token) => token === "RUN_URL" ? runUrl : token === "PROMPT" ? prompt : filled
+  ) + suffix;
+  const full = render(fence(results));
+  if (full.length <= ISSUE_BODY_LIMIT) return full;
+  const note = `
+
+Results truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
+  const tokens = template.match(/\$RESULTS/g)?.length ?? 0;
+  const room = Math.floor((ISSUE_BODY_LIMIT - render("").length) / Math.max(tokens, 1)) - fence("").length - note.length;
+  let cut = results.slice(0, Math.max(room, 0));
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return render(fence(cut) + note).slice(0, ISSUE_BODY_LIMIT);
+}
+
 // src/scanSpecs.ts
-var import_fs4 = __toESM(require("fs"));
+var import_fs5 = __toESM(require("fs"));
 var import_path = __toESM(require("path"));
 var SCANNABLE = /* @__PURE__ */ new Set([".json", ".md", ".mdx", ".markdown", ".yaml", ".yml"]);
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git", ".github"]);
 var realScanDeps = {
-  readFileSync: (p, enc) => import_fs4.default.readFileSync(p, enc),
-  readdirSync: (p) => import_fs4.default.readdirSync(p, { withFileTypes: true }),
-  existsSync: (p) => import_fs4.default.existsSync(p)
+  readFileSync: (p, enc) => import_fs5.default.readFileSync(p, enc),
+  readdirSync: (p) => import_fs5.default.readdirSync(p, { withFileTypes: true }),
+  existsSync: (p) => import_fs5.default.existsSync(p)
 };
 function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   const seen = /* @__PURE__ */ new Set();
@@ -24446,7 +24560,7 @@ function shouldNoticeRetiredWdaCache({
   if (value === "true") return { notify: true, reason: "ios input is true" };
   return scan(roots) ? { notify: true, reason: "auto-detected an ios platform in your specs" } : { notify: false, reason: "no ios platform detected in specs" };
 }
-var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
+var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
 
 // src/index.ts
 var meta = { dist_interface: "github-actions" };
@@ -24498,6 +24612,14 @@ async function main() {
       );
     }
     const version = getInput("version");
+    const { refusal, warning: warning2 } = checkVersion(version);
+    if (refusal) {
+      setFailed(refusal);
+      return;
+    }
+    if (warning2) warning(warning2);
+    const { exitOnFail, notice: notice2 } = resolveExitOnFail(getInput("exit_on_fail"));
+    if (notice2) notice(notice2);
     const dd = version ? `doc-detective@${version}` : "doc-detective";
     const cwd = getInput("working_directory");
     const config = getInput("config");
@@ -24514,7 +24636,7 @@ async function main() {
     );
     if (androidDecision.setUp) {
       await enableLinuxKvm({
-        existsSync: (p) => import_fs5.default.existsSync(p),
+        existsSync: (p) => import_fs6.default.existsSync(p),
         exec: (command, args) => exec(command, args),
         info: (m) => info(m),
         warning: (m) => warning(m)
@@ -24542,17 +24664,12 @@ async function main() {
     compiledCommand += ` --output ${outputPath}`;
     info(`Running Doc Detective: ${compiledCommand}`);
     info(`Working directory: ${cwd}`);
-    let commandOutputData = "";
-    const options = {
-      cwd,
-      listeners: {
-        stdout: (data) => {
-          commandOutputData += data.toString();
-        }
-      }
-    };
-    await exec(compiledCommand, [], options);
-    const results = loadResults(outputPath, commandOutputData);
+    const { exitCode, results } = await runCli({
+      exec,
+      command: compiledCommand,
+      outputPath,
+      cwd
+    });
     setOutput("results", results);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
@@ -24601,10 +24718,13 @@ async function main() {
           error(`Error creating issue: ${error2.message}`);
         }
       }
-      if (getInput("exit_on_fail") == "true") {
-        setFailed("Doc Detective found failing tests.");
-      }
     }
+    const failure = failureMessage({
+      exitCode,
+      exitOnFail,
+      failedSpecs: results?.summary?.specs?.fail ?? 0
+    });
+    if (failure) setFailed(failure);
   } catch (error2) {
     setFailed(error2.message);
   }
@@ -24615,11 +24735,13 @@ async function createIssue(results) {
   const prompt = getInput("prompt");
   const integrations = parseIntegrations(getInput("integrations"));
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
-  const body = getInput("issue_body").replaceAll("$RUN_URL", runURL).replaceAll("$RESULTS", `
-
-\`\`\`json
-${results}
-\`\`\``).replaceAll("$PROMPT", prompt) + integrationsAccordion;
+  const body = buildIssueBody({
+    template: getInput("issue_body"),
+    results,
+    runUrl: runURL,
+    prompt,
+    suffix: integrationsAccordion
+  });
   const labelsList = getInput("issue_labels").split(",").map((s) => s.trim()).filter(Boolean);
   const assigneesList = getInput("issue_assignees").split(",").map((s) => s.trim()).filter(Boolean);
   if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
