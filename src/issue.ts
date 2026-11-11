@@ -33,8 +33,10 @@ export async function fileIssue({
     per_page: 100,
     ...(labels[0] ? { labels: labels[0] } : {}),
   });
+  // GitHub lists newest first, so a duplicate title updates the newest issue.
   const existing = open.find((issue) => !issue.pull_request && issue.title === title);
   if (existing) {
+    // Only the body changes. Title, labels, and assignees keep any edits a person made.
     const { data } = await octokit.rest.issues.update({
       owner,
       repo,
