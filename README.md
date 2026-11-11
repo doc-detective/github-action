@@ -301,6 +301,8 @@ The title of the created GitHub issue. Only valid if `create_issue_on_fail` is s
     issue_title: Doc Detective found issues in the documentation
 ```
 
+<a id="issue_body"></a>
+
 ### `issue_body`
 
 The body of the created GitHub issue. Only valid if `create_issue_on_fail` is set to `true`. The action replaces these tokens:
@@ -369,6 +371,8 @@ Supported values: `doc-sentinel`, `promptless`, `dosu`, `claude`, `opencode`, `c
     create_issue_on_fail: true
     issue_mentions: claude,copilot
 ```
+
+<a id="issue_prompt"></a>
 
 ### `issue_prompt` (default: `Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.`)
 
