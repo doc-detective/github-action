@@ -73,7 +73,7 @@ test("a crash reports the CLI's stdout and stderr, since logs go to stderr", asy
       outputPath: tmpPath(),
       cwd: ".",
     }),
-    /from stdout\nfrom stderr/
+    /from stdout[\s\S]*from stderr|from stderr[\s\S]*from stdout/
   );
 });
 

@@ -17,6 +17,7 @@ test("accepts versions and ranges that stay below CLI 5", () => {
     "4.0.0-rc.1",
     "<5",
     "<5.0.0",
+    "<5.0.0-rc.1",
     "<=4.9",
     "< 5",
     ">=4 <5",
