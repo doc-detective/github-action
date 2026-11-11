@@ -17,7 +17,6 @@ test("accepts versions and ranges that stay below CLI 5", () => {
     "4.0.0-rc.1",
     "<5",
     "<5.0.0",
-    "<5.0.0-rc.1",
     "<=4.9",
     "< 5",
     ">=4 <5",
@@ -40,6 +39,8 @@ test("refuses anything that can resolve to CLI 5 or later, pointing to @v2", () 
     "5.0.0",
     "v5",
     "5.0.0-rc.1",
+    // Matches 5.0.0 prereleases below rc.1, such as 5.0.0-beta.1.
+    "<5.0.0-rc.1",
     "v5-rc",
     "5.x",
     "6",

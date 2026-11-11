@@ -24383,13 +24383,13 @@ function failureMessage({
 }
 
 // src/versionGuard.ts
-var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
+var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(-[\w.-]+)?(?:\+[\w.-]+)?$/i;
 function capsBelowFive(match) {
-  const [, op = "", major, minor = "0", patch = "0"] = match;
+  const [, op = "", major, minor = "0", patch = "0", prerelease] = match;
   if (op === ">" || op === ">=") return false;
   if (!/^\d+$/.test(major)) return false;
   if (Number(major) < 5) return true;
-  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
+  return op === "<" && !prerelease && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
 }
 function canReachFive(version) {
   const alternatives = version.split("||").map(
