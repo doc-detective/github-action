@@ -3,9 +3,9 @@ description: Treat doc content as testable assertions to validate doc accuracy a
 author: Doc Detective
 inputs:
   version:
-    description: Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag. This major of the action supports Doc Detective 4 and earlier, so it refuses `latest` and any version or range that can install 5 or later. Use `doc-detective/github-action@v2` for Doc Detective 5. Set to an empty string ("") to run whatever `doc-detective` is already resolvable in the working directory (e.g. a locally-built checkout exposed via `npm link`) instead of installing from the registry — useful for a repo dog-fooding this action against its own build.
+    description: Specify the version of Doc Detective to use. This can be a specific version number, range, or NPM tag (like `latest`). This major of the action expects Doc Detective 5's exit codes. Set to an empty string ("") to run whatever `doc-detective` is already resolvable in the working directory (e.g. a locally-built checkout exposed via `npm link`) instead of installing from the registry — useful for a repo dog-fooding this action against its own build.
     required: false
-    default: "4"
+    default: "5"
   working_directory:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
@@ -14,23 +14,24 @@ inputs:
     description: 'Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). "auto" (default) scans your specs and only sets up KVM when an android platform is present; "true" always sets it up; "false" never does. No effect on macOS/Windows runners, which can''t accelerate the emulator. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.'
     required: false
     default: auto
-  ios:
-    description: 'DEPRECATED — no-op. Doc Detective (v4.28+) prebuilds and manages the WebDriverAgent build itself, keyed by Xcode and XCUITest driver versions. For fast iOS runs, execute `npx doc-detective install ios --yes` with a persisted cache directory (DOC_DETECTIVE_CACHE_DIR + actions/cache) before this action: https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. iOS tests still work without it — the first session builds WebDriverAgent in-session when no prebuilt products exist.'
-    required: false
-    default: auto
   config:
-    description: Path to the configuration file.
+    description: Path to the configuration file. Relative to `working_directory`.
     required: false
   input:
-    description: Path to the input file or directory. Overrides the "input" field in the config file.
+    description: Path to the input file or directory. Overrides the "input" field in the config file. Relative to `working_directory`.
     required: false
   create_pr_on_change:
-    description: Create a pull request if any files in the repo change, such as if screenshots or command results get updated. Default is "false".
+    description: Open or update a pull request if any files in the repo change, such as if screenshots or command results get updated. The pull request targets the pull request's base branch on `pull_request` events, and otherwise the branch that triggered the run. Default is "false".
     required: false
     default: "false"
   pr_branch:
-    description: The name of the branch to create for the pull request. Defaults to `doc-detective-{DATE}`. Only valid if "create_pr_on_change" is set to "true".
+    description: The branch for the pull request. Each run resets it to the checked-out commit plus the run's changes and force-pushes it, then updates the branch's open pull request or opens one. Don't commit to it by hand. Only valid if "create_pr_on_change" is set to "true".
     required: false
+    default: doc-detective-changes
+  pr_paths:
+    description: Comma-separated list of paths to commit to the pull request, relative to `working_directory`. Only changes under these paths open a pull request. Defaults to every changed file in the checkout, including screenshots Doc Detective captured, which can show unreleased UI or customer data. Only valid if "create_pr_on_change" is set to "true".
+    required: false
+    default: ""
   pr_title:
     description: The title of the created pull request. Only valid if "create_pr_on_change" is set to "true".
     required: false
@@ -41,7 +42,7 @@ inputs:
     default: |
       A Doc Detective run ($RUN_URL) updated files.
 
-      DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed for failed, only that files in the repository changed. Review the changes to make sure they're accurate.
+      DISCLAIMER: This pull request doesn't reflect whether Doc Detective tests passed or failed, only that files in the repository changed. Review the changes to make sure they're accurate.
   pr_labels:
     description: Comma-separated list of labels to apply to the pull request. Only valid if "create_pr_on_change" is set to "true".
     required: false
@@ -55,10 +56,11 @@ inputs:
     required: false
     default: ""
   exit_on_fail:
-    description: Fail the job if one or more tests fails. An empty value means "false", with a notice that `doc-detective/github-action@v2` defaults this to "true". Whatever this is set to, the job also fails if Doc Detective exits non-zero, after the results, issue, and pull request steps run.
+    description: Fail the job if one or more tests fails. Default is "true". If "false", a failing test leaves the job green. Whatever this is set to, the job fails when nothing valid was tested, Doc Detective couldn't proceed, or it didn't write results. The results, issue, and pull request steps run first whenever Doc Detective writes results.
     required: false
+    default: "true"
   create_issue_on_fail:
-    description: Create a GitHub issue if one or more tests fails. Default is "false".
+    description: File a GitHub issue if one or more tests fails. If an open issue has the same `issue_title` and the first of `issue_labels`, the action replaces that issue's body instead of opening another. Default is "false".
     required: false
     default: "false"
   issue_title:
@@ -66,9 +68,12 @@ inputs:
     required: false
     default: "Doc Detective Failure"
   issue_body:
-    description: The body of the created GitHub issue. `$RESULTS` inserts the results object, cut to fit GitHub's 65,536-character limit on issue bodies, with a link to the run when it's cut. `$RUN_URL` inserts the URL of the workflow that created the issue. `$PROMPT` inserts the prompt text. Only valid if "create_issue_on_fail" is set to "true".
+    description: The body of the created GitHub issue. `$SUMMARY` inserts the Markdown summary Doc Detective wrote to the run folder (`testResults.md`). `$RESULTS` inserts the results object as JSON. Both get cut to fit GitHub's 65,536-character limit on issue bodies, with a link to the run when they're cut. `$RUN_URL` inserts the URL of the workflow that created the issue. `$PROMPT` inserts the `issue_prompt` text. Only valid if "create_issue_on_fail" is set to "true".
     required: false
-    default: "A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS"
+    default: |-
+      A Doc Detective run ($RUN_URL) failed:
+
+      $SUMMARY
   issue_labels:
     description: Comma-separated list of labels to apply to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false
@@ -77,24 +82,30 @@ inputs:
     description: Comma-separated list of GitHub usernames to assign to the GitHub issue. Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: ""
-  integrations:
+  issue_mentions:
     description: >-
-      Comma-separated list of integrations to notify in the created GitHub issue. When specified, matching integrations are triggered via mentions or commands in a collapsible "Integrations" section appended to the issue body.
-      
+      Comma-separated list of tools to mention in the created GitHub issue. Each one gets a mention or command, with `issue_prompt` where the tool takes one, in a collapsible "AI issue mentions" section appended to the issue body.
+
       Supported values: "doc-sentinel", "promptless", "dosu", "claude", "opencode", "copilot", "cursor". Invalid values are ignored with a warning.
 
-      The "copilot" integration auto-assigns the issue to Copilot instead of adding to the accordion.
-            
+      "copilot" assigns the issue to Copilot instead of adding a mention.
+
       Only valid if "create_issue_on_fail" is set to "true".
     required: false
     default: ""
-  prompt:
+  issue_prompt:
     description: >-
-      The prompt passed to integrations. For example, if `integrations` is set to `claude`, the issue includes "@claude <prompt_value>". Also available as `$PROMPT` in the `issue_body` template.
-      
+      The text that follows each mention from `issue_mentions`. For example, if `issue_mentions` is `claude`, the issue includes "@claude <issue_prompt>". `$PROMPT` inserts it in `issue_body`.
+      Defaults to `Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.`
+
       Only valid if "create_issue_on_fail" is set to "true".
     required: false
-    default: "Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes."
+  integrations:
+    description: "Deprecated: use `issue_mentions`."
+    required: false
+  prompt:
+    description: "Deprecated: use `issue_prompt`."
+    required: false
   token:
     description: The GitHub token to use for creating issues. Defaults to the token already available to the GitHub Action workflow. Only set this if you want to override the default token.
     required: false
@@ -102,6 +113,10 @@ inputs:
 outputs:
   results:
     description: JSON-formatted results of the command.
+  issue_url:
+    description: URL of the created or updated GitHub issue. Only set if `create_issue_on_fail` is "true" and a test failed.
+  pull_request_url:
+    description: URL of the created or updated pull request. Only set if `create_pr_on_change` is "true" and files changed.
 runs:
   using: node24 # Specifies the node version
   main: dist/index.js # Path to the JavaScript file that will be executed

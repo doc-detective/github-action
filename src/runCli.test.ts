@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { runCli } from "./runCli.ts";
+import { buildCliArgs, runCli } from "./runCli.ts";
 
 function tmpPath(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dd-gha-cli-"));
@@ -19,7 +19,8 @@ test("loads results after a non-zero exit, without rejecting", async () => {
       fs.writeFileSync(outputPath, JSON.stringify(passing));
       return 1;
     },
-    command: "npx doc-detective",
+    command: "npx",
+    args: [],
     outputPath,
     cwd: ".",
   });
@@ -36,7 +37,8 @@ test("runs with ignoreReturnCode and the requested working directory", async () 
       fs.writeFileSync(outputPath, "{}");
       return 0;
     },
-    command: "npx doc-detective",
+    command: "npx",
+    args: [],
     outputPath,
     cwd: "docs",
   });
@@ -53,7 +55,8 @@ test("deletes a stale output file, so a crash can't reuse old results", async ()
         assert.equal(fs.existsSync(outputPath), false);
         return 2;
       },
-      command: "npx doc-detective",
+      command: "npx",
+    args: [],
       outputPath,
       cwd: ".",
     }),
@@ -69,11 +72,12 @@ test("a crash reports the CLI's stdout and stderr, since logs go to stderr", asy
         options.listeners.stderr(Buffer.from("from stderr\n"));
         return 1;
       },
-      command: "npx doc-detective",
+      command: "npx",
+    args: [],
       outputPath: tmpPath(),
       cwd: ".",
     }),
-    /from stdout[\s\S]*from stderr|from stderr[\s\S]*from stdout/
+    /from stdout\nfrom stderr/
   );
 });
 
@@ -81,10 +85,62 @@ test("a missing results file fails even when the CLI exits 0", async () => {
   await assert.rejects(
     runCli({
       exec: async () => 0,
-      command: "npx doc-detective",
+      command: "npx",
+    args: [],
       outputPath: tmpPath(),
       cwd: ".",
     }),
     /exited with code 0.*did not write results/s
   );
+});
+
+test("buildCliArgs keeps each value a single argument, so spaces survive", () => {
+  assert.deepEqual(
+    buildCliArgs({
+      version: "5",
+      config: "my config.json",
+      input: "my docs",
+      outputPath: "/tmp/run dir/out.json",
+    }),
+    ["doc-detective@5", "--config", "my config.json", "--input", "my docs", "--output", "/tmp/run dir/out.json"]
+  );
+});
+
+test("buildCliArgs leaves out unset options, and the version for a local CLI", () => {
+  assert.deepEqual(
+    buildCliArgs({ version: "", config: "", input: "", outputPath: "/tmp/out.json" }),
+    ["doc-detective", "--output", "/tmp/out.json"]
+  );
+});
+
+test("no version gets --output-dir, so the config's outputDir applies", () => {
+  for (const version of ["", "4", "5", "latest"]) {
+    const args = buildCliArgs({ version, config: "", input: "", outputPath: "/tmp/out.json" });
+    assert.ok(!args.includes("--output-dir"), version);
+  }
+});
+
+test("a CLI 2 version gets no runTests subcommand", () => {
+  assert.ok(
+    !buildCliArgs({ version: "2.15.0", config: "", input: "", outputPath: "o" }).includes(
+      "runTests"
+    )
+  );
+});
+
+test("runCli hands the arguments to exec untouched", async () => {
+  const outputPath = tmpPath();
+  let seen: unknown[] = [];
+  await runCli({
+    exec: async (command, args) => {
+      seen = [command, args];
+      fs.writeFileSync(outputPath, "{}");
+      return 0;
+    },
+    command: "npx",
+    args: ["doc-detective@5", "--input", "my docs"],
+    outputPath,
+    cwd: ".",
+  });
+  assert.deepEqual(seen, ["npx", ["doc-detective@5", "--input", "my docs"]]);
 });

@@ -10,7 +10,7 @@ on:
       version:
         description: version
         required: false
-        default: '4'
+        default: '5'
       working_directory:
         description: working_directory
         required: false
@@ -42,12 +42,12 @@ on:
         description: issue_body
         required: false
         default: 'A Doc Detective run ($RUN_URL) failed with the following results:$RESULTS'
-      integrations:
-        description: integrations
+      issue_mentions:
+        description: issue_mentions
         required: false
         default: ''
-      prompt:
-        description: prompt
+      issue_prompt:
+        description: issue_prompt
         required: false
 
 permissions:
@@ -78,5 +78,5 @@ jobs:
           exit_on_fail: ${{ github.event.inputs.exit_on_fail }}
           create_issue_on_fail: ${{ github.event.inputs.create_issue_on_fail }}
           issue_body: ${{ github.event.inputs.issue_body }}
-          integrations: ${{ github.event.inputs.integrations }}
-          prompt: ${{ github.event.inputs.prompt }}
+          issue_mentions: ${{ github.event.inputs.issue_mentions }}
+          issue_prompt: ${{ github.event.inputs.issue_prompt }}

@@ -1049,14 +1049,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path6 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path6 && path6[0] !== "/") {
-          path6 = `/${path6}`;
+        if (path8 && path8[0] !== "/") {
+          path8 = `/${path8}`;
         }
-        return new URL(`${origin}${path6}`);
+        return new URL(`${origin}${path8}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1507,39 +1507,39 @@ var require_diagnostics = __commonJS({
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
         const {
-          request: { method, path: path6, origin }
+          request: { method, path: path8, origin }
         } = evt;
-        debuglog("sending request to %s %s/%s", method, origin, path6);
+        debuglog("sending request to %s %s/%s", method, origin, path8);
       });
       diagnosticsChannel.channel("undici:request:headers").subscribe((evt) => {
         const {
-          request: { method, path: path6, origin },
+          request: { method, path: path8, origin },
           response: { statusCode }
         } = evt;
         debuglog(
           "received response to %s %s/%s - HTTP %d",
           method,
           origin,
-          path6,
+          path8,
           statusCode
         );
       });
       diagnosticsChannel.channel("undici:request:trailers").subscribe((evt) => {
         const {
-          request: { method, path: path6, origin }
+          request: { method, path: path8, origin }
         } = evt;
-        debuglog("trailers received from %s %s/%s", method, origin, path6);
+        debuglog("trailers received from %s %s/%s", method, origin, path8);
       });
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
-          request: { method, path: path6, origin },
+          request: { method, path: path8, origin },
           error: error2
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
-          path6,
+          path8,
           error2.message
         );
       });
@@ -1588,9 +1588,9 @@ var require_diagnostics = __commonJS({
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
           const {
-            request: { method, path: path6, origin }
+            request: { method, path: path8, origin }
           } = evt;
-          debuglog("sending request to %s %s/%s", method, origin, path6);
+          debuglog("sending request to %s %s/%s", method, origin, path8);
         });
       }
       diagnosticsChannel.channel("undici:websocket:open").subscribe((evt) => {
@@ -1653,7 +1653,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path6,
+        path: path8,
         method,
         body,
         headers,
@@ -1668,11 +1668,11 @@ var require_request = __commonJS({
         expectContinue,
         servername
       }, handler2) {
-        if (typeof path6 !== "string") {
+        if (typeof path8 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path6[0] !== "/" && !(path6.startsWith("http://") || path6.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path6)) {
+        } else if (invalidPathRegex.test(path8)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -1735,7 +1735,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? buildURL(path6, query) : path6;
+        this.path = query ? buildURL(path8, query) : path8;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -6248,7 +6248,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request2) {
-      const { method, path: path6, host, upgrade, blocking, reset } = request2;
+      const { method, path: path8, host, upgrade, blocking, reset } = request2;
       let { body, headers, contentLength } = request2;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util.isFormDataLike(body)) {
@@ -6314,7 +6314,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path6} HTTP/1.1\r
+      let header = `${method} ${path8} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -6840,7 +6840,7 @@ var require_client_h2 = __commonJS({
     }
     function writeH2(client, request2) {
       const session = client[kHTTP2Session];
-      const { method, path: path6, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
+      const { method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
       let { body } = request2;
       if (upgrade) {
         util.errorRequest(client, request2, new Error("Upgrade not supported for H2"));
@@ -6907,7 +6907,7 @@ var require_client_h2 = __commonJS({
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path6;
+      headers[HTTP2_HEADER_PATH] = path8;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -7260,9 +7260,9 @@ var require_redirect_handler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path6 = search ? `${pathname}${search}` : pathname;
+        const path8 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path6;
+        this.opts.path = path8;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -8496,10 +8496,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path6 = "/",
+          path: path8 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path6;
+        opts.path = origin + path8;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL2(origin);
           headers.host = host;
@@ -10420,20 +10420,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path6) {
-      if (typeof path6 !== "string") {
-        return path6;
+    function safeUrl(path8) {
+      if (typeof path8 !== "string") {
+        return path8;
       }
-      const pathSegments = path6.split("?");
+      const pathSegments = path8.split("?");
       if (pathSegments.length !== 2) {
-        return path6;
+        return path8;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path6, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path6);
+    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path8);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -10455,7 +10455,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path6 }) => matchValue(safeUrl(path6), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -10493,9 +10493,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path6, method, body, headers, query } = opts;
+      const { path: path8, method, body, headers, query } = opts;
       return {
-        path: path6,
+        path: path8,
         method,
         body,
         headers,
@@ -10958,10 +10958,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path6, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path6,
+            Path: path8,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -14644,7 +14644,7 @@ var require_util4 = __commonJS({
     var { getEncoding } = require_encoding();
     var { serializeAMimeType, parseMIMEType } = require_data_url();
     var { types } = require("node:util");
-    var { StringDecoder } = require("string_decoder");
+    var { StringDecoder: StringDecoder2 } = require("string_decoder");
     var { btoa } = require("node:buffer");
     var staticPropertyDescriptors = {
       enumerable: true,
@@ -14735,7 +14735,7 @@ var require_util4 = __commonJS({
             dataURL += serializeAMimeType(parsed);
           }
           dataURL += ";base64,";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             dataURL += btoa(decoder.write(chunk));
           }
@@ -14764,7 +14764,7 @@ var require_util4 = __commonJS({
         }
         case "BinaryString": {
           let binaryString = "";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             binaryString += decoder.write(chunk);
           }
@@ -15842,9 +15842,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path6) {
-      for (let i = 0; i < path6.length; ++i) {
-        const code = path6.charCodeAt(i);
+    function validateCookiePath(path8) {
+      for (let i = 0; i < path8.length; ++i) {
+        const code = path8.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code === 127 || // DEL
         code === 59) {
@@ -18438,11 +18438,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path6 = opts.path;
+          let path8 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path6 = `/${path6}`;
+            path8 = `/${path8}`;
           }
-          url = new URL(util.parseOrigin(url).origin + path6);
+          url = new URL(util.parseOrigin(url).origin + path8);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -19825,6 +19825,9 @@ var _summary = new Summary();
 // node_modules/@actions/core/lib/platform.js
 var import_os2 = __toESM(require("os"), 1);
 
+// node_modules/@actions/exec/lib/exec.js
+var import_string_decoder = require("string_decoder");
+
 // node_modules/@actions/exec/lib/toolrunner.js
 var os3 = __toESM(require("os"), 1);
 var events = __toESM(require("events"), 1);
@@ -20539,6 +20542,38 @@ function exec(commandLine, args, options) {
     return runner.exec();
   });
 }
+function getExecOutput(commandLine, args, options) {
+  return __awaiter5(this, void 0, void 0, function* () {
+    var _a, _b;
+    let stdout = "";
+    let stderr = "";
+    const stdoutDecoder = new import_string_decoder.StringDecoder("utf8");
+    const stderrDecoder = new import_string_decoder.StringDecoder("utf8");
+    const originalStdoutListener = (_a = options === null || options === void 0 ? void 0 : options.listeners) === null || _a === void 0 ? void 0 : _a.stdout;
+    const originalStdErrListener = (_b = options === null || options === void 0 ? void 0 : options.listeners) === null || _b === void 0 ? void 0 : _b.stderr;
+    const stdErrListener = (data) => {
+      stderr += stderrDecoder.write(data);
+      if (originalStdErrListener) {
+        originalStdErrListener(data);
+      }
+    };
+    const stdOutListener = (data) => {
+      stdout += stdoutDecoder.write(data);
+      if (originalStdoutListener) {
+        originalStdoutListener(data);
+      }
+    };
+    const listeners = Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
+    const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
+    stdout += stdoutDecoder.end();
+    stderr += stderrDecoder.end();
+    return {
+      exitCode,
+      stdout,
+      stderr
+    };
+  });
+}
 
 // node_modules/@actions/core/lib/platform.js
 var platform = import_os2.default.platform();
@@ -20578,9 +20613,6 @@ function error(message, properties = {}) {
 function warning(message, properties = {}) {
   issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
-function notice(message, properties = {}) {
-  issueCommand("notice", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
-}
 function info(message) {
   process.stdout.write(message + os5.EOL);
 }
@@ -20599,8 +20631,8 @@ var Context = class {
       if ((0, import_fs2.existsSync)(process.env.GITHUB_EVENT_PATH)) {
         this.payload = JSON.parse((0, import_fs2.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
       } else {
-        const path6 = process.env.GITHUB_EVENT_PATH;
-        process.stdout.write(`GITHUB_EVENT_PATH ${path6} does not exist${import_os3.EOL}`);
+        const path8 = process.env.GITHUB_EVENT_PATH;
+        process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${import_os3.EOL}`);
       }
     }
     this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -24292,9 +24324,8 @@ function getOctokit(token, options, ...additionalPlugins) {
 
 // src/index.ts
 var import_os4 = __toESM(require("os"));
-var import_path2 = __toESM(require("path"));
-var import_fs6 = __toESM(require("fs"));
-var import_child_process = require("child_process");
+var import_path4 = __toESM(require("path"));
+var import_fs8 = __toESM(require("fs"));
 
 // src/runCli.ts
 var import_fs4 = __toESM(require("fs"));
@@ -24336,10 +24367,27 @@ ${cliOutput}`
 }
 
 // src/runCli.ts
+function buildCliArgs({
+  version,
+  config,
+  input,
+  outputPath
+}) {
+  return [
+    version ? `doc-detective@${version}` : "doc-detective",
+    ...config ? ["--config", config] : [],
+    ...input ? ["--input", input] : [],
+    "--output",
+    outputPath
+    // No `--output-dir`: the config's `outputDir` places the run folder and
+    // reports, so `screenshot` baselines compare across runs. The action keeps
+    // them out of git through `info/exclude` instead.
+  ];
+}
 async function runCli({
   exec: exec2,
   command,
-  args = [],
+  args,
   outputPath,
   cwd
 }) {
@@ -24362,104 +24410,296 @@ async function runCli({
   }
 }
 
-// src/outcome.ts
-function resolveExitOnFail(input) {
-  if (input === "") {
-    return {
-      exitOnFail: false,
-      notice: `exit_on_fail isn't set, so failing tests don't fail this job unless the CLI exits non-zero. doc-detective/github-action@v2 defaults exit_on_fail to "true". Set it explicitly to choose now.`
-    };
-  }
-  return { exitOnFail: input === "true" };
+// src/git.ts
+var import_fs5 = __toESM(require("fs"));
+var import_path = __toESM(require("path"));
+var RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "doc-detective-summary.md", "testResults-*"];
+function makeGit(getExecOutput2, cwd) {
+  return async (args) => {
+    const { exitCode, stdout, stderr } = await getExecOutput2("git", args, {
+      cwd,
+      silent: true,
+      ignoreReturnCode: true
+    });
+    if (exitCode !== 0) throw new Error(`\`git ${args.join(" ")}\` failed: ${stderr.trim()}`);
+    return stdout;
+  };
 }
-function failureMessage({
-  exitCode,
-  exitOnFail,
-  failedSpecs
-}) {
-  if (exitOnFail && failedSpecs > 0) return "Doc Detective found failing tests.";
-  if (exitCode !== 0) return `Doc Detective exited with code ${exitCode}.`;
-  return null;
+async function excludeRunArtifacts(git, cwd) {
+  let file;
+  try {
+    file = import_path.default.resolve(cwd, (await git(["rev-parse", "--git-path", "info/exclude"])).trim());
+  } catch {
+    return false;
+  }
+  const current = import_fs5.default.existsSync(file) ? import_fs5.default.readFileSync(file, "utf8") : "";
+  const lines = new Set(current.split(/\r?\n/).map((line) => line.trim()));
+  const missing = RUN_ARTIFACTS.filter((pattern) => !lines.has(pattern));
+  if (missing.length) {
+    import_fs5.default.mkdirSync(import_path.default.dirname(file), { recursive: true });
+    const separator = current && !current.endsWith("\n") ? "\n" : "";
+    import_fs5.default.appendFileSync(file, `${separator}# Doc Detective run artifacts
+${missing.join("\n")}
+`);
+  }
+  return true;
 }
 
-// src/versionGuard.ts
-var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(-[\w.-]+)?(?:\+[\w.-]+)?$/i;
-function capsBelowFive(match) {
-  const [, op = "", major, minor = "0", patch = "0", prerelease] = match;
+// src/nodeVersion.ts
+function nodeVersionWarning(version) {
+  const shown = version.trim();
+  const match = shown.match(/^v?(\d+)\.(\d+)/);
+  if (!match) return void 0;
+  const [major, minor] = [Number(match[1]), Number(match[2])];
+  if (major > 24 || major === 24 && minor >= 15) return void 0;
+  return `Doc Detective 5 needs Node.js 24.15 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
+}
+var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
+function capsBelowFive([, op = "", major, minor = "0", patch = "0"]) {
   if (op === ">" || op === ">=") return false;
   if (!/^\d+$/.test(major)) return false;
   if (Number(major) < 5) return true;
-  return op === "<" && !prerelease && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
+  return op === "<" && Number(major) === 5 && Number(minor) === 0 && Number(patch) === 0;
 }
-function canReachFive(version) {
+function canInstallCli5(version) {
+  if (version === "latest") return true;
+  if (version === "") return false;
   const alternatives = version.split("||").map(
     (range) => range.trim().replace(/^\S+\s+-\s+(\S+)$/, "<=$1").replace(/([<>=^~]+)\s+/g, "$1").split(/\s+/).map((comparator) => comparator.match(COMPARATOR))
   );
-  if (alternatives.flat().includes(null)) return null;
-  return alternatives.some(
-    (comparators) => !comparators.some((c) => capsBelowFive(c))
-  );
+  if (alternatives.flat().includes(null)) return false;
+  return alternatives.some((comparators) => !comparators.some((c) => capsBelowFive(c)));
 }
-function checkVersion(version) {
-  if (version === "") return {};
-  const reaches = version === "latest" ? true : canReachFive(version);
-  if (reaches === true) {
-    return {
-      refusal: `doc-detective/github-action@v1 supports Doc Detective 4 and earlier, but version "${version}" can install 5 or later. Use doc-detective/github-action@v2 for Doc Detective 5, or set version to 4.`
+
+// src/pullRequest.ts
+function prBase(env) {
+  return env.GITHUB_BASE_REF || env.GITHUB_REF_NAME || "";
+}
+var pathspec = (paths) => paths.length ? ["--", ...paths] : [];
+function changedFiles(git, paths) {
+  return git(["status", "--porcelain", ...pathspec(paths)]);
+}
+async function openPullRequest({
+  git,
+  octokit,
+  owner,
+  repo,
+  branch,
+  base,
+  paths,
+  title,
+  body,
+  actor,
+  labels,
+  assignees,
+  reviewers,
+  error: error2
+}) {
+  if (!base) {
+    throw new Error(
+      "Couldn't tell which branch the pull request targets: `GITHUB_BASE_REF` and `GITHUB_REF_NAME` are both empty."
+    );
+  }
+  await git(["checkout", "-B", branch]);
+  await git(["add", "-A", ...pathspec(paths)]);
+  await git([
+    "-c",
+    `user.name=${actor}`,
+    "-c",
+    `user.email=${actor}@users.noreply.github.com`,
+    "commit",
+    "-m",
+    "Doc Detective results"
+  ]);
+  await git(["push", "--force", "origin", branch]);
+  const { data: open2 } = await octokit.rest.pulls.list({
+    owner,
+    repo,
+    state: "open",
+    head: `${owner}:${branch}`,
+    base
+  });
+  if (open2[0]) {
+    const { data } = await octokit.rest.pulls.update({
+      owner,
+      repo,
+      pull_number: open2[0].number,
+      title,
+      body
+    });
+    return { url: data.html_url, updated: true };
+  }
+  const { data: pr } = await octokit.rest.pulls.create({ owner, repo, title, body, head: branch, base });
+  const decorate2 = async (what, call) => {
+    try {
+      await call();
+    } catch (e) {
+      error2(
+        e.status === 403 ? `Couldn't ${what}: the token lacks permission. Give the job \`pull-requests: write\`, and allow GitHub Actions to create pull requests in the repository settings.` : `Couldn't ${what}: ${e.message}`
+      );
+    }
+  };
+  if (labels.length)
+    await decorate2(
+      "label the pull request",
+      () => octokit.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels })
+    );
+  if (assignees.length)
+    await decorate2(
+      "assign the pull request",
+      () => octokit.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees })
+    );
+  if (reviewers.length)
+    await decorate2(
+      "request reviewers",
+      () => octokit.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers })
+    );
+  return { url: pr.html_url, updated: false };
+}
+
+// src/outcome.ts
+function parseExitOnFail(input) {
+  return input.trim().toLowerCase() !== "false";
+}
+function decideOutcome({
+  exitCode,
+  exitOnFail
+}) {
+  if (exitCode === 0) return { fail: false, reason: "Doc Detective passed." };
+  if (exitCode === 1) {
+    return exitOnFail ? { fail: true, reason: "Doc Detective found failing tests." } : {
+      fail: false,
+      reason: "Doc Detective found failing tests, but exit_on_fail is false."
     };
   }
-  if (reaches === null) {
+  if (exitCode === 2) {
     return {
-      warning: `Can't tell which Doc Detective version the "${version}" tag installs. doc-detective/github-action@v1 supports 4 and earlier. Use doc-detective/github-action@v2 for 5.`
+      fail: true,
+      reason: "Doc Detective exited with code 2: nothing valid was tested, or it couldn't proceed. See the log for details."
     };
   }
-  return {};
+  return { fail: true, reason: `Doc Detective exited with code ${exitCode}.` };
 }
 
 // src/issueBody.ts
+var import_fs6 = __toESM(require("fs"));
+var import_path2 = __toESM(require("path"));
 var ISSUE_BODY_LIMIT = 65536;
 var fence = (results) => `
 
 \`\`\`json
 ${results}
 \`\`\``;
+function readRunSummary(runDir, runUrl) {
+  if (typeof runDir === "string" && runDir) {
+    try {
+      return import_fs6.default.readFileSync(import_path2.default.join(runDir, "testResults.md"), "utf8").trimEnd();
+    } catch {
+    }
+  }
+  return `Doc Detective wrote no summary for this run. See the [workflow run](${runUrl}).`;
+}
 function buildIssueBody({
   template,
+  summary: summary2,
   results,
   runUrl,
   prompt,
   suffix
 }) {
-  const render = (filled) => template.replace(
-    /\$(RUN_URL|PROMPT|RESULTS)/g,
-    (_, token) => token === "RUN_URL" ? runUrl : token === "PROMPT" ? prompt : filled
+  const render = (filledSummary, filledResults) => template.replace(
+    /\$(RUN_URL|PROMPT|RESULTS|SUMMARY)/g,
+    (_, token) => token === "RUN_URL" ? runUrl : token === "PROMPT" ? prompt : token === "SUMMARY" ? filledSummary : filledResults
   ) + suffix;
-  const full = render(fence(results));
+  const full = render(summary2, fence(results));
   if (full.length <= ISSUE_BODY_LIMIT) return full;
   const note = `
 
-Results truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
-  const tokens = template.match(/\$RESULTS/g)?.length ?? 0;
-  const room = Math.floor((ISSUE_BODY_LIMIT - render("").length) / Math.max(tokens, 1)) - fence("").length - note.length;
-  let cut = results.slice(0, Math.max(room, 0));
-  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
-  return render(fence(cut) + note).slice(0, ISSUE_BODY_LIMIT);
+Truncated to fit GitHub's issue size limit. See the [workflow run](${runUrl}) for details.`;
+  const tokens = template.match(/\$(RESULTS|SUMMARY)/g)?.length ?? 0;
+  const summaryRoom = Math.floor((ISSUE_BODY_LIMIT - render("", "").length) / Math.max(tokens, 1)) - note.length;
+  const resultsRoom = summaryRoom - fence("").length;
+  if ((/\$RESULTS/.test(template) ? resultsRoom : summaryRoom) < 0) {
+    throw new Error(
+      `The issue_body and issue_prompt inputs leave no room for the summary or results within GitHub's ${ISSUE_BODY_LIMIT}-character limit. Shorten them.`
+    );
+  }
+  const cut = (text, room) => {
+    let kept = text.slice(0, room);
+    if (/[\uD800-\uDBFF]$/.test(kept)) kept = kept.slice(0, -1);
+    return kept;
+  };
+  const fitSummary = () => {
+    if (summary2.length <= summaryRoom) return summary2;
+    const kept = cut(summary2, summaryRoom);
+    const lineEnd = kept.lastIndexOf("\n");
+    return (lineEnd > 0 ? kept.slice(0, lineEnd) : kept) + note;
+  };
+  const fitResults = () => results.length <= resultsRoom ? fence(results) : fence(cut(results, resultsRoom)) + note;
+  return render(fitSummary(), fitResults());
+}
+
+// src/issue.ts
+async function fileIssue({
+  octokit,
+  owner,
+  repo,
+  title,
+  body,
+  labels,
+  assignees,
+  warning: warning2
+}) {
+  const open2 = await octokit.paginate(octokit.rest.issues.listForRepo, {
+    owner,
+    repo,
+    state: "open",
+    per_page: 100,
+    ...labels[0] ? { labels: labels[0] } : {}
+  });
+  const existing = open2.find((issue2) => !issue2.pull_request && issue2.title === title);
+  if (existing) {
+    const { data } = await octokit.rest.issues.update({
+      owner,
+      repo,
+      issue_number: existing.number,
+      body
+    });
+    return { url: data.html_url, updated: true };
+  }
+  const create = (withAssignees) => octokit.rest.issues.create({
+    owner,
+    repo,
+    title,
+    body,
+    labels,
+    ...withAssignees ? { assignees } : {}
+  });
+  try {
+    return { url: (await create(true)).data.html_url, updated: false };
+  } catch (error2) {
+    if (error2.status !== 422) throw error2;
+    warning2(
+      `Couldn't create the issue with assignees (${assignees.join(", ")}). Retrying without assignees.`
+    );
+    return { url: (await create(false)).data.html_url, updated: false };
+  }
 }
 
 // src/scanSpecs.ts
-var import_fs5 = __toESM(require("fs"));
-var import_path = __toESM(require("path"));
+var import_fs7 = __toESM(require("fs"));
+var import_path3 = __toESM(require("path"));
 var SCANNABLE = /* @__PURE__ */ new Set([".json", ".md", ".mdx", ".markdown", ".yaml", ".yml"]);
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git", ".github"]);
 var realScanDeps = {
-  readFileSync: (p, enc) => import_fs5.default.readFileSync(p, enc),
-  readdirSync: (p) => import_fs5.default.readdirSync(p, { withFileTypes: true }),
-  existsSync: (p) => import_fs5.default.existsSync(p)
+  readFileSync: (p, enc) => import_fs7.default.readFileSync(p, enc),
+  readdirSync: (p) => import_fs7.default.readdirSync(p, { withFileTypes: true }),
+  existsSync: (p) => import_fs7.default.existsSync(p)
 };
 function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   const seen = /* @__PURE__ */ new Set();
   const scanFile = (file) => {
-    if (!SCANNABLE.has(import_path.default.extname(file).toLowerCase())) return false;
+    if (!SCANNABLE.has(import_path3.default.extname(file).toLowerCase())) return false;
     try {
       return matches(deps.readFileSync(file, "utf8"));
     } catch {
@@ -24477,7 +24717,7 @@ function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
       return scanFile(target);
     }
     for (const entry of entries) {
-      const child2 = import_path.default.join(target, entry.name);
+      const child2 = import_path3.default.join(target, entry.name);
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
         if (walk(child2, depth + 1)) return true;
@@ -24538,33 +24778,17 @@ async function enableLinuxKvm(deps) {
   }
 }
 
-// src/iosSetup.ts
-var IOS_PLATFORM_RE = /["']platforms?["']\s*:\s*(?:\[[^\]]*?)?["']ios["']/i;
-function textRequestsIos(text) {
-  return IOS_PLATFORM_RE.test(text);
+// src/actionInputs.ts
+var DEFAULT_ISSUE_PROMPT = "Investigate potential causes of the failures reported in this Doc Detective test output and suggest fixes.";
+function getAliasedInput(name, alias, io) {
+  const value = io.getInput(name);
+  const old = io.getInput(alias);
+  if (value && old) throw new Error(`Set \`${name}\` or \`${alias}\`, not both.`);
+  if (old) io.warning(`The \`${alias}\` input is deprecated. Rename it to \`${name}\`.`);
+  return value || old;
 }
-function scanForIos(roots, deps = realScanDeps, maxDepth = 6) {
-  return scanSpecs(roots, textRequestsIos, deps, maxDepth);
-}
-function shouldNoticeRetiredWdaCache({
-  iosInput,
-  platform: platform2,
-  roots,
-  scan = scanForIos
-}) {
-  const value = (iosInput || "auto").trim().toLowerCase();
-  if (value === "false") return { notify: false, reason: "ios input is false" };
-  if (platform2 !== "darwin") {
-    return { notify: false, reason: "not a macOS runner" };
-  }
-  if (value === "true") return { notify: true, reason: "ios input is true" };
-  return scan(roots) ? { notify: true, reason: "auto-detected an ios platform in your specs" } : { notify: false, reason: "no ios platform detected in specs" };
-}
-var WDA_CACHE_RETIREMENT_NOTICE = "The `ios` WebDriverAgent build cache was retired: Doc Detective v4.28+ prebuilds and manages WDA itself, keyed by your Xcode and driver versions. Upgrade to v4.28+ if necessary, then run `npx doc-detective install ios --yes` with a persisted cache directory before this action \u2014 see https://docs.doc-detective.com/docs/ci/github-action#speed-up-ios-tests-on-macos. The `ios` input is now a no-op; iOS tests still work and build WebDriverAgent in-session when no prebuilt products exist.";
 
-// src/index.ts
-var meta = { dist_interface: "github-actions" };
-process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
+// src/integrations.ts
 var INTEGRATION_MAP = {
   "doc-sentinel": "\n/cc @reem-sab",
   "promptless": "\n@promptless $PROMPT",
@@ -24574,7 +24798,7 @@ var INTEGRATION_MAP = {
   "cursor": "\n@cursor $PROMPT"
 };
 var VALID_INTEGRATIONS = /* @__PURE__ */ new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
-function parseIntegrations(integrationsInput) {
+function parseIntegrations(integrationsInput, warn = warning) {
   if (!integrationsInput || !integrationsInput.trim()) return [];
   const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
   const valid = [];
@@ -24582,23 +24806,25 @@ function parseIntegrations(integrationsInput) {
     if (VALID_INTEGRATIONS.has(name)) {
       valid.push(name);
     } else {
-      warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
-      );
+      warn(`Unknown issue_mentions value "${name}". Supported values: ${[...VALID_INTEGRATIONS].join(", ")}`);
     }
   }
   return valid;
 }
 function buildIntegrationsAccordion(integrations, prompt) {
-  const accordionEntries = integrations.filter((name) => name !== "copilot").map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt)).filter(Boolean);
+  const accordionEntries = integrations.filter((name) => name !== "copilot").map((name) => INTEGRATION_MAP[name].replace("$PROMPT", () => prompt)).filter(Boolean);
   if (accordionEntries.length === 0) return "";
   return `
 
 <details>
-<summary>Integrations</summary>
+<summary>AI issue mentions</summary>
 ${accordionEntries.join("\n")}
 </details>`;
 }
+
+// src/index.ts
+var meta = { dist_interface: "github-actions" };
+process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
 var repoOwner = context2.repo.owner;
 var repoName = context2.repo.repo;
 var runId = process.env.GITHUB_RUN_ID;
@@ -24608,135 +24834,125 @@ async function main() {
   try {
     if (import_os4.default.platform() === "linux") {
       warning(
-        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
+        "On Linux runners, Chrome and Firefox contexts run headless when there's no display. Doc Detective records headless Chrome, but not headless Firefox. To run headed or record Firefox, install Xvfb, or use a macOS or Windows runner."
       );
     }
     const version = getInput("version");
-    const { refusal, warning: warning2 } = checkVersion(version);
-    if (refusal) {
-      setFailed(refusal);
-      return;
-    }
-    if (warning2) warning(warning2);
-    const { exitOnFail, notice: notice2 } = resolveExitOnFail(getInput("exit_on_fail"));
-    if (notice2) notice(notice2);
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const exitOnFail = parseExitOnFail(getInput("exit_on_fail"));
     const cwd = getInput("working_directory");
     const config = getInput("config");
     const input = getInput("input");
+    const io = { getInput, warning };
+    const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
+    const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
     const androidInput = getInput("android");
-    const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path2.default.resolve(cwd || ".", p));
+    const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path4.default.resolve(cwd || ".", p));
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: import_os4.default.platform(),
-      roots: scanRoots.length ? scanRoots : [import_path2.default.resolve(cwd || ".")]
+      roots: scanRoots.length ? scanRoots : [import_path4.default.resolve(cwd || ".")]
     });
     info(
       `Android setup: ${androidDecision.setUp ? "enabled" : "skipped"} (${androidDecision.reason}).`
     );
     if (androidDecision.setUp) {
       await enableLinuxKvm({
-        existsSync: (p) => import_fs6.default.existsSync(p),
-        exec: (command, args) => exec(command, args),
+        existsSync: (p) => import_fs8.default.existsSync(p),
+        exec: (command, args2) => exec(command, args2),
         info: (m) => info(m),
         warning: (m) => warning(m)
       });
     }
-    const iosInput = getInput("ios");
-    const iosNotice = shouldNoticeRetiredWdaCache({
-      iosInput,
-      platform: import_os4.default.platform(),
-      roots: scanRoots.length ? scanRoots : [import_path2.default.resolve(cwd || ".")]
-    });
-    if (iosNotice.notify) {
-      notice(WDA_CACHE_RETIREMENT_NOTICE);
+    if (canInstallCli5(version)) {
+      const node = await getExecOutput("node", ["--version"], {
+        cwd,
+        silent: true,
+        ignoreReturnCode: true
+      }).catch(() => void 0);
+      const nodeWarning = node && nodeVersionWarning(node.stdout);
+      if (nodeWarning) warning(nodeWarning);
     }
-    let compiledCommand = `npx ${dd}`;
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
-    }
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
-    const outputPath = import_path2.default.resolve(
+    const outputPath = import_path4.default.resolve(
       process.env.RUNNER_TEMP || import_os4.default.tmpdir(),
       "doc-detective-output.json"
     );
-    compiledCommand += ` --output ${outputPath}`;
-    info(`Running Doc Detective: ${compiledCommand}`);
+    const args = buildCliArgs({ version, config, input, outputPath });
+    const git = makeGit(getExecOutput, cwd);
+    await excludeRunArtifacts(git, cwd).catch(
+      (error2) => warning(
+        `Couldn't keep the run artifacts out of git, so they can show up in \`git status\` and pull requests. ${error2.message}`
+      )
+    );
+    info(`Running Doc Detective: npx ${args.join(" ")}`);
     info(`Working directory: ${cwd}`);
     const { exitCode, results } = await runCli({
       exec,
-      command: compiledCommand,
+      command: "npx",
+      args,
       outputPath,
       cwd
     });
     setOutput("results", results);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
-      let hasGit = false;
+      const prPaths = listInput("pr_paths");
+      let status = "";
       try {
-        const gitVersionCheck = (0, import_child_process.execSync)("git --version");
-        if (gitVersionCheck.toString()) hasGit = true;
-      } catch {
-        warning("Git isn't available. Skipping change checking.");
+        status = await changedFiles(git, prPaths);
+      } catch (error2) {
+        warning(
+          `Couldn't check ${import_path4.default.resolve(cwd)} for changed files, so the action opens no pull request. ${error2.message}`
+        );
       }
-      if (hasGit) {
-        let changedFiles = false;
-        let status = "";
+      if (status.trim()) {
+        info(`Changed files:
+${status}`);
         try {
-          const statusResponse = (0, import_child_process.execSync)("git status");
-          status = statusResponse.toString();
-          if (!status.includes("working tree clean")) changedFiles = true;
-          if (status.includes("not a git repository")) {
-            warning(
-              `${process.cwd()} isn't a git repository. Skipping change checking.`
-            );
-          }
+          const pr = await createPullRequest(git, prPaths);
+          setOutput("pull_request_url", pr.url);
+          info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error2) {
-          warning(`Error checking for changed files: ${error2.message}`);
-        }
-        if (changedFiles) {
-          info("Changed files found.");
-          info(`Git status: ${status}`);
-          try {
-            const pr = await createPullRequest();
-            setOutput("pull_request_url", pr.data.html_url);
-            info(`Pull Request: ${JSON.stringify(pr)}`);
-          } catch (error2) {
-            error(`Error creating pull request: ${error2.message}`);
-          }
+          error(`Error creating or updating the pull request: ${error2.message}`);
         }
       }
     }
     if (results?.summary?.specs?.fail > 0) {
       if (getInput("create_issue_on_fail") == "true") {
         try {
-          const issue2 = await createIssue(JSON.stringify(results, null, 2));
-          setOutput("issue_url", issue2.data.html_url);
-          info(`Issue: ${JSON.stringify(issue2)}`);
+          const issue2 = await createIssue(
+            JSON.stringify(results, null, 2),
+            readRunSummary(results.runDir, runURL),
+            issueMentions,
+            issuePrompt
+          );
+          setOutput("issue_url", issue2.url);
+          info(`Issue ${issue2.updated ? "updated" : "created"}: ${issue2.url}`);
         } catch (error2) {
-          error(`Error creating issue: ${error2.message}`);
+          error(`Error creating or updating the issue: ${error2.message}`);
         }
       }
     }
-    const failure = failureMessage({
-      exitCode,
-      exitOnFail,
-      failedSpecs: results?.summary?.specs?.fail ?? 0
-    });
-    if (failure) setFailed(failure);
+    const failedSpecs = results?.summary?.specs?.fail ?? 0;
+    if (exitCode === 0 && failedSpecs > 0) {
+      warning(
+        `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
+      );
+    }
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    if (outcome.fail) setFailed(outcome.reason);
+    else info(outcome.reason);
   } catch (error2) {
     setFailed(error2.message);
   }
 }
-async function createIssue(results) {
+async function createIssue(results, summary2, mentions, prompt) {
   const token = getInput("token");
   const title = getInput("issue_title");
-  const prompt = getInput("prompt");
-  const integrations = parseIntegrations(getInput("integrations"));
+  const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: getInput("issue_body"),
+    summary: summary2,
     results,
     runUrl: runURL,
     prompt,
@@ -24747,103 +24963,37 @@ async function createIssue(results) {
   if (integrations.includes("copilot") && !assigneesList.includes("copilot-swe-agent")) {
     assigneesList.push("copilot-swe-agent");
   }
-  const octokit = getOctokit(token);
-  let issue2;
-  try {
-    issue2 = await octokit.rest.issues.create({
-      owner: context2.repo.owner,
-      repo: context2.repo.repo,
-      title,
-      body,
-      labels: labelsList,
-      assignees: assigneesList
-    });
-  } catch (error2) {
-    if (error2.status === 422) {
-      warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
-      issue2 = await octokit.rest.issues.create({
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        title,
-        body,
-        labels: labelsList
-      });
-    } else {
-      throw error2;
-    }
-  }
-  info(`Issue created: ${issue2.data.html_url}`);
-  setOutput("issueUrl", issue2.data.html_url);
-  return issue2;
-}
-async function createPullRequest() {
-  const token = getInput("token");
-  const title = getInput("pr_title");
-  const body = getInput("pr_body").replace("$RUN_URL", runURL);
-  const labels = getInput("pr_labels");
-  const reviewers = getInput("pr_reviewers");
-  const assignees = getInput("pr_assignees");
-  const base = (0, import_child_process.execSync)("git rev-parse --abbrev-ref HEAD").toString().replace("\n", "");
-  const head = getInput("pr_branch") || `doc-detective-${Date.now()}`;
-  const octokit = getOctokit(token);
-  const userName = process.env.GITHUB_ACTOR;
-  const userEmail = `${userName}@users.noreply.github.com`;
-  await exec(`git config --global user.email "${userEmail}"`);
-  await exec(`git config --global user.name "${userName}"`);
-  info(`Creating branch: ${head}`);
-  await exec(`git checkout -b ${head}`);
-  await exec("git add .");
-  await exec(`git commit -m "Doc Detective results"`);
-  await exec(`git push origin ${head}`);
-  const pr = await octokit.rest.pulls.create({
-    owner: context2.repo.owner,
-    repo: context2.repo.repo,
+  return fileIssue({
+    octokit: getOctokit(token),
+    owner: repoOwner,
+    repo: repoName,
     title,
     body,
-    head,
-    base
+    labels: labelsList,
+    assignees: assigneesList,
+    warning
   });
-  try {
-    info(`Adding labels.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        issue_number: pr.data.number,
-        labels: labels.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-    info(`Adding assignees.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        issue_number: pr.data.number,
-        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-    info(`Adding reviewers.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
-      {
-        owner: context2.repo.owner,
-        repo: context2.repo.repo,
-        pull_number: pr.data.number,
-        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean)
-      }
-    );
-  } catch (error2) {
-    if (error2.status === 403) {
-      error(
-        "Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests."
-      );
-    } else {
-      error(error2);
-    }
-  }
-  return pr;
+}
+function listInput(name) {
+  return getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+}
+function createPullRequest(git, paths) {
+  return openPullRequest({
+    git,
+    octokit: getOctokit(getInput("token")),
+    owner: repoOwner,
+    repo: repoName,
+    branch: getInput("pr_branch") || "doc-detective-changes",
+    base: prBase(process.env),
+    paths,
+    title: getInput("pr_title"),
+    body: getInput("pr_body").replace("$RUN_URL", runURL),
+    actor: process.env.GITHUB_ACTOR ?? "",
+    labels: listInput("pr_labels"),
+    assignees: listInput("pr_assignees"),
+    reviewers: listInput("pr_reviewers"),
+    error
+  });
 }
 /*! Bundled license information:
 

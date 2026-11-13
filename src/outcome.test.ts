@@ -1,37 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { failureMessage, resolveExitOnFail } from "./outcome.ts";
+import { decideOutcome, parseExitOnFail } from "./outcome.ts";
 
-test("failureMessage covers exit codes against exit_on_fail and failed specs", () => {
-  const table: [number, boolean, number, RegExp | null][] = [
-    [0, false, 0, null],
-    [0, true, 0, null],
-    // CLI 4's default: a failed spec still exits 0, so only exit_on_fail fails it.
-    [0, false, 2, null],
-    [0, true, 2, /found failing tests/],
-    // A non-zero exit fails the job whatever the input says.
-    [1, false, 0, /exited with code 1/],
-    [1, true, 0, /exited with code 1/],
-    [1, false, 2, /exited with code 1/],
-    [1, true, 2, /found failing tests/],
-    [2, false, 0, /exited with code 2/],
-    [130, false, 0, /exited with code 130/],
+test("decideOutcome maps each exit code against exit_on_fail", () => {
+  const table: [number, boolean, boolean, RegExp][] = [
+    [0, true, false, /passed/],
+    [0, false, false, /passed/],
+    [1, true, true, /failing tests/],
+    [1, false, false, /exit_on_fail is false/],
+    [2, true, true, /nothing valid was tested/],
+    [2, false, true, /nothing valid was tested/],
+    // Anything off the contract, such as an interrupt, fails closed.
+    [130, true, true, /exited with code 130/],
+    [130, false, true, /exited with code 130/],
+    [-1, false, true, /exited with code -1/],
   ];
-  for (const [exitCode, exitOnFail, failedSpecs, expected] of table) {
-    const message = failureMessage({ exitCode, exitOnFail, failedSpecs });
-    const label = `exit ${exitCode}, exit_on_fail ${exitOnFail}, ${failedSpecs} failed`;
-    if (expected) assert.match(message ?? "", expected, label);
-    else assert.equal(message, null, label);
+  for (const [exitCode, exitOnFail, fail, reason] of table) {
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    const label = `exit ${exitCode}, exit_on_fail ${exitOnFail}`;
+    assert.equal(outcome.fail, fail, label);
+    assert.match(outcome.reason, reason, label);
   }
 });
 
-test("an unset exit_on_fail is false, with a notice about the v2 default", () => {
-  const { exitOnFail, notice } = resolveExitOnFail("");
-  assert.equal(exitOnFail, false);
-  assert.match(notice ?? "", /v2.*true/);
-});
-
-test("an explicit exit_on_fail stays quiet", () => {
-  assert.deepEqual(resolveExitOnFail("true"), { exitOnFail: true });
-  assert.deepEqual(resolveExitOnFail("false"), { exitOnFail: false });
+test("exit_on_fail is on unless it's explicitly false", () => {
+  for (const input of ["true", "", "TRUE", "yes"]) {
+    assert.equal(parseExitOnFail(input), true, input);
+  }
+  for (const input of ["false", "False", "FALSE"]) {
+    assert.equal(parseExitOnFail(input), false, input);
+  }
 });

@@ -1,64 +1,22 @@
 import * as core from "@actions/core";
-import { exec } from "@actions/exec";
+import { exec, getExecOutput } from "@actions/exec";
 import * as github from "@actions/github";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { execSync } from "child_process";
-import { runCli } from "./runCli.ts";
-import { failureMessage, resolveExitOnFail } from "./outcome.ts";
-import { checkVersion } from "./versionGuard.ts";
-import { buildIssueBody } from "./issueBody.ts";
+import { buildCliArgs, runCli } from "./runCli.ts";
+import { excludeRunArtifacts, makeGit, type Git } from "./git.ts";
+import { canInstallCli5, nodeVersionWarning } from "./nodeVersion.ts";
+import { changedFiles, openPullRequest, prBase } from "./pullRequest.ts";
+import { decideOutcome, parseExitOnFail } from "./outcome.ts";
+import { buildIssueBody, readRunSummary } from "./issueBody.ts";
+import { fileIssue } from "./issue.ts";
 import { shouldSetUpAndroid, enableLinuxKvm } from "./androidSetup.ts";
-import {
-  shouldNoticeRetiredWdaCache,
-  WDA_CACHE_RETIREMENT_NOTICE,
-} from "./iosSetup.ts";
+import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
+import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
 
 const meta = { dist_interface: "github-actions" };
 process.env["DOC_DETECTIVE_META"] = JSON.stringify(meta);
-
-const INTEGRATION_MAP: Record<string, string> = {
-  "doc-sentinel": "\n/cc @reem-sab",
-  "promptless": "\n@promptless $PROMPT",
-  "dosu": "\n@dosu $PROMPT",
-  "claude": "\n@claude $PROMPT",
-  "opencode": "\n/opencode $PROMPT",
-  "cursor": "\n@cursor $PROMPT",
-};
-
-// All valid integration names (INTEGRATION_MAP keys + special-case integrations)
-const VALID_INTEGRATIONS = new Set([...Object.keys(INTEGRATION_MAP), "copilot"]);
-
-function parseIntegrations(integrationsInput: string): string[] {
-  if (!integrationsInput || !integrationsInput.trim()) return [];
-
-  const requested = integrationsInput.split(",").map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0);
-  const valid: string[] = [];
-
-  for (const name of requested) {
-    if (VALID_INTEGRATIONS.has(name)) {
-      valid.push(name);
-    } else {
-      core.warning(
-        `Unknown integration "${name}". Supported integrations: ${[...VALID_INTEGRATIONS].join(", ")}`
-      );
-    }
-  }
-
-  return valid;
-}
-
-function buildIntegrationsAccordion(integrations: string[], prompt: string): string {
-  const accordionEntries = integrations
-    .filter((name) => name !== "copilot")
-    .map((name) => INTEGRATION_MAP[name].replace("$PROMPT", prompt))
-    .filter(Boolean);
-
-  if (accordionEntries.length === 0) return "";
-
-  return `\n\n<details>\n<summary>Integrations</summary>\n${accordionEntries.join("\n")}\n</details>`;
-}
 
 const repoOwner = github.context.repo.owner;
 const repoName = github.context.repo.repo;
@@ -72,29 +30,20 @@ async function main(): Promise<void> {
     // Post warning if running on Linux
     if (os.platform() === "linux") {
       core.warning(
-        "On Ubuntu runners, this action only supports headless mode. Firefox and Chrome contexts automatically fall back to headless mode when necessary. If your tests doesn't work in headless mode (like if you need the 'record' step), use macOS or Windows runners."
+        "On Linux runners, Chrome and Firefox contexts run headless when there's no display. Doc Detective records headless Chrome, but not headless Firefox. To run headed or record Firefox, install Xvfb, or use a macOS or Windows runner."
       );
     }
     // Get the inputs
     const version = core.getInput("version");
-    const { refusal, warning } = checkVersion(version);
-    if (refusal) {
-      core.setFailed(refusal);
-      return;
-    }
-    if (warning) core.warning(warning);
-    const { exitOnFail, notice } = resolveExitOnFail(core.getInput("exit_on_fail"));
-    if (notice) core.notice(notice);
-    // An empty `version` means "use whatever doc-detective is already resolvable
-    // from the working directory" — e.g. a locally-built checkout exposed via
-    // `npm link`, so a repo can dog-food the action against its own build under
-    // review rather than the published package. Pinning `doc-detective@<tag>`
-    // (even `@latest`) makes npx resolve from the registry and ignore a linked
-    // local build, so omit the `@version` suffix entirely when version is blank.
-    const dd = version ? `doc-detective@${version}` : "doc-detective";
+    const exitOnFail = parseExitOnFail(core.getInput("exit_on_fail"));
     const cwd = core.getInput("working_directory");
     const config = core.getInput("config");
     const input = core.getInput("input");
+    // Read the renamed inputs up front, so setting both names fails before the run.
+    // (Passing `core` itself would keep all of @actions/core in the bundle.)
+    const io = { getInput: core.getInput, warning: core.warning };
+    const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
+    const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
 
     // Android emulator support: on Linux, grant KVM access so the emulator can
     // accelerate. Driven by the `android` input ("auto" | "true" | "false");
@@ -122,40 +71,35 @@ async function main(): Promise<void> {
       });
     }
 
-    // The iOS WebDriverAgent build cache is RETIRED (see iosSetup.ts):
-    // Doc Detective v4.28+ prebuilds and manages WDA products itself
-    // (`install ios`), keyed by Xcode × driver version, which the
-    // action-side derivedData cache both duplicated (double builds when
-    // both ran) and undercut (its driver-blind key was the stale-cache
-    // session-timeout mode). The `ios` input is a deprecated no-op; runs
-    // that would have used the cache get a one-line migration notice.
-    const iosInput = core.getInput("ios");
-    const iosNotice = shouldNoticeRetiredWdaCache({
-      iosInput,
-      platform: os.platform(),
-      roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
-    });
-    if (iosNotice.notify) {
-      core.notice(WDA_CACHE_RETIREMENT_NOTICE);
+    // npx runs Doc Detective on the job's Node.js, not the action's. Only CLI 5
+    // needs 24.15, so the check skips a version that stays on 4.
+    if (canInstallCli5(version)) {
+      const node = await getExecOutput("node", ["--version"], {
+        cwd,
+        silent: true,
+        ignoreReturnCode: true,
+      }).catch(() => undefined);
+      const nodeWarning = node && nodeVersionWarning(node.stdout);
+      if (nodeWarning) core.warning(nodeWarning);
     }
 
-    // Compile command
-    let compiledCommand = `npx ${dd}`;
-    // If v2, add the 'runTests' command
-    if (version.startsWith("2")) {
-      compiledCommand += " runTests";
-    }
-    // Add the options
-    if (config) compiledCommand += ` --config ${config}`;
-    if (input) compiledCommand += ` --input ${input}`;
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
       "doc-detective-output.json"
     );
-    compiledCommand += ` --output ${outputPath}`;
+    const args = buildCliArgs({ version, config, input, outputPath });
+
+    // Git runs in working_directory, like Doc Detective. The run folder and
+    // reports land under the config's outputDir, so keep them out of git.
+    const git = makeGit(getExecOutput, cwd);
+    await excludeRunArtifacts(git, cwd).catch((error) =>
+      core.warning(
+        `Couldn't keep the run artifacts out of git, so they can show up in \`git status\` and pull requests. ${(error as Error).message}`
+      )
+    );
 
     // Run Doc Detective
-    core.info(`Running Doc Detective: ${compiledCommand}`);
+    core.info(`Running Doc Detective: npx ${args.join(" ")}`);
     core.info(`Working directory: ${cwd}`);
 
     // Read results from the file we passed via `--output`, not from stdout, and
@@ -163,7 +107,8 @@ async function main(): Promise<void> {
     // before a non-zero exit fails the job.
     const { exitCode, results } = await runCli({
       exec,
-      command: compiledCommand,
+      command: "npx",
+      args,
       outputPath,
       cwd,
     });
@@ -172,45 +117,24 @@ async function main(): Promise<void> {
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
       core.info("Checking for changed files.");
-      // Check if git is available
-      let hasGit = false;
+      const prPaths = listInput("pr_paths");
+      let status = "";
       try {
-        const gitVersionCheck = execSync("git --version");
-        if (gitVersionCheck.toString()) hasGit = true;
-      } catch {
-        core.warning("Git isn't available. Skipping change checking.");
+        status = await changedFiles(git, prPaths);
+      } catch (error) {
+        core.warning(
+          `Couldn't check ${path.resolve(cwd)} for changed files, so the action opens no pull request. ${(error as Error).message}`
+        );
       }
 
-      if (hasGit) {
-        let changedFiles = false;
-        let status = "";
-
-        // Check if there are changed files
+      if (status.trim()) {
+        core.info(`Changed files:\n${status}`);
         try {
-          const statusResponse = execSync("git status");
-          status = statusResponse.toString();
-          if (!status.includes("working tree clean")) changedFiles = true;
-          if (status.includes("not a git repository")) {
-            core.warning(
-              `${process.cwd()} isn't a git repository. Skipping change checking.`
-            );
-          }
+          const pr = await createPullRequest(git, prPaths);
+          core.setOutput("pull_request_url", pr.url);
+          core.info(`Pull request ${pr.updated ? "updated" : "created"}: ${pr.url}`);
         } catch (error) {
-          core.warning(`Error checking for changed files: ${(error as Error).message}`);
-        }
-
-        if (changedFiles) {
-          core.info("Changed files found.");
-          core.info(`Git status: ${status}`);
-
-          // Create a pull request if there are changed files
-          try {
-            const pr = await createPullRequest();
-            core.setOutput("pull_request_url", pr.data.html_url);
-            core.info(`Pull Request: ${JSON.stringify(pr)}`);
-          } catch (error) {
-            core.error(`Error creating pull request: ${(error as Error).message}`);
-          }
+          core.error(`Error creating or updating the pull request: ${(error as Error).message}`);
         }
       }
     }
@@ -220,34 +144,43 @@ async function main(): Promise<void> {
       if (core.getInput("create_issue_on_fail") == "true") {
         // Create an issue if there are failing tests
         try {
-          const issue = await createIssue(JSON.stringify(results, null, 2));
-          core.setOutput("issue_url", issue.data.html_url);
-          core.info(`Issue: ${JSON.stringify(issue)}`);
+          const issue = await createIssue(
+            JSON.stringify(results, null, 2),
+            readRunSummary(results.runDir, runURL),
+            issueMentions,
+            issuePrompt
+          );
+          core.setOutput("issue_url", issue.url);
+          core.info(`Issue ${issue.updated ? "updated" : "created"}: ${issue.url}`);
         } catch (error) {
-          core.error(`Error creating issue: ${(error as Error).message}`);
+          core.error(`Error creating or updating the issue: ${(error as Error).message}`);
         }
       }
     }
 
-    const failure = failureMessage({
-      exitCode,
-      exitOnFail,
-      failedSpecs: results?.summary?.specs?.fail ?? 0,
-    });
-    if (failure) core.setFailed(failure);
+    const failedSpecs = results?.summary?.specs?.fail ?? 0;
+    if (exitCode === 0 && failedSpecs > 0) {
+      core.warning(
+        `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
+      );
+    }
+
+    const outcome = decideOutcome({ exitCode, exitOnFail });
+    if (outcome.fail) core.setFailed(outcome.reason);
+    else core.info(outcome.reason);
   } catch (error) {
     core.setFailed((error as Error).message);
   }
 }
 
-async function createIssue(results: string) {
+async function createIssue(results: string, summary: string, mentions: string, prompt: string) {
   const token = core.getInput("token");
   const title = core.getInput("issue_title");
-  const prompt = core.getInput("prompt");
-  const integrations = parseIntegrations(core.getInput("integrations"));
+  const integrations = parseIntegrations(mentions);
   const integrationsAccordion = buildIntegrationsAccordion(integrations, prompt);
   const body = buildIssueBody({
     template: core.getInput("issue_body"),
+    summary,
     results,
     runUrl: runURL,
     prompt,
@@ -259,121 +192,38 @@ async function createIssue(results: string) {
     assigneesList.push("copilot-swe-agent");
   }
 
-  const octokit = github.getOctokit(token);
-
-  // Try creating the issue; if assignees cause a 422, retry without them
-  let issue;
-  try {
-    issue = await octokit.rest.issues.create({
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      title,
-      body,
-      labels: labelsList,
-      assignees: assigneesList,
-    });
-  } catch (error) {
-    if ((error as { status?: number }).status === 422) {
-      core.warning(`Issue creation failed with assignees (${assigneesList.join(", ")}). Retrying without assignees.`);
-      issue = await octokit.rest.issues.create({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        title,
-        body,
-        labels: labelsList,
-      });
-    } else {
-      throw error;
-    }
-  }
-
-  core.info(`Issue created: ${issue.data.html_url}`);
-  core.setOutput("issueUrl", issue.data.html_url);
-  return issue;
-}
-
-async function createPullRequest() {
-  const token = core.getInput("token");
-  const title = core.getInput("pr_title");
-  const body = core.getInput("pr_body").replace("$RUN_URL", runURL);
-  const labels = core.getInput("pr_labels");
-  const reviewers = core.getInput("pr_reviewers");
-  const assignees = core.getInput("pr_assignees");
-  const base = execSync("git rev-parse --abbrev-ref HEAD")
-    .toString()
-    .replace("\n", "");
-  const head = core.getInput("pr_branch") || `doc-detective-${Date.now()}`;
-
-  const octokit = github.getOctokit(token);
-
-  // Infer user email and name
-  const userName = process.env.GITHUB_ACTOR;
-  const userEmail = `${userName}@users.noreply.github.com`;
-
-  // Configure git with user email and name
-  await exec(`git config --global user.email "${userEmail}"`);
-  await exec(`git config --global user.name "${userName}"`);
-
-  // Create new branch
-  core.info(`Creating branch: ${head}`);
-  await exec(`git checkout -b ${head}`);
-
-  // Commit changes
-  await exec("git add .");
-  await exec(`git commit -m "Doc Detective results"`);
-  await exec(`git push origin ${head}`);
-
-  // Create pull request
-  const pr = await octokit.rest.pulls.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
+  return fileIssue({
+    octokit: github.getOctokit(token),
+    owner: repoOwner,
+    repo: repoName,
     title,
     body,
-    head,
-    base,
+    labels: labelsList,
+    assignees: assigneesList,
+    warning: core.warning,
   });
+}
 
-  try {
-    // Add labels, reviewers, and assignees
-    core.info(`Adding labels.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        issue_number: pr.data.number,
-        labels: labels.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-    core.info(`Adding assignees.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        issue_number: pr.data.number,
-        assignees: assignees.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-    core.info(`Adding reviewers.`);
-    await octokit.request(
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
-      {
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: pr.data.number,
-        reviewers: reviewers.split(",").map((s) => s.trim()).filter(Boolean),
-      }
-    );
-  } catch (error) {
-    if ((error as { status?: number }).status === 403) {
-      core.error(
-        "Doc Detective doesn't have permissions to create pull requests. Make sure the workflow or job has write permissions for pull requests and that you've allowed GitHub Actions to create pull requests."
-      );
-    } else {
-      core.error(error as Error);
-    }
-  }
+/** A comma-separated input, as a list. */
+function listInput(name: string): string[] {
+  return core.getInput(name).split(",").map((s) => s.trim()).filter(Boolean);
+}
 
-  return pr;
+function createPullRequest(git: Git, paths: string[]) {
+  return openPullRequest({
+    git,
+    octokit: github.getOctokit(core.getInput("token")),
+    owner: repoOwner,
+    repo: repoName,
+    branch: core.getInput("pr_branch") || "doc-detective-changes",
+    base: prBase(process.env),
+    paths,
+    title: core.getInput("pr_title"),
+    body: core.getInput("pr_body").replace("$RUN_URL", runURL),
+    actor: process.env.GITHUB_ACTOR ?? "",
+    labels: listInput("pr_labels"),
+    assignees: listInput("pr_assignees"),
+    reviewers: listInput("pr_reviewers"),
+    error: core.error,
+  });
 }
