@@ -73819,10 +73819,11 @@ async function restoreRuntimeCache(version3, cwd, nodeVersion) {
       nodeVersion,
       now: Date.now()
     });
-    const paths = cachePaths(defaultCacheRoot());
+    const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
+    const paths = [...cachePaths(defaultCacheRoot()), import_path5.default.join(npmCache, "_npx")];
     const restored = await restoreCache(paths, key);
     info(
-      restored ? `Restored the Doc Detective runtime from the cache (${key}).` : `No cached Doc Detective runtime for ${key}, so this run installs and caches it.`
+      restored ? `Restored doc-detective and its runtime from the cache (${key}).` : `No cached doc-detective and runtime for ${key}, so this run installs and caches them.`
     );
     return { version: exact, save: restored ? void 0 : { key, paths } };
   } catch (error2) {

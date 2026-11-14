@@ -11,7 +11,7 @@ inputs:
     required: false
     default: "."
   cache:
-    description: 'Cache the runtime and browsers Doc Detective installs on first use, so later runs restore them instead of downloading them. On by default. The key covers the Doc Detective version, OS, CPU architecture, Node.js major version, and week, so cached browsers are at most a week behind. Set to "false" to install everything on every run. The action skips caching when `version` is empty or `DOC_DETECTIVE_CACHE_DIR` is set.'
+    description: 'Cache the doc-detective package, and the runtime and browsers it installs on first use, so later runs restore them instead of downloading them. On by default. The key covers the Doc Detective version, OS, CPU architecture, Node.js major version, and week, so cached browsers are at most a week behind. Set to "false" to install everything on every run. The action skips caching when `version` is empty or `DOC_DETECTIVE_CACHE_DIR` is set.'
     required: false
     default: "true"
   android:

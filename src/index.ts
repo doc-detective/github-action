@@ -219,7 +219,8 @@ async function createIssue(results: string, summary: string, mentions: string, p
 }
 
 /**
- * Restore the runtime and browsers Doc Detective installs on first use. Returns
+ * Restore the doc-detective package npx installs, and the runtime and browsers
+ * Doc Detective installs on first use. Returns
  * the exact version to run, so what runs matches the key, and the cache to save
  * after the run on a miss. Any failure warns and runs uncached.
  */
@@ -252,12 +253,14 @@ async function restoreRuntimeCache(
       nodeVersion,
       now: Date.now(),
     });
-    const paths = cachePaths(defaultCacheRoot());
+    // npx installs doc-detective itself under `<npm cache>/_npx`.
+    const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
+    const paths = [...cachePaths(defaultCacheRoot()), path.join(npmCache, "_npx")];
     const restored = await cache.restoreCache(paths, key);
     core.info(
       restored
-        ? `Restored the Doc Detective runtime from the cache (${key}).`
-        : `No cached Doc Detective runtime for ${key}, so this run installs and caches it.`
+        ? `Restored doc-detective and its runtime from the cache (${key}).`
+        : `No cached doc-detective and runtime for ${key}, so this run installs and caches them.`
     );
     return { version: exact, save: restored ? undefined : { key, paths } };
   } catch (error) {
