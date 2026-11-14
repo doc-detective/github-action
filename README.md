@@ -98,6 +98,22 @@ Path to the input file or directory. Overrides the `input` field in the config f
     input: path/to/your/tests
 ```
 
+### `cache` (default: `true`)
+
+Cache the runtime and browsers Doc Detective installs on first use, so later runs restore them from the [Actions cache](https://docs.github.com/actions/using-workflows/caching-dependencies-to-speed-up-workflows) instead of downloading them. The first run in a repository, and the first run each week, installs everything and saves it.
+
+The cache key covers the Doc Detective version, the OS, the CPU architecture, the Node.js major version, and the week. Doc Detective doesn't update a browser it already installed, so the weekly key keeps cached browsers at most a week behind their stable channel. The action resolves `version` to an exact version, like `5.0.0`, and runs that version.
+
+The action caches Doc Detective's default cache folder, without the Android SDK, the Java runtime, or WebDriverAgent builds. It skips caching when `version` is empty, or when you set `DOC_DETECTIVE_CACHE_DIR` and manage that folder yourself, as in [Speed up iOS tests](#speed-up-ios-tests). If your config sets `cacheDir`, the action has nothing to cache. A cache miss or a failed restore or save logs a message, and the run continues.
+
+Set `cache` to `false` to install everything on every run.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    cache: false
+```
+
 ### `android` (default: `auto`)
 
 Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present; `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
