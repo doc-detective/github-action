@@ -1,15 +1,17 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import semver from "semver";
 
 /**
- * The exact version `npm view doc-detective@<spec> version --json` printed: a
- * string for one match, an array (ascending) for a range. Undefined if none.
+ * The highest version `npm view doc-detective@<spec> version --json` printed: a
+ * string for one match, an array for a range, in publish order rather than
+ * version order. Undefined if none.
  */
 export function exactVersion(npmViewJson: string): string | undefined {
   try {
     const parsed = JSON.parse(npmViewJson);
-    const version = Array.isArray(parsed) ? parsed.at(-1) : parsed;
+    const version = Array.isArray(parsed) ? semver.rsort(parsed.filter((v) => semver.valid(v)))[0] : parsed;
     return typeof version === "string" && version ? version : undefined;
   } catch {
     return undefined;
@@ -26,8 +28,8 @@ export function isExactVersion(version: string): boolean {
  * DOC_DETECTIVE_CACHE_DIR, nor the config's `cacheDir` says otherwise. Mirrors
  * `defaultCacheRoot` in doc-detective's `src/runtime/cacheDir.ts`.
  */
-// ponytail: copied from the CLI, so a CLI change to its default means the action
-// caches an empty folder (a miss, never a failure). Ask the CLI if that happens.
+// Copied from the CLI, so if the CLI changes its default, the action caches an
+// empty folder: a miss, never a failure.
 export function defaultCacheRoot({
   env = process.env,
   home = os.homedir(),

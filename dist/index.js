@@ -32760,10 +32760,11 @@ ${accordionEntries.join("\n")}
 var import_fs8 = __toESM(require("fs"));
 var import_os4 = __toESM(require("os"));
 var import_path4 = __toESM(require("path"));
+var import_semver = __toESM(require_semver2());
 function exactVersion(npmViewJson) {
   try {
     const parsed = JSON.parse(npmViewJson);
-    const version3 = Array.isArray(parsed) ? parsed.at(-1) : parsed;
+    const version3 = Array.isArray(parsed) ? import_semver.default.rsort(parsed.filter((v) => import_semver.default.valid(v)))[0] : parsed;
     return typeof version3 === "string" && version3 ? version3 : void 0;
   } catch {
     return void 0;
@@ -35466,7 +35467,7 @@ function create(patterns, options) {
 var crypto2 = __toESM(require("crypto"), 1);
 var fs10 = __toESM(require("fs"), 1);
 var path13 = __toESM(require("path"), 1);
-var semver = __toESM(require_semver2(), 1);
+var semver2 = __toESM(require_semver2(), 1);
 var util = __toESM(require("util"), 1);
 
 // node_modules/@actions/cache/lib/internal/constants.js
@@ -35633,7 +35634,7 @@ function getVersion(app_1) {
 function getCompressionMethod() {
   return __awaiter11(this, void 0, void 0, function* () {
     const versionOutput = yield getVersion("zstd", ["--quiet"]);
-    const version3 = semver.clean(versionOutput);
+    const version3 = semver2.clean(versionOutput);
     debug(`zstd version: ${version3}`);
     if (versionOutput === "") {
       return CompressionMethod.Gzip;

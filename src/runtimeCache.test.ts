@@ -6,6 +6,8 @@ import { cacheKey, cachePaths, defaultCacheRoot, exactVersion, isExactVersion } 
 test("exactVersion takes the highest match from npm view --json", () => {
   assert.equal(exactVersion('"5.0.0"'), "5.0.0");
   assert.equal(exactVersion('["5.0.0", "5.0.1", "5.1.0"]'), "5.1.0");
+  // A backport published after a newer minor comes last.
+  assert.equal(exactVersion('["5.0.0", "5.1.0", "5.0.2"]'), "5.1.0");
   assert.equal(exactVersion(""), undefined);
   assert.equal(exactVersion("[]"), undefined);
   assert.equal(exactVersion("npm error 404"), undefined);
