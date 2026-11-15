@@ -279,7 +279,7 @@ async function saveRuntimeCache(save?: { key: string; paths: string[] }): Promis
   }
   try {
     if ((await cache.saveCache(save.paths, save.key)) !== -1) {
-      core.info(`Cached the Doc Detective runtime (${save.key}).`);
+      core.info(`Cached doc-detective and its runtime (${save.key}).`);
     }
   } catch (error) {
     core.warning(`Couldn't cache the Doc Detective runtime. ${(error as Error).message}`);

@@ -73839,7 +73839,7 @@ async function saveRuntimeCache(save) {
   }
   try {
     if (await saveCache2(save.paths, save.key) !== -1) {
-      info(`Cached the Doc Detective runtime (${save.key}).`);
+      info(`Cached doc-detective and its runtime (${save.key}).`);
     }
   } catch (error2) {
     warning(`Couldn't cache the Doc Detective runtime. ${error2.message}`);
