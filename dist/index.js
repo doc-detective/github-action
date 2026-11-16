@@ -73693,7 +73693,7 @@ async function main() {
       const nodeWarning = node && nodeVersionWarning(node.stdout);
       if (nodeWarning) warning(nodeWarning);
     }
-    const runtime = getInput("cache") === "false" ? { version: version3 } : await restoreRuntimeCache(version3, cwd, node?.stdout ?? "");
+    const runtime = getInput("cache").trim().toLowerCase() === "false" ? { version: version3 } : await restoreRuntimeCache(version3, cwd, node?.stdout ?? "");
     const outputPath = import_path5.default.resolve(
       process.env.RUNNER_TEMP || import_os5.default.tmpdir(),
       "doc-detective-output.json"
@@ -73832,7 +73832,10 @@ async function restoreRuntimeCache(version3, cwd, nodeVersion) {
 }
 async function saveRuntimeCache(save) {
   if (!save) return;
-  if (!save.paths.some((p) => import_fs10.default.existsSync(p))) return;
+  if (!save.paths.some((p) => import_fs10.default.existsSync(p))) {
+    info("Doc Detective installed nothing in its default cache folder, so there's nothing to cache.");
+    return;
+  }
   try {
     if (await saveCache2(save.paths, save.key) !== -1) {
       info(`Cached the Doc Detective runtime (${save.key}).`);

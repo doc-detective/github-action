@@ -92,7 +92,7 @@ async function main(): Promise<void> {
     }
 
     const runtime =
-      core.getInput("cache") === "false"
+      core.getInput("cache").trim().toLowerCase() === "false"
         ? { version }
         : await restoreRuntimeCache(version, cwd, node?.stdout ?? "");
 
@@ -270,7 +270,10 @@ async function restoreRuntimeCache(
 async function saveRuntimeCache(save?: { key: string; paths: string[] }): Promise<void> {
   if (!save) return;
   // A config `cacheDir` puts the runtime somewhere else, leaving nothing here.
-  if (!save.paths.some((p) => fs.existsSync(p))) return;
+  if (!save.paths.some((p) => fs.existsSync(p))) {
+    core.info("Doc Detective installed nothing in its default cache folder, so there's nothing to cache.");
+    return;
+  }
   try {
     if ((await cache.saveCache(save.paths, save.key)) !== -1) {
       core.info(`Cached the Doc Detective runtime (${save.key}).`);
