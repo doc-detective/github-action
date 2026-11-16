@@ -275,10 +275,12 @@ async function restoreRuntimeCache(
 async function saveRuntimeCache(save?: CacheSave): Promise<void> {
   if (!save) return;
   try {
+    // The CLI writes installed.json once it installs something. Without it, a
+    // run that failed early would cache `_npx` alone and look like a hit later.
     const installed = path.join(save.root, "installed.json");
-    const key = cacheKey(save.prefix, save.version, fs.existsSync(installed) ? fs.readFileSync(installed, "utf8") : undefined);
+    if (!fs.existsSync(installed)) return;
+    const key = cacheKey(save.prefix, save.version, fs.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
-    if (!save.paths.some((p) => fs.existsSync(p))) return;
     for (const dir of staleNpxDirs(save.npxRoot, save.version)) fs.rmSync(dir, { recursive: true, force: true });
     if ((await cache.saveCache(save.paths, key)) !== -1) {
       core.info(`Cached doc-detective and its runtime (${key}).`);

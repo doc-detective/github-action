@@ -81215,9 +81215,9 @@ async function saveRuntimeCache(save) {
   if (!save) return;
   try {
     const installed = import_path5.default.join(save.root, "installed.json");
-    const key = cacheKey(save.prefix, save.version, import_fs10.default.existsSync(installed) ? import_fs10.default.readFileSync(installed, "utf8") : void 0);
+    if (!import_fs10.default.existsSync(installed)) return;
+    const key = cacheKey(save.prefix, save.version, import_fs10.default.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
-    if (!save.paths.some((p) => import_fs10.default.existsSync(p))) return;
     for (const dir of staleNpxDirs(save.npxRoot, save.version)) import_fs10.default.rmSync(dir, { recursive: true, force: true });
     if (await saveCache2(save.paths, key) !== -1) {
       info(`Cached doc-detective and its runtime (${key}).`);
