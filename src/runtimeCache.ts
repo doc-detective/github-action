@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { parseEnv } from "util";
 import semver from "semver";
 import { parse as parseYaml } from "yaml";
 
@@ -59,7 +60,8 @@ export function cachePaths(root: string): string[] {
 }
 
 /**
- * The cache root the CLI will use, by its precedence: DOC_DETECTIVE_CACHE_DIR,
+ * The cache root the CLI will use, by its precedence: DOC_DETECTIVE_CACHE_DIR
+ * (from the environment, then `.env` in `cwd`),
  * then `cacheDir` from DOC_DETECTIVE_CONFIG, then from the project config (the
  * `config` input, or `.doc-detective.json|yaml|yml` in `cwd`), then the
  * default. Mirrors `setConfig` in doc-detective's `src/utils.ts`: env values
@@ -79,6 +81,12 @@ export function resolveCacheRoot({
   read?: (file: string) => string;
   exists?: (p: string) => boolean;
 }): string {
+  // The CLI loads `.env` from `cwd` without overriding the environment.
+  try {
+    env = { ...parseEnv(read(path.join(cwd, ".env"))), ...env };
+  } catch {
+    // No `.env`.
+  }
   const fromEnv = env.DOC_DETECTIVE_CACHE_DIR?.trim();
   if (fromEnv) return path.resolve(cwd, fromEnv);
   const fromEnvConfig = cacheDirOf(() => env.DOC_DETECTIVE_CONFIG ?? "");
@@ -121,6 +129,18 @@ export function cacheKeyPrefix({
 }): string {
   const nodeMajor = nodeVersion.trim().match(/^v?(\d+)/)?.[1] ?? "unknown";
   return `doc-detective-runtime-${platform}-${arch}-node${nodeMajor}-`;
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The CLI version as it goes in the key. CLIs before 5.3.0 never replace an
+ * installed browser, so their caches also rotate weekly, and restore only
+ * from the same week, to keep cached browsers at most a week behind.
+ */
+export function versionTag(version: string, now: number): { tag: string; refreshesBrowsers: boolean } {
+  const refreshesBrowsers = !semver.valid(version) || semver.gte(version, "5.3.0");
+  return { tag: refreshesBrowsers ? version : `${version}-w${Math.floor(now / WEEK_MS)}`, refreshesBrowsers };
 }
 
 /**

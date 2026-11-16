@@ -21,6 +21,7 @@ import {
   exactVersion,
   isExactVersion,
   resolveCacheRoot,
+  versionTag,
   otherNpxDirs,
 } from "./runtimeCache.ts";
 import * as cache from "@actions/cache";
@@ -220,7 +221,7 @@ async function createIssue(results: string, summary: string, mentions: string, p
   });
 }
 
-type CacheSave = { prefix: string; version: string; root: string; npxRoot: string; paths: string[]; restoredKey?: string };
+type CacheSave = { prefix: string; version: string; tag: string; root: string; npxRoot: string; paths: string[]; restoredKey?: string };
 
 /**
  * Restore the doc-detective package npx installs, and the runtime and browsers
@@ -254,13 +255,16 @@ async function restoreRuntimeCache(
     const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
     const npxRoot = path.join(npmCache, "_npx");
     const paths = [...cachePaths(root), npxRoot];
-    const restoredKey = await cache.restoreCache(paths, `${prefix}${exact}-`, [`${prefix}${exact}-`, prefix]);
+    const { tag, refreshesBrowsers } = versionTag(exact, Date.now());
+    // A CLI that refreshes browsers can start from any version's cache.
+    const restoreKeys = refreshesBrowsers ? [`${prefix}${tag}-`, prefix] : [`${prefix}${tag}-`];
+    const restoredKey = await cache.restoreCache(paths, `${prefix}${tag}-`, restoreKeys);
     core.info(
       restoredKey
         ? `Restored doc-detective and its runtime from the cache (${restoredKey}).`
         : `No cached doc-detective and runtime, so this run installs and caches them.`
     );
-    return { version: exact, save: { prefix, version: exact, root, npxRoot, paths, restoredKey } };
+    return { version: exact, save: { prefix, version: exact, tag, root, npxRoot, paths, restoredKey } };
   } catch (error) {
     core.warning(`Couldn't restore the Doc Detective runtime cache, so this run installs it. ${(error as Error).message}`);
     return { version };
@@ -279,17 +283,18 @@ async function saveRuntimeCache(save?: CacheSave): Promise<void> {
     // run that failed early would cache `_npx` alone and look like a hit later.
     const installed = path.join(save.root, "installed.json");
     if (!fs.existsSync(installed)) return;
-    const key = cacheKey(save.prefix, save.version, fs.readFileSync(installed, "utf8"));
+    const key = cacheKey(save.prefix, save.tag, fs.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
     // Keep everything else npx installed out of the cache, then put it back.
     const aside = `${save.npxRoot}-aside`;
-    const moved = otherNpxDirs(save.npxRoot, save.version).map((dir) => {
-      const to = path.join(aside, path.basename(dir));
-      fs.mkdirSync(aside, { recursive: true });
-      fs.renameSync(dir, to);
-      return [to, dir];
-    });
+    const moved: [string, string][] = [];
     try {
+      for (const dir of otherNpxDirs(save.npxRoot, save.version)) {
+        const to = path.join(aside, path.basename(dir));
+        fs.mkdirSync(aside, { recursive: true });
+        fs.renameSync(dir, to);
+        moved.push([to, dir]);
+      }
       if ((await cache.saveCache(save.paths, key)) !== -1) {
         core.info(`Cached doc-detective and its runtime (${key}).`);
       }

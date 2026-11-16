@@ -11,6 +11,7 @@ import {
   exactVersion,
   isExactVersion,
   resolveCacheRoot,
+  versionTag,
   otherNpxDirs,
 } from "./runtimeCache.ts";
 
@@ -95,6 +96,12 @@ test("resolveCacheRoot follows the CLI's precedence and anchors", () => {
     resolveCacheRoot({ ...opts, env: { DOC_DETECTIVE_CACHE_DIR: " /abs/dd ", DOC_DETECTIVE_CONFIG: '{"cacheDir":"x"}' } }),
     path.resolve(cwd, "/abs/dd")
   );
+  const withDotenv = { ...opts, read: (f: string) => (f === path.join(cwd, ".env") ? "DOC_DETECTIVE_CACHE_DIR=.dd\n" : files[f]) };
+  assert.equal(resolveCacheRoot(withDotenv), path.join(cwd, ".dd"));
+  assert.equal(
+    resolveCacheRoot({ ...withDotenv, env: { DOC_DETECTIVE_CACHE_DIR: "/env-wins" } }),
+    path.resolve(cwd, "/env-wins")
+  );
   const fallback = { ...opts, env: { XDG_CACHE_HOME: "/xdg" } };
   assert.equal(resolveCacheRoot({ ...fallback, config: "cfg/none.json" }), path.join("/xdg", "doc-detective"));
   assert.equal(resolveCacheRoot({ ...fallback, config: "https://example.com/dd.json" }), path.join("/xdg", "doc-detective"));
@@ -114,4 +121,15 @@ test("otherNpxDirs lists everything but this doc-detective version", () => {
   assert.deepEqual(otherNpxDirs(root, "5.2.1").sort(), [path.join(root, "b"), path.join(root, "c")]);
   assert.deepEqual(otherNpxDirs(path.join(root, "missing"), "5.2.1"), []);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("versionTag rotates weekly only for CLIs that don't refresh browsers", () => {
+  const now = Date.UTC(2026, 10, 16);
+  assert.deepEqual(versionTag("5.3.0", now), { tag: "5.3.0", refreshesBrowsers: true });
+  assert.deepEqual(versionTag("6.0.0-beta.1", now).refreshesBrowsers, true);
+  const old = versionTag("5.2.1", now);
+  assert.match(old.tag, /^5\.2\.1-w\d+$/);
+  assert.equal(old.refreshesBrowsers, false);
+  assert.equal(versionTag("5.2.1", now + 60_000).tag, old.tag);
+  assert.notEqual(versionTag("5.2.1", now + 7 * 24 * 60 * 60 * 1000).tag, old.tag);
 });

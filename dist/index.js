@@ -40091,6 +40091,7 @@ var import_crypto = __toESM(require("crypto"));
 var import_fs8 = __toESM(require("fs"));
 var import_os4 = __toESM(require("os"));
 var import_path4 = __toESM(require("path"));
+var import_util = require("util");
 var import_semver = __toESM(require_semver2());
 var import_yaml = __toESM(require_dist());
 function exactVersion(npmViewJson) {
@@ -40127,6 +40128,10 @@ function resolveCacheRoot({
   read = (file) => import_fs8.default.readFileSync(file, "utf8"),
   exists: exists2 = import_fs8.default.existsSync
 }) {
+  try {
+    env = { ...(0, import_util.parseEnv)(read(import_path4.default.join(cwd, ".env"))), ...env };
+  } catch {
+  }
   const fromEnv = env.DOC_DETECTIVE_CACHE_DIR?.trim();
   if (fromEnv) return import_path4.default.resolve(cwd, fromEnv);
   const fromEnvConfig = cacheDirOf(() => env.DOC_DETECTIVE_CONFIG ?? "");
@@ -40156,6 +40161,11 @@ function cacheKeyPrefix({
 }) {
   const nodeMajor = nodeVersion.trim().match(/^v?(\d+)/)?.[1] ?? "unknown";
   return `doc-detective-runtime-${platform2}-${arch2}-node${nodeMajor}-`;
+}
+var WEEK_MS = 7 * 24 * 60 * 60 * 1e3;
+function versionTag(version3, now) {
+  const refreshesBrowsers = !import_semver.default.valid(version3) || import_semver.default.gte(version3, "5.3.0");
+  return { tag: refreshesBrowsers ? version3 : `${version3}-w${Math.floor(now / WEEK_MS)}`, refreshesBrowsers };
 }
 function cacheKey(prefix2, version3, installedJson) {
   let lines = [];
@@ -81201,11 +81211,13 @@ async function restoreRuntimeCache(version3, cwd, config, nodeVersion) {
     const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
     const npxRoot = import_path5.default.join(npmCache, "_npx");
     const paths = [...cachePaths(root), npxRoot];
-    const restoredKey = await restoreCache(paths, `${prefix2}${exact}-`, [`${prefix2}${exact}-`, prefix2]);
+    const { tag, refreshesBrowsers } = versionTag(exact, Date.now());
+    const restoreKeys = refreshesBrowsers ? [`${prefix2}${tag}-`, prefix2] : [`${prefix2}${tag}-`];
+    const restoredKey = await restoreCache(paths, `${prefix2}${tag}-`, restoreKeys);
     info(
       restoredKey ? `Restored doc-detective and its runtime from the cache (${restoredKey}).` : `No cached doc-detective and runtime, so this run installs and caches them.`
     );
-    return { version: exact, save: { prefix: prefix2, version: exact, root, npxRoot, paths, restoredKey } };
+    return { version: exact, save: { prefix: prefix2, version: exact, tag, root, npxRoot, paths, restoredKey } };
   } catch (error2) {
     warning(`Couldn't restore the Doc Detective runtime cache, so this run installs it. ${error2.message}`);
     return { version: version3 };
@@ -81216,16 +81228,17 @@ async function saveRuntimeCache(save) {
   try {
     const installed = import_path5.default.join(save.root, "installed.json");
     if (!import_fs10.default.existsSync(installed)) return;
-    const key = cacheKey(save.prefix, save.version, import_fs10.default.readFileSync(installed, "utf8"));
+    const key = cacheKey(save.prefix, save.tag, import_fs10.default.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
     const aside = `${save.npxRoot}-aside`;
-    const moved = otherNpxDirs(save.npxRoot, save.version).map((dir) => {
-      const to = import_path5.default.join(aside, import_path5.default.basename(dir));
-      import_fs10.default.mkdirSync(aside, { recursive: true });
-      import_fs10.default.renameSync(dir, to);
-      return [to, dir];
-    });
+    const moved = [];
     try {
+      for (const dir of otherNpxDirs(save.npxRoot, save.version)) {
+        const to = import_path5.default.join(aside, import_path5.default.basename(dir));
+        import_fs10.default.mkdirSync(aside, { recursive: true });
+        import_fs10.default.renameSync(dir, to);
+        moved.push([to, dir]);
+      }
       if (await saveCache2(save.paths, key) !== -1) {
         info(`Cached doc-detective and its runtime (${key}).`);
       }
