@@ -289,9 +289,11 @@ async function saveRuntimeCache(save?: CacheSave): Promise<void> {
     const aside = `${save.npxRoot}-aside`;
     const moved: [string, string][] = [];
     try {
+      // A run killed mid-save can leave folders here; they'd block the renames.
+      fs.rmSync(aside, { recursive: true, force: true });
+      fs.mkdirSync(aside, { recursive: true });
       for (const dir of otherNpxDirs(save.npxRoot, save.version)) {
         const to = path.join(aside, path.basename(dir));
-        fs.mkdirSync(aside, { recursive: true });
         fs.renameSync(dir, to);
         moved.push([to, dir]);
       }

@@ -81233,9 +81233,10 @@ async function saveRuntimeCache(save) {
     const aside = `${save.npxRoot}-aside`;
     const moved = [];
     try {
+      import_fs10.default.rmSync(aside, { recursive: true, force: true });
+      import_fs10.default.mkdirSync(aside, { recursive: true });
       for (const dir of otherNpxDirs(save.npxRoot, save.version)) {
         const to = import_path5.default.join(aside, import_path5.default.basename(dir));
-        import_fs10.default.mkdirSync(aside, { recursive: true });
         import_fs10.default.renameSync(dir, to);
         moved.push([to, dir]);
       }
