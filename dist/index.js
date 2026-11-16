@@ -40172,7 +40172,7 @@ function installedVersions(node, at = "") {
     ([k, v]) => k === "installedVersion" && typeof v === "string" ? [`${at}@${v}`] : installedVersions(v, `${at}/${k}`)
   );
 }
-function staleNpxDirs(npxRoot, version3) {
+function otherNpxDirs(npxRoot, version3) {
   let dirs = [];
   try {
     dirs = import_fs8.default.readdirSync(npxRoot);
@@ -40184,7 +40184,7 @@ function staleNpxDirs(npxRoot, version3) {
       const pkg = JSON.parse(import_fs8.default.readFileSync(import_path4.default.join(dir, "node_modules", "doc-detective", "package.json"), "utf8"));
       return pkg.version !== version3;
     } catch {
-      return false;
+      return true;
     }
   });
 }
@@ -81218,9 +81218,19 @@ async function saveRuntimeCache(save) {
     if (!import_fs10.default.existsSync(installed)) return;
     const key = cacheKey(save.prefix, save.version, import_fs10.default.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
-    for (const dir of staleNpxDirs(save.npxRoot, save.version)) import_fs10.default.rmSync(dir, { recursive: true, force: true });
-    if (await saveCache2(save.paths, key) !== -1) {
-      info(`Cached doc-detective and its runtime (${key}).`);
+    const aside = `${save.npxRoot}-aside`;
+    const moved = otherNpxDirs(save.npxRoot, save.version).map((dir) => {
+      const to = import_path5.default.join(aside, import_path5.default.basename(dir));
+      import_fs10.default.mkdirSync(aside, { recursive: true });
+      import_fs10.default.renameSync(dir, to);
+      return [to, dir];
+    });
+    try {
+      if (await saveCache2(save.paths, key) !== -1) {
+        info(`Cached doc-detective and its runtime (${key}).`);
+      }
+    } finally {
+      for (const [from, to] of moved) import_fs10.default.renameSync(from, to);
     }
   } catch (error2) {
     warning(`Couldn't cache the Doc Detective runtime. ${error2.message}`);

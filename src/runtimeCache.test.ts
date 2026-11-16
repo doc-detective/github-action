@@ -11,7 +11,7 @@ import {
   exactVersion,
   isExactVersion,
   resolveCacheRoot,
-  staleNpxDirs,
+  otherNpxDirs,
 } from "./runtimeCache.ts";
 
 test("exactVersion takes the highest match from npm view --json", () => {
@@ -101,7 +101,7 @@ test("resolveCacheRoot follows the CLI's precedence and anchors", () => {
   assert.equal(resolveCacheRoot({ ...fallback, config: "missing.json" }), path.join("/xdg", "doc-detective"));
 });
 
-test("staleNpxDirs lists only other doc-detective versions", () => {
+test("otherNpxDirs lists everything but this doc-detective version", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "npx-"));
   const add = (dir: string, name: string, version: string) => {
     const pkg = path.join(root, dir, "node_modules", name);
@@ -111,7 +111,7 @@ test("staleNpxDirs lists only other doc-detective versions", () => {
   add("a", "doc-detective", "5.2.1");
   add("b", "doc-detective", "5.2.0");
   add("c", "cowsay", "1.0.0");
-  assert.deepEqual(staleNpxDirs(root, "5.2.1"), [path.join(root, "b")]);
-  assert.deepEqual(staleNpxDirs(path.join(root, "missing"), "5.2.1"), []);
+  assert.deepEqual(otherNpxDirs(root, "5.2.1").sort(), [path.join(root, "b"), path.join(root, "c")]);
+  assert.deepEqual(otherNpxDirs(path.join(root, "missing"), "5.2.1"), []);
   fs.rmSync(root, { recursive: true, force: true });
 });

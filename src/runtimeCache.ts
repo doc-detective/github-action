@@ -149,10 +149,12 @@ function installedVersions(node: unknown, at = ""): string[] {
 }
 
 /**
- * Folders under `_npx` holding a doc-detective other than `version`. Pruned
- * before saving so a cache carried across CLI releases doesn't keep every one.
+ * Folders under `_npx` that don't hold doc-detective `version`: other
+ * releases, and anything else the job ran with `npx`, which may be a private
+ * package. Moved out of the way while saving, so the cache holds only the
+ * doc-detective this run used.
  */
-export function staleNpxDirs(npxRoot: string, version: string): string[] {
+export function otherNpxDirs(npxRoot: string, version: string): string[] {
   let dirs: string[] = [];
   try {
     dirs = fs.readdirSync(npxRoot);
@@ -166,7 +168,7 @@ export function staleNpxDirs(npxRoot: string, version: string): string[] {
         const pkg = JSON.parse(fs.readFileSync(path.join(dir, "node_modules", "doc-detective", "package.json"), "utf8"));
         return pkg.version !== version;
       } catch {
-        return false;
+        return true;
       }
     });
 }

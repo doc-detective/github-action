@@ -21,7 +21,7 @@ import {
   exactVersion,
   isExactVersion,
   resolveCacheRoot,
-  staleNpxDirs,
+  otherNpxDirs,
 } from "./runtimeCache.ts";
 import * as cache from "@actions/cache";
 
@@ -281,9 +281,20 @@ async function saveRuntimeCache(save?: CacheSave): Promise<void> {
     if (!fs.existsSync(installed)) return;
     const key = cacheKey(save.prefix, save.version, fs.readFileSync(installed, "utf8"));
     if (key === save.restoredKey) return;
-    for (const dir of staleNpxDirs(save.npxRoot, save.version)) fs.rmSync(dir, { recursive: true, force: true });
-    if ((await cache.saveCache(save.paths, key)) !== -1) {
-      core.info(`Cached doc-detective and its runtime (${key}).`);
+    // Keep everything else npx installed out of the cache, then put it back.
+    const aside = `${save.npxRoot}-aside`;
+    const moved = otherNpxDirs(save.npxRoot, save.version).map((dir) => {
+      const to = path.join(aside, path.basename(dir));
+      fs.mkdirSync(aside, { recursive: true });
+      fs.renameSync(dir, to);
+      return [to, dir];
+    });
+    try {
+      if ((await cache.saveCache(save.paths, key)) !== -1) {
+        core.info(`Cached doc-detective and its runtime (${key}).`);
+      }
+    } finally {
+      for (const [from, to] of moved) fs.renameSync(from, to);
     }
   } catch (error) {
     core.warning(`Couldn't cache the Doc Detective runtime. ${(error as Error).message}`);
