@@ -1,7 +1,9 @@
+import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import semver from "semver";
+import { parse as parseYaml } from "yaml";
 
 /**
  * The highest version `npm view doc-detective@<spec> version --json` printed: a
@@ -56,27 +58,115 @@ export function cachePaths(root: string): string[] {
   return ["runtime", "browsers", "installed.json"].map((p) => path.join(root, p));
 }
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * The cache root the CLI will use, by its precedence: DOC_DETECTIVE_CACHE_DIR,
+ * then `cacheDir` from DOC_DETECTIVE_CONFIG, then from the project config (the
+ * `config` input, or `.doc-detective.json|yaml|yml` in `cwd`), then the
+ * default. Mirrors `setConfig` in doc-detective's `src/utils.ts`: env values
+ * resolve against `cwd`, a config file's against its folder unless it sets
+ * `relativePathBase: "cwd"`. Skips the user-level config and remote configs.
+ */
+export function resolveCacheRoot({
+  cwd,
+  config = "",
+  env = process.env,
+  read = (file: string) => fs.readFileSync(file, "utf8"),
+  exists = fs.existsSync,
+}: {
+  cwd: string;
+  config?: string;
+  env?: NodeJS.ProcessEnv;
+  read?: (file: string) => string;
+  exists?: (p: string) => boolean;
+}): string {
+  const fromEnv = env.DOC_DETECTIVE_CACHE_DIR?.trim();
+  if (fromEnv) return path.resolve(cwd, fromEnv);
+  const fromEnvConfig = cacheDirOf(() => env.DOC_DETECTIVE_CONFIG ?? "");
+  if (fromEnvConfig) return path.resolve(cwd, fromEnvConfig.cacheDir);
+  if (!/^https?:\/\//.test(config)) {
+    const file = config
+      ? path.resolve(cwd, config)
+      : [".doc-detective.json", ".doc-detective.yaml", ".doc-detective.yml"].map((n) => path.join(cwd, n)).find(exists);
+    const fromFile = file ? cacheDirOf(() => read(file)) : undefined;
+    if (file && fromFile) {
+      return path.resolve(fromFile.relativePathBase === "cwd" ? cwd : path.dirname(file), fromFile.cacheDir);
+    }
+  }
+  return defaultCacheRoot({ env, exists });
+}
+
+/** `cacheDir` and `relativePathBase` from JSON or YAML text, if it sets a `cacheDir`. */
+function cacheDirOf(text: () => string): { cacheDir: string; relativePathBase?: unknown } | undefined {
+  try {
+    const parsed = parseYaml(text());
+    const cacheDir = typeof parsed?.cacheDir === "string" ? parsed.cacheDir.trim() : "";
+    return cacheDir ? { cacheDir, relativePathBase: parsed.relativePathBase } : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
- * One key per CLI version, OS, CPU, Node.js major (sharp is a native module),
- * and week. CLI 5 never replaces a browser it already installed, so the week
- * caps how far the cached Chrome and Firefox fall behind their stable channel.
+ * The part of the key that must match for a cache to restore at all: OS, CPU,
+ * and Node.js major (sharp is a native module).
  */
-export function cacheKey({
-  version,
+export function cacheKeyPrefix({
   platform,
   arch,
   nodeVersion,
-  now,
 }: {
-  version: string;
   platform: string;
   arch: string;
   nodeVersion: string;
-  now: number;
 }): string {
   const nodeMajor = nodeVersion.trim().match(/^v?(\d+)/)?.[1] ?? "unknown";
-  const week = Math.floor(now / WEEK_MS);
-  return `doc-detective-runtime-${version}-${platform}-${arch}-node${nodeMajor}-w${week}`;
+  return `doc-detective-runtime-${platform}-${arch}-node${nodeMajor}-`;
+}
+
+/**
+ * The key to save under: the prefix, the CLI version, and a hash of every
+ * `installedVersion` in `installed.json`. It changes only when the run
+ * installed or updated something, so an unchanged cache never re-uploads, and
+ * an updated browser always saves a new entry.
+ */
+export function cacheKey(prefix: string, version: string, installedJson: string | undefined): string {
+  let lines: string[] = [];
+  try {
+    lines = installedVersions(JSON.parse(installedJson ?? "null")).sort();
+  } catch {
+    // An unreadable record hashes like a missing one.
+  }
+  const hash = crypto.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
+  return `${prefix}${version}-${hash}`;
+}
+
+/** `path@version` for every `installedVersion` in the record, at any depth. */
+function installedVersions(node: unknown, at = ""): string[] {
+  if (!node || typeof node !== "object") return [];
+  return Object.entries(node).flatMap(([k, v]) =>
+    k === "installedVersion" && typeof v === "string" ? [`${at}@${v}`] : installedVersions(v, `${at}/${k}`)
+  );
+}
+
+/**
+ * Folders under `_npx` holding a doc-detective other than `version`. Pruned
+ * before saving so a cache carried across CLI releases doesn't keep every one.
+ */
+export function staleNpxDirs(npxRoot: string, version: string): string[] {
+  let dirs: string[] = [];
+  try {
+    dirs = fs.readdirSync(npxRoot);
+  } catch {
+    return [];
+  }
+  return dirs
+    .map((d) => path.join(npxRoot, d))
+    .filter((dir) => {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(dir, "node_modules", "doc-detective", "package.json"), "utf8"));
+        return pkg.version !== version;
+      } catch {
+        return false;
+      }
+    });
 }

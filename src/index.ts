@@ -16,10 +16,12 @@ import { DEFAULT_ISSUE_PROMPT, getAliasedInput } from "./actionInputs.ts";
 import { parseIntegrations, buildIntegrationsAccordion } from "./integrations.ts";
 import {
   cacheKey,
+  cacheKeyPrefix,
   cachePaths,
-  defaultCacheRoot,
   exactVersion,
   isExactVersion,
+  resolveCacheRoot,
+  staleNpxDirs,
 } from "./runtimeCache.ts";
 import * as cache from "@actions/cache";
 
@@ -94,7 +96,7 @@ async function main(): Promise<void> {
     const runtime =
       core.getInput("cache").trim().toLowerCase() === "false"
         ? { version }
-        : await restoreRuntimeCache(version, cwd, node?.stdout ?? "");
+        : await restoreRuntimeCache(version, cwd, config, node?.stdout ?? "");
 
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
@@ -218,23 +220,23 @@ async function createIssue(results: string, summary: string, mentions: string, p
   });
 }
 
+type CacheSave = { prefix: string; version: string; root: string; npxRoot: string; paths: string[]; restoredKey?: string };
+
 /**
  * Restore the doc-detective package npx installs, and the runtime and browsers
- * Doc Detective installs on first use. Returns
- * the exact version to run, so what runs matches the key, and the cache to save
- * after the run on a miss. Any failure warns and runs uncached.
+ * Doc Detective installs on first use, from the newest cache for this OS, CPU,
+ * and Node.js major, preferring one for this CLI version. Returns the exact
+ * version to run, so the `_npx` folder matches, and what to save after the
+ * run. Any failure warns and runs uncached.
  */
 async function restoreRuntimeCache(
   version: string,
   cwd: string,
+  config: string,
   nodeVersion: string
-): Promise<{ version: string; save?: { key: string; paths: string[] } }> {
+): Promise<{ version: string; save?: CacheSave }> {
   // A linked CLI has no version to key on.
   if (!version) return { version };
-  if (process.env.DOC_DETECTIVE_CACHE_DIR) {
-    core.info("DOC_DETECTIVE_CACHE_DIR is set, so the action leaves caching the Doc Detective runtime to you.");
-    return { version };
-  }
   if (!cache.isFeatureAvailable()) {
     core.info("The Actions cache isn't available here, so Doc Detective installs its runtime uncached.");
     return { version };
@@ -246,40 +248,40 @@ async function restoreRuntimeCache(
           (await getExecOutput("npm", ["view", `doc-detective@${version}`, "version", "--json"], { cwd, silent: true })).stdout
         );
     if (!exact) throw new Error(`npm found no doc-detective version matching "${version}".`);
-    const key = cacheKey({
-      version: exact,
-      platform: os.platform(),
-      arch: os.arch(),
-      nodeVersion,
-      now: Date.now(),
-    });
+    const prefix = cacheKeyPrefix({ platform: os.platform(), arch: os.arch(), nodeVersion });
+    const root = resolveCacheRoot({ cwd, config });
     // npx installs doc-detective itself under `<npm cache>/_npx`.
     const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
-    const paths = [...cachePaths(defaultCacheRoot()), path.join(npmCache, "_npx")];
-    const restored = await cache.restoreCache(paths, key);
+    const npxRoot = path.join(npmCache, "_npx");
+    const paths = [...cachePaths(root), npxRoot];
+    const restoredKey = await cache.restoreCache(paths, `${prefix}${exact}-`, [prefix]);
     core.info(
-      restored
-        ? `Restored doc-detective and its runtime from the cache (${key}).`
-        : `No cached doc-detective and runtime for ${key}, so this run installs and caches them.`
+      restoredKey
+        ? `Restored doc-detective and its runtime from the cache (${restoredKey}).`
+        : `No cached doc-detective and runtime, so this run installs and caches them.`
     );
-    return { version: exact, save: restored ? undefined : { key, paths } };
+    return { version: exact, save: { prefix, version: exact, root, npxRoot, paths, restoredKey } };
   } catch (error) {
     core.warning(`Couldn't restore the Doc Detective runtime cache, so this run installs it. ${(error as Error).message}`);
     return { version };
   }
 }
 
-/** Cache what this run installed. Any failure warns. */
-async function saveRuntimeCache(save?: { key: string; paths: string[] }): Promise<void> {
+/**
+ * Cache what this run installed or updated, under a key that hashes what
+ * `installed.json` records. Skips when that matches what was restored. Any
+ * failure warns.
+ */
+async function saveRuntimeCache(save?: CacheSave): Promise<void> {
   if (!save) return;
-  // A config `cacheDir` puts the runtime somewhere else, leaving nothing here.
-  if (!save.paths.some((p) => fs.existsSync(p))) {
-    core.info("Doc Detective installed nothing in its default cache folder, so there's nothing to cache.");
-    return;
-  }
   try {
-    if ((await cache.saveCache(save.paths, save.key)) !== -1) {
-      core.info(`Cached doc-detective and its runtime (${save.key}).`);
+    const installed = path.join(save.root, "installed.json");
+    const key = cacheKey(save.prefix, save.version, fs.existsSync(installed) ? fs.readFileSync(installed, "utf8") : undefined);
+    if (key === save.restoredKey) return;
+    if (!save.paths.some((p) => fs.existsSync(p))) return;
+    for (const dir of staleNpxDirs(save.npxRoot, save.version)) fs.rmSync(dir, { recursive: true, force: true });
+    if ((await cache.saveCache(save.paths, key)) !== -1) {
+      core.info(`Cached doc-detective and its runtime (${key}).`);
     }
   } catch (error) {
     core.warning(`Couldn't cache the Doc Detective runtime. ${(error as Error).message}`);
