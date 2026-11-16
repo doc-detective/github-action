@@ -254,7 +254,7 @@ async function restoreRuntimeCache(
     const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
     const npxRoot = path.join(npmCache, "_npx");
     const paths = [...cachePaths(root), npxRoot];
-    const restoredKey = await cache.restoreCache(paths, `${prefix}${exact}-`, [prefix]);
+    const restoredKey = await cache.restoreCache(paths, `${prefix}${exact}-`, [`${prefix}${exact}-`, prefix]);
     core.info(
       restoredKey
         ? `Restored doc-detective and its runtime from the cache (${restoredKey}).`

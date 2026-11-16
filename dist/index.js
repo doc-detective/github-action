@@ -81201,7 +81201,7 @@ async function restoreRuntimeCache(version3, cwd, config, nodeVersion) {
     const npmCache = (await getExecOutput("npm", ["config", "get", "cache"], { cwd, silent: true })).stdout.trim();
     const npxRoot = import_path5.default.join(npmCache, "_npx");
     const paths = [...cachePaths(root), npxRoot];
-    const restoredKey = await restoreCache(paths, `${prefix2}${exact}-`, [prefix2]);
+    const restoredKey = await restoreCache(paths, `${prefix2}${exact}-`, [`${prefix2}${exact}-`, prefix2]);
     info(
       restoredKey ? `Restored doc-detective and its runtime from the cache (${restoredKey}).` : `No cached doc-detective and runtime, so this run installs and caches them.`
     );
