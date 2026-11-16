@@ -10,6 +10,10 @@ inputs:
     description: The directory to run the command in, relative to the root of the repository. Defaults to the root of the repository.
     required: false
     default: "."
+  cache:
+    description: 'Cache the doc-detective package, and the runtime and browsers it installs on first use, so later runs restore them instead of downloading them. On by default. Follows `DOC_DETECTIVE_CACHE_DIR` and a config `cacheDir`. The action saves a new cache entry only when the run installed or updated something. Set to "false" to install everything on every run. The action skips caching when `version` is empty.'
+    required: false
+    default: "true"
   android:
     description: 'Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). "auto" (default) scans your specs and only sets up KVM when an android platform is present; "true" always sets it up; "false" never does. No effect on macOS/Windows runners, which can''t accelerate the emulator. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.'
     required: false

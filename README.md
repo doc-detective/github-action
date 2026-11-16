@@ -98,6 +98,22 @@ Path to the input file or directory. Overrides the `input` field in the config f
     input: path/to/your/tests
 ```
 
+### `cache` (default: `true`)
+
+Cache the `doc-detective` package that `npx` installs, and the runtime and browsers Doc Detective installs on first use, so later runs restore them from the [Actions cache](https://docs.github.com/actions/using-workflows/caching-dependencies-to-speed-up-workflows) instead of downloading them. The first run in a repository installs everything and saves it.
+
+Each run restores the newest cache for its OS, CPU architecture, and Node.js major version, preferring one saved by the same Doc Detective version. After the run, the action saves a new entry only if the run installed or updated something, such as a new Doc Detective version or a browser Doc Detective updated. Doc Detective 5.3.0 and later update outdated cached browsers. For earlier versions, the cache also rotates weekly, so cached browsers stay at most a week behind. While caching is on, the action resolves `version` to an exact version, like `5.2.1`, and runs that version.
+
+The action caches the `doc-detective` package in `npx`'s package folder, `_npx` in the npm cache, leaving out anything else your job ran with `npx`. It also caches the `runtime` and `browsers` folders and `installed.json` in Doc Detective's cache folder, without the Android SDK, the Java runtime, Android emulators, or WebDriverAgent builds. It finds that folder the way Doc Detective does: `DOC_DETECTIVE_CACHE_DIR` from the environment or a `.env` file in `working_directory`, then `cacheDir` in `DOC_DETECTIVE_CONFIG`, then `cacheDir` in your config file, then the default. It skips caching when `version` is empty. A cache miss or a failed restore or save logs a message, and the run continues.
+
+Set `cache` to `false` to install everything on every run.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    cache: false
+```
+
 ### `android` (default: `auto`)
 
 Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present; `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
@@ -110,7 +126,7 @@ Enable Android emulator support on Linux runners by granting KVM access (the emu
 
 ### Speed up iOS tests
 
-Doc Detective prebuilds and manages the WebDriverAgent (WDA) build itself. For fast iOS runs, persist the Doc Detective cache and prebuild before the action:
+Doc Detective prebuilds and manages the WebDriverAgent (WDA) build itself. For fast iOS runs, persist the whole Doc Detective cache and prebuild before the action. That cache already holds the runtime and browsers, so turn off the action's [`cache`](#cache-default-true) to avoid storing them twice:
 
 ```yaml
 jobs:
@@ -135,6 +151,8 @@ jobs:
             dd-cache-${{ runner.os }}-
       - run: npx doc-detective install ios --yes
       - uses: doc-detective/github-action@v2
+        with:
+          cache: false
 ```
 
 Without the prebuild, iOS tests still work — the first XCUITest session builds WebDriverAgent in-session (~10 min on a cold runner). The managed prebuild requires Doc Detective v4.28 or later.
