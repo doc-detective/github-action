@@ -512,3 +512,9 @@ URL of the created or updated GitHub issue. Only set if `create_issue_on_fail` i
     create_issue_on_fail: true
 - run: echo "${{ steps.doc-detective.outputs.issue_url }}"
 ```
+
+## Releases
+
+Releases are cut automatically. When a pull request with a `feat:` or `fix:` commit merges to `main`, the release workflow tags a new version and publishes a GitHub release with generated notes. The `latest` tag moves to the newest release. Each major tag, such as `v2`, moves to the newest release in its major version.
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/). The commit type decides whether a release is cut and which version it gets. A `!` after the type or a `BREAKING CHANGE:` footer cuts a major version.

@@ -1,0 +1,31 @@
+name: Commitlint
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # The lint job runs no install scripts, so skip them to keep it fast.
+      - run: npm ci --ignore-scripts
+
+      # Pull requests merge with merge commits, so every commit in the range
+      # reaches main and its type decides the release (see release.yml).
+      - name: Validate PR commits
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
