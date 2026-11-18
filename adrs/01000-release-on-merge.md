@@ -52,9 +52,10 @@ Behavior decided:
    own major, so `v2.1.0` moves `v2` and `latest`, and a later `v3.0.0` moves `v3` and `latest` and
    leaves `v2` alone. The tags only move forward. A run whose commit isn't the newest release, such
    as a re-run of an old run, leaves them alone. So does a run with no stable release at `HEAD`.
-4. **Recovery.** A run on `main` whose commit has a version tag but no GitHub release creates the
-   release with GitHub's generated notes, then moves the tags. Re-running a run that failed partway
-   finishes it. The tags don't move until the GitHub release exists.
+4. **Recovery.** A run on `main` whose commit has a version tag but no published GitHub release
+   creates the release with GitHub's generated notes, then moves the tags. A draft or prerelease
+   doesn't count as published. Re-running a run that failed partway finishes it. The tags don't
+   move until the published release exists.
 5. **No commits.** The release pushes tags and a GitHub release only. It pushes no commit, writes
    no changelog file, and doesn't touch `package.json`.
 6. **Commit gate.** commitlint checks every pull request's commits against Conventional Commits,
