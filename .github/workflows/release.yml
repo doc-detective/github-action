@@ -36,45 +36,68 @@ jobs:
 
       - run: npm ci
 
-      # Fail-safe: semantic-release derives the last version from git tags, not
-      # package.json. With no baseline tag it would cut a "first release"
-      # (v1.0.0) from full history, which already exists. Abort loudly instead
-      # (covers both push and manual workflow_dispatch runs).
+      # Fail-safe: semantic-release derives the last version from the stable
+      # vX.Y.Z tags in this commit's history, not from package.json or floating
+      # tags like v2. With none, it would cut a "first release" (v1.0.0), which
+      # already exists. Abort loudly instead (covers both push and manual
+      # workflow_dispatch runs).
       - name: Ensure a baseline release tag exists
         run: |
-          if [ -z "$(git tag -l 'v*')" ]; then
-            echo "::error::No baseline 'v*' git tag found. The baseline is v2.0.0. Fetch or restore it before releasing:"
+          if [ -z "$(git tag --merged HEAD --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)" ]; then
+            echo "::error::No stable 'vX.Y.Z' tag is reachable from this commit. The baseline is v2.0.0. Restore it before releasing:"
             echo "::error::  git tag -a v2.0.0 -m 'v2.0.0' d4754e9 && git push origin v2.0.0"
             echo "::error::Without it, semantic-release would cut a regressing first release (v1.0.0)."
             exit 1
           fi
 
-      # Cuts a release when a feat:, fix:, or breaking commit landed since the
-      # last one: a vX.Y.Z tag and a GitHub release with generated notes. It
-      # pushes no commits, because main requires pull requests and dist/ is
-      # committed in the pull request (see ci.yml).
+      # Cuts a release when a feat:, fix:, revert, or breaking commit landed
+      # since the last one: a vX.Y.Z tag and a GitHub release with generated
+      # notes. It pushes no commits, because main requires pull requests and
+      # dist/ is committed in the pull request (see ci.yml).
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      # Workflows reference this action by floating tag (`@v2`, `@latest`), so
-      # point both at each stable release: v2.3.1 moves v2 and latest.
+      # Workflows reference this action by floating tag, so point those at each
+      # stable release. `latest` follows the newest stable release overall, and
+      # a major tag the newest in its own major: v2.3.1 moves v2 and latest, and
+      # a later v3.0.0 moves v3 and latest but leaves v2 alone.
       # semantic-release tags HEAD, so no stable tag there means no release was
-      # cut. Only on main: a manual run against an old release tag would
-      # otherwise find that tag at HEAD and move the floating tags back to it.
+      # cut. The tags only move forward: re-running an old run finds its old
+      # tag at HEAD, which is no longer the newest, and moves nothing.
+      # Only on main, so a manual run against another ref can't move them.
       - name: Move the major version and latest tags
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          version="$(git tag --points-at HEAD --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          newest() { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true; }
+          version="$(git tag --points-at HEAD --list 'v*' | newest)"
           if [ -z "$version" ]; then
             echo "No stable release at HEAD. Leaving the major and latest tags alone."
             exit 0
           fi
+          # semantic-release pushes the tag before it creates the GitHub
+          # release. If an earlier run failed in between, a re-run finds
+          # nothing left to release, so finish the release here.
+          if ! gh release view "$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$version" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+            echo "Created the missing GitHub release for ${version}."
+          fi
           major="${version%%.*}"
-          git tag -f "$major" HEAD
-          git tag -f latest HEAD
-          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${major}" refs/tags/latest
-          echo "Moved ${major} and latest to ${version}."
+          refs=()
+          if [ "$version" = "$(git tag --list "${major}.*" | newest)" ]; then
+            git tag -f "$major" HEAD
+            refs+=("refs/tags/${major}")
+          fi
+          if [ "$version" = "$(git tag --list 'v*' | newest)" ]; then
+            git tag -f latest HEAD
+            refs+=("refs/tags/latest")
+          fi
+          if [ "${#refs[@]}" -eq 0 ]; then
+            echo "${version} isn't the newest release. Leaving the major and latest tags alone."
+            exit 0
+          fi
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${refs[@]}"
+          echo "Moved ${refs[*]#refs/tags/} to ${version}."
