@@ -44,8 +44,7 @@ jobs:
       - name: Ensure a baseline release tag exists
         run: |
           if [ -z "$(git tag --merged HEAD --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)" ]; then
-            echo "::error::No stable 'vX.Y.Z' tag is reachable from this commit. The baseline is v2.0.0. Restore it before releasing:"
-            echo "::error::  git tag -a v2.0.0 -m 'v2.0.0' d4754e9 && git push origin v2.0.0"
+            echo "::error::No stable 'vX.Y.Z' tag is reachable from this commit. The baseline is v2.0.0. Restore it before releasing."
             echo "::error::Without it, semantic-release would cut a regressing first release (v1.0.0)."
             exit 1
           fi
@@ -80,8 +79,11 @@ jobs:
           fi
           # semantic-release pushes the tag before it creates the GitHub
           # release. If an earlier run failed in between, a re-run finds
-          # nothing left to release, so finish the release here.
-          if ! gh release view "$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          # nothing left to release, so finish the release here. A draft or
+          # prerelease doesn't count as published. If the release can't be
+          # created, the step fails before any tag moves.
+          unpublished="$(gh release view "$version" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' 2> /dev/null || echo true)"
+          if [ "$unpublished" != "false" ]; then
             gh release create "$version" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
             echo "Created the missing GitHub release for ${version}."
           fi
