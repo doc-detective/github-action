@@ -43,13 +43,20 @@ Behavior decided:
 
 1. **Trigger.** semantic-release runs on every push to `main`.
 2. **Release.** A `feat:`, `fix:`, or breaking commit since the last release cuts a release. That
-   means a `vX.Y.Z` tag and a GitHub release with generated notes. Other commit types cut nothing.
-3. **Floating tags.** After a stable release, the workflow force-moves the major tag (`v2`) and
-   `latest` to it. With no stable release at `HEAD`, it leaves both alone.
-4. **No commits.** The release pushes tags and a GitHub release only. It pushes no commit, writes
+   means a `vX.Y.Z` tag and a GitHub release with generated notes. A commit that `git revert`
+   writes cuts a patch release, because it changes what ships. Other commit types cut nothing.
+3. **Floating tags.** After a stable release, the workflow force-moves two tags to it. `latest`
+   tracks the newest stable release overall. Each major tag tracks the newest stable release in its
+   own major, so `v2.1.0` moves `v2` and `latest`, and a later `v3.0.0` moves `v3` and `latest` and
+   leaves `v2` alone. The tags only move forward. A run whose commit isn't the newest release, such
+   as a re-run of an old run, leaves them alone. So does a run with no stable release at `HEAD`.
+4. **Recovery.** A run on `main` whose commit has a version tag but no GitHub release creates the
+   release with GitHub's generated notes, then moves the tags. Re-running a run that failed partway
+   finishes it. The tags don't move until the GitHub release exists.
+5. **No commits.** The release pushes tags and a GitHub release only. It pushes no commit, writes
    no changelog file, and doesn't touch `package.json`.
-5. **Commit gate.** commitlint checks every pull request's commits against Conventional Commits,
-   because commit types now decide releases.
+6. **Commit gate.** commitlint checks every pull request's commits against Conventional Commits,
+   because commit types now decide releases. No author is exempt, Dependabot included.
 
 `publish.yml` is deleted.
 
