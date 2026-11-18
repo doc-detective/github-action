@@ -43,8 +43,10 @@ Behavior decided:
 
 1. **Trigger.** semantic-release runs on every push to `main`.
 2. **Release.** A `feat:`, `fix:`, or breaking commit since the last release cuts a release. That
-   means a `vX.Y.Z` tag and a GitHub release with generated notes. A commit that `git revert`
-   writes cuts a patch release, because it changes what ships. Other commit types cut nothing.
+   means a `vX.Y.Z` tag and a GitHub release with generated notes. A breaking commit has `!` after
+   its type or a `BREAKING CHANGE:` footer, and cuts a major release whatever its type. A commit
+   that `git revert` writes cuts a patch release, because it changes what ships. When the commit it
+   reverts is in the same release, neither counts. Other commit types cut nothing.
 3. **Floating tags.** After a stable release, the workflow force-moves two tags to it. `latest`
    tracks the newest stable release overall. Each major tag tracks the newest stable release in its
    own major, so `v2.1.0` moves `v2` and `latest`, and a later `v3.0.0` moves `v3` and `latest` and
