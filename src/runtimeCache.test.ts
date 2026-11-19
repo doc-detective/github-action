@@ -57,7 +57,10 @@ test("defaultCacheRoot matches the CLI's lookup order", () => {
 });
 
 test("cachePaths leaves out the Android SDK, JRE, and WDA builds", () => {
-  assert.deepEqual(cachePaths("r"), [path.join("r", "runtime"), path.join("r", "browsers"), path.join("r", "installed.json")]);
+  assert.deepEqual(
+    cachePaths("r"),
+    ["runtime", "browsers", "chromedriver-mobile", "installed.json"].map((p) => path.join("r", p))
+  );
 });
 
 test("cacheKeyPrefix changes with OS, CPU, and Node major only", () => {

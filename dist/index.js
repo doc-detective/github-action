@@ -40136,7 +40136,7 @@ function defaultCacheRoot({
   return import_path4.default.join(home, ".cache", "doc-detective");
 }
 function cachePaths(root) {
-  return ["runtime", "browsers", "installed.json"].map((p) => import_path4.default.join(root, p));
+  return ["runtime", "browsers", "chromedriver-mobile", "installed.json"].map((p) => import_path4.default.join(root, p));
 }
 function resolveCacheRoot({
   cwd,

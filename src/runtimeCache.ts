@@ -53,12 +53,13 @@ export function defaultCacheRoot({
 }
 
 /**
- * What the runtime entry caches: the npm runtime, the browsers, and the record
- * of what's installed. Not the multi-gigabyte Android SDK, JRE, and emulators.
- * WebDriverAgent builds get an entry of their own, at `iosCachePath`.
+ * What the runtime entry caches: the npm runtime, the browsers, the
+ * ChromeDriver for mobile web views, and the record of what's installed. Not
+ * the multi-gigabyte Android SDK, JRE, and emulators. WebDriverAgent builds
+ * get an entry of their own, at `iosCachePath`.
  */
 export function cachePaths(root: string): string[] {
-  return ["runtime", "browsers", "installed.json"].map((p) => path.join(root, p));
+  return ["runtime", "browsers", "chromedriver-mobile", "installed.json"].map((p) => path.join(root, p));
 }
 
 /**
