@@ -10,13 +10,11 @@
 // The detection half is pure (regex over spec text) so it's unit-testable; the
 // KVM half shells out and is injected for tests.
 
-import { scanSpecs, realScanDeps, type ScanDeps } from "./scanSpecs.ts";
+import { platformRe, scanSpecs, realScanDeps, type ScanDeps } from "./scanSpecs.ts";
 
-// Matches an `android` value on a `platform`/`platforms` field in a resolved
-// spec or config — `"platform": "android"`, `"platforms": "android"`, and the
-// array forms `"platforms": ["android", ...]` / `["chrome", "android"]`.
-export const ANDROID_PLATFORM_RE =
-  /["']platforms?["']\s*:\s*(?:\[[^\]]*?)?["']android["']/i;
+// Matches an `android` value on a `platform`/`platforms` field in a spec or
+// config, in JSON or YAML. See `platformRe` for the forms.
+export const ANDROID_PLATFORM_RE = platformRe("android");
 
 /** True if the given text requests the `android` target platform. */
 export function textRequestsAndroid(text: string): boolean {

@@ -19,11 +19,17 @@ import {
   cacheKeyPrefix,
   cachePaths,
   exactVersion,
+  iosCacheKeyPrefix,
+  iosCachePath,
+  iosRestoreKeys,
+  iosSaveKey,
   isExactVersion,
   resolveCacheRoot,
+  shouldCacheIos,
   versionTag,
   otherNpxDirs,
 } from "./runtimeCache.ts";
+import { scanRoots } from "./scanSpecs.ts";
 import * as cache from "@actions/cache";
 
 const meta = { dist_interface: "github-actions" };
@@ -62,13 +68,11 @@ async function main(): Promise<void> {
     // present. Everything else (SDK, emulator, image, driver) Doc Detective
     // bootstraps itself at test time.
     const androidInput = core.getInput("android");
-    const scanRoots = [input, config, cwd]
-      .filter((p) => p && p.length > 0)
-      .map((p) => path.resolve(cwd || ".", p));
+    const roots = scanRoots({ input, config, cwd });
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: os.platform(),
-      roots: scanRoots.length ? scanRoots : [path.resolve(cwd || ".")],
+      roots,
     });
     core.info(
       `Android setup: ${androidDecision.setUp ? "enabled" : "skipped"} (${androidDecision.reason}).`
@@ -94,10 +98,12 @@ async function main(): Promise<void> {
       if (nodeWarning) core.warning(nodeWarning);
     }
 
-    const runtime =
-      core.getInput("cache").trim().toLowerCase() === "false"
-        ? { version }
-        : await restoreRuntimeCache(version, cwd, config, node?.stdout ?? "");
+    const cacheOn = core.getInput("cache").trim().toLowerCase() !== "false";
+    const runtime = cacheOn ? await restoreRuntimeCache(version, cwd, config, node?.stdout ?? "") : { version };
+    // After the runtime entry, which holds the record of WebDriverAgent builds.
+    const ios = shouldCacheIos({ cacheOn, version, available: cache.isFeatureAvailable(), platform: os.platform(), roots })
+      ? await restoreIosCache(resolveCacheRoot({ cwd, config }))
+      : undefined;
 
     const outputPath = path.resolve(
       process.env.RUNNER_TEMP || os.tmpdir(),
@@ -130,6 +136,7 @@ async function main(): Promise<void> {
     });
     core.setOutput("results", results);
     await saveRuntimeCache(runtime.save);
+    await saveIosCache(ios);
 
     // Create a pull request if there are changed files
     if (core.getInput("create_pr_on_change") == "true") {
@@ -305,6 +312,60 @@ async function saveRuntimeCache(save?: CacheSave): Promise<void> {
     }
   } catch (error) {
     core.warning(`Couldn't cache the Doc Detective runtime. ${(error as Error).message}`);
+  }
+}
+
+type IosCache = { root: string; prefix: string; restoredKey?: string };
+
+/** `installed.json` in the cache folder `root`, if the CLI has written one. */
+function readInstalled(root: string): string | undefined {
+  try {
+    return fs.readFileSync(path.join(root, "installed.json"), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+/** An error's message, as a sentence. */
+function cause(error: unknown): string {
+  return String((error as Error)?.message ?? error).replace(/\.?\s*$/, ".");
+}
+
+/**
+ * Restore the WebDriverAgent builds from the newest cache for this OS and CPU,
+ * preferring one for the builds `installed.json` records. Returns what to
+ * compare against after the run. Any failure warns and saves nothing.
+ */
+async function restoreIosCache(root: string): Promise<IosCache | undefined> {
+  try {
+    const prefix = iosCacheKeyPrefix({ platform: os.platform(), arch: os.arch() });
+    const { primaryKey, restoreKeys } = iosRestoreKeys(prefix, readInstalled(root));
+    const restoredKey = await cache.restoreCache([iosCachePath(root)], primaryKey, restoreKeys);
+    core.info(
+      restoredKey
+        ? `Restored the WebDriverAgent build from the cache (${restoredKey}).`
+        : `No cached WebDriverAgent build, so this run builds and caches it.`
+    );
+    return { root, prefix, restoredKey };
+  } catch (error) {
+    core.warning(`Couldn't restore the WebDriverAgent cache, so this run builds it. ${cause(error)}`);
+    return undefined;
+  }
+}
+
+/**
+ * Cache the WebDriverAgent builds when the run built one, or the set of builds
+ * changed. Skips when the key matches what was restored. Any failure warns.
+ */
+async function saveIosCache(ios?: IosCache): Promise<void> {
+  if (!ios) return;
+  try {
+    const key = iosSaveKey({ ...ios, installedJson: readInstalled(ios.root) });
+    if (key && (await cache.saveCache([iosCachePath(ios.root)], key)) !== -1) {
+      core.info(`Cached the WebDriverAgent build (${key}).`);
+    }
+  } catch (error) {
+    core.warning(`Couldn't cache the WebDriverAgent build. ${cause(error)}`);
   }
 }
 
