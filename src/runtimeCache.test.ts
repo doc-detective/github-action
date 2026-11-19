@@ -56,11 +56,15 @@ test("defaultCacheRoot matches the CLI's lookup order", () => {
   );
 });
 
-test("cachePaths leaves out the Android SDK, JRE, and WDA builds", () => {
+test("cachePaths holds the runtime, browsers, mobile ChromeDriver, and record, and nothing else", () => {
+  // Pinned: the cache matches an entry on this list as well as its key, so a
+  // change here stops every saved runtime entry from restoring.
   assert.deepEqual(
     cachePaths("r"),
     ["runtime", "browsers", "chromedriver-mobile", "installed.json"].map((p) => path.join("r", p))
   );
+  // The Android SDK, JRE, and emulators stay out, and WebDriverAgent builds have their own entry.
+  assert.ok(!cachePaths("r").includes(iosCachePath("r")));
 });
 
 test("cacheKeyPrefix changes with OS, CPU, and Node major only", () => {
