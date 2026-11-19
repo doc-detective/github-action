@@ -80,15 +80,28 @@ export function scanSpecs(
 export function platformRe(name: string): RegExp {
   const literal = name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const value = String.raw`["']?${literal}["']?(?![\w-])`;
-  const item = String.raw`\r?\n[ \t]*-[ \t]*`;
+  // The rest of a line, then any blank or comment-only lines, then `- `.
+  const item = String.raw`(?:[ \t]*(?:#[^\r\n]*)?\r?\n)+[ \t]*-[ \t]*`;
   return new RegExp(
     String.raw`(?<![\w-])["']?platforms?["']?\s*:` +
       // A scalar, or an item of an inline list.
       String.raw`(?:\s*(?:\[[^\]]*?(?<![\w-]))?${value}` +
       // An item of a block list.
-      String.raw`|[ \t]*(?:${item}["']?[\w-]+["']?[ \t]*)*?${item}${value})`,
+      String.raw`|(?:${item}["']?[\w-]+["']?)*?${item}${value})`,
     "i"
   );
+}
+
+/**
+ * Where to look for specs: `input` and `config`, resolved against
+ * `working_directory`, and `working_directory` itself. With an empty
+ * `working_directory`, only what the inputs name, or the workspace when they
+ * name nothing.
+ */
+export function scanRoots({ input, config, cwd }: { input: string; config: string; cwd: string }): string[] {
+  const base = path.resolve(cwd || ".");
+  const named = [input, config].filter(Boolean).map((p) => path.resolve(base, p));
+  return cwd || !named.length ? [...named, base] : named;
 }
 
 export const IOS_PLATFORM_RE = platformRe("ios");

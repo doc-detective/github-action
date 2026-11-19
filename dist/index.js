@@ -39996,13 +39996,18 @@ function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
 function platformRe(name) {
   const literal = name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const value = String.raw`["']?${literal}["']?(?![\w-])`;
-  const item = String.raw`\r?\n[ \t]*-[ \t]*`;
+  const item = String.raw`(?:[ \t]*(?:#[^\r\n]*)?\r?\n)+[ \t]*-[ \t]*`;
   return new RegExp(
     String.raw`(?<![\w-])["']?platforms?["']?\s*:` + // A scalar, or an item of an inline list.
     String.raw`(?:\s*(?:\[[^\]]*?(?<![\w-]))?${value}` + // An item of a block list.
-    String.raw`|[ \t]*(?:${item}["']?[\w-]+["']?[ \t]*)*?${item}${value})`,
+    String.raw`|(?:${item}["']?[\w-]+["']?)*?${item}${value})`,
     "i"
   );
+}
+function scanRoots({ input, config, cwd }) {
+  const base = import_path3.default.resolve(cwd || ".");
+  const named = [input, config].filter(Boolean).map((p) => import_path3.default.resolve(base, p));
+  return cwd || !named.length ? [...named, base] : named;
 }
 var IOS_PLATFORM_RE = platformRe("ios");
 function textRequestsIos(text) {
@@ -81144,8 +81149,7 @@ async function main() {
     const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
     const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
     const androidInput = getInput("android");
-    const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path5.default.resolve(cwd || ".", p));
-    const roots = scanRoots.length ? scanRoots : [import_path5.default.resolve(cwd || ".")];
+    const roots = scanRoots({ input, config, cwd });
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: import_os5.default.platform(),

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { platformRe, scanForIos, textRequestsIos } from "./scanSpecs.ts";
+import { platformRe, scanForIos, scanRoots, textRequestsIos } from "./scanSpecs.ts";
 import { textRequestsAndroid } from "./androidSetup.ts";
 
 // Every form, for both platforms: the two matchers are one pattern.
@@ -50,6 +50,9 @@ test("platform matchers accept YAML block lists", () => {
       `platforms:\n  - ${name}\n`,
       `runOn:\n  - platforms:\n      - mac\n      - "${name}"\n    browsers: safari\n`,
       `platforms:\r\n- linux\r\n- ${name}\r\n`,
+      // Comments and blank lines between the items.
+      `platforms:\n  - mac # desktop\n  - ${name}\n`,
+      `platforms: # targets\n\n  # phones\n  - linux\n\n  - ${name} # simulator\n`,
     ]) {
       assert.equal(matches(text), true, text);
     }
@@ -71,6 +74,7 @@ test("platform matchers reject other words, values, and keys", () => {
       `platforms:\n  - my-${name}\n`,
       `myplatforms: ${name}`,
       `platform: linux # not ${name}`,
+      `platforms:\n  - mac # ${name}\n  # - ${name}\n`,
     ]) {
       assert.equal(matches(text), false, text);
     }
@@ -79,6 +83,24 @@ test("platform matchers reject other words, values, and keys", () => {
   assert.equal(textRequestsIos('{"platforms": ["kiosk"]}'), false);
   assert.equal(textRequestsIos('{"platforms": "android"}'), false);
   assert.equal(textRequestsAndroid("platforms: [ios]"), false);
+});
+
+test("scanRoots resolves input and config against working_directory, and adds it", () => {
+  const here = path.resolve(".");
+  const docs = path.resolve("docs");
+  // The default working_directory, with and without the other inputs.
+  assert.deepEqual(scanRoots({ input: "", config: "", cwd: "." }), [here]);
+  assert.deepEqual(scanRoots({ input: "specs", config: "dd.json", cwd: "." }), [
+    path.join(here, "specs"),
+    path.join(here, "dd.json"),
+    here,
+  ]);
+  // A working_directory is a root itself, not resolved against itself.
+  assert.deepEqual(scanRoots({ input: "", config: "", cwd: "docs" }), [docs]);
+  assert.deepEqual(scanRoots({ input: "specs", config: "", cwd: "docs" }), [path.join(docs, "specs"), docs]);
+  // An empty working_directory: only what the inputs name, or the workspace.
+  assert.deepEqual(scanRoots({ input: "specs", config: "", cwd: "" }), [path.join(here, "specs")]);
+  assert.deepEqual(scanRoots({ input: "", config: "", cwd: "" }), [here]);
 });
 
 test("platformRe builds one matcher per platform name", () => {

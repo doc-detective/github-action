@@ -29,6 +29,7 @@ import {
   versionTag,
   otherNpxDirs,
 } from "./runtimeCache.ts";
+import { scanRoots } from "./scanSpecs.ts";
 import * as cache from "@actions/cache";
 
 const meta = { dist_interface: "github-actions" };
@@ -67,10 +68,7 @@ async function main(): Promise<void> {
     // present. Everything else (SDK, emulator, image, driver) Doc Detective
     // bootstraps itself at test time.
     const androidInput = core.getInput("android");
-    const scanRoots = [input, config, cwd]
-      .filter((p) => p && p.length > 0)
-      .map((p) => path.resolve(cwd || ".", p));
-    const roots = scanRoots.length ? scanRoots : [path.resolve(cwd || ".")];
+    const roots = scanRoots({ input, config, cwd });
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: os.platform(),
