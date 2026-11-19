@@ -78,7 +78,8 @@ export function scanSpecs(
  * to be the whole value, so `ios` doesn't match `kiosk` or `ios-simulator`.
  */
 export function platformRe(name: string): RegExp {
-  const value = String.raw`["']?${name}["']?(?![\w-])`;
+  const literal = name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  const value = String.raw`["']?${literal}["']?(?![\w-])`;
   const item = String.raw`\r?\n[ \t]*-[ \t]*`;
   return new RegExp(
     String.raw`(?<![\w-])["']?platforms?["']?\s*:` +

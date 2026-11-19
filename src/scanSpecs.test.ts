@@ -84,6 +84,9 @@ test("platform matchers reject other words, values, and keys", () => {
 test("platformRe builds one matcher per platform name", () => {
   assert.ok(platformRe("ios").test("platforms: ios"));
   assert.ok(!platformRe("ios").test("platforms: android"));
+  // The name is literal text, not a pattern.
+  assert.ok(platformRe("a.b").test("platforms: a.b"));
+  assert.ok(!platformRe("a.b").test("platforms: axb"));
 });
 
 test("scanForIos finds an ios spec in JSON or YAML, and skips node_modules", () => {

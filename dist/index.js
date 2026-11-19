@@ -39994,7 +39994,8 @@ function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   return roots.some((root) => walk(root, 0));
 }
 function platformRe(name) {
-  const value = String.raw`["']?${name}["']?(?![\w-])`;
+  const literal = name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  const value = String.raw`["']?${literal}["']?(?![\w-])`;
   const item = String.raw`\r?\n[ \t]*-[ \t]*`;
   return new RegExp(
     String.raw`(?<![\w-])["']?platforms?["']?\s*:` + // A scalar, or an item of an inline list.

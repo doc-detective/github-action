@@ -255,6 +255,9 @@ export function shouldCacheIos({
  * the cache takes the newest entry for the recorded set of builds, then the
  * newest for the platform. Without a record of builds, only the latter.
  */
+// The primary key is a prefix on purpose, as the runtime entry's is. Entries
+// save under a longer key ending in the fingerprint, which isn't known until
+// the entry is restored. Don't make the primary key a full key.
 export function iosRestoreKeys(prefix: string, installedJson: string | undefined): { primaryKey: string; restoreKeys: string[] } {
   const keys = wdaKeys(installedJson);
   if (!keys) return { primaryKey: prefix, restoreKeys: [prefix] };
