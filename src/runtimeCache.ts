@@ -5,6 +5,7 @@ import path from "path";
 import { parseEnv } from "util";
 import semver from "semver";
 import { parse as parseYaml } from "yaml";
+import { scanForIos } from "./scanSpecs.ts";
 
 /**
  * The highest version `npm view doc-detective@<spec> version --json` printed: a
@@ -52,8 +53,9 @@ export function defaultCacheRoot({
 }
 
 /**
- * What the action caches: the npm runtime, the browsers, and the record of
- * both. Not the multi-gigabyte Android SDK, JRE, or WebDriverAgent builds.
+ * What the runtime entry caches: the npm runtime, the browsers, and the record
+ * of what's installed. Not the multi-gigabyte Android SDK, JRE, and emulators.
+ * WebDriverAgent builds get an entry of their own, at `iosCachePath`.
  */
 export function cachePaths(root: string): string[] {
   return ["runtime", "browsers", "installed.json"].map((p) => path.join(root, p));
@@ -143,21 +145,27 @@ export function versionTag(version: string, now: number): { tag: string; refresh
   return { tag: refreshesBrowsers ? version : `${version}-w${Math.floor(now / WEEK_MS)}`, refreshesBrowsers };
 }
 
+const shortHash = (lines: string[]) => crypto.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
+
 /**
  * The key to save under: the prefix, the CLI version, and a hash of every
- * `installedVersion` in `installed.json`. It changes only when the run
- * installed or updated something, so an unchanged cache never re-uploads, and
- * an updated browser always saves a new entry.
+ * `installedVersion` and every `ios.wdaKeys` item in `installed.json`. It
+ * changes only when the run installed or updated something, so an unchanged
+ * cache never re-uploads, and an updated browser always saves a new entry. A
+ * new WebDriverAgent build saves one too, because this entry holds the record
+ * that lists it.
  */
 export function cacheKey(prefix: string, version: string, installedJson: string | undefined): string {
   let lines: string[] = [];
   try {
-    lines = installedVersions(JSON.parse(installedJson ?? "null")).sort();
+    lines = [
+      ...installedVersions(JSON.parse(installedJson ?? "null")),
+      ...(wdaKeys(installedJson) ?? []).map((key) => `/ios/wdaKeys@${key}`),
+    ].sort();
   } catch {
     // An unreadable record hashes like a missing one.
   }
-  const hash = crypto.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
-  return `${prefix}${version}-${hash}`;
+  return `${prefix}${version}-${shortHash(lines)}`;
 }
 
 /** `path@version` for every `installedVersion` in the record, at any depth. */
@@ -166,6 +174,117 @@ function installedVersions(node: unknown, at = ""): string[] {
   return Object.entries(node).flatMap(([k, v]) =>
     k === "installedVersion" && typeof v === "string" ? [`${at}@${v}`] : installedVersions(v, `${at}/${k}`)
   );
+}
+
+/**
+ * `ios.wdaKeys` from `installed.json`, sorted: one key per WebDriverAgent
+ * build the CLI recorded. Undefined when the record has no iOS slot.
+ */
+export function wdaKeys(installedJson: string | undefined): string[] | undefined {
+  try {
+    const keys = JSON.parse(installedJson ?? "null")?.ios?.wdaKeys;
+    return Array.isArray(keys) ? keys.filter((k): k is string => typeof k === "string").sort() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Where the CLI keeps its WebDriverAgent builds: the iOS entry's one path. */
+export function iosCachePath(root: string): string {
+  return path.join(root, "ios", "wda");
+}
+
+/** The part of the iOS key that must match for an entry to restore at all: OS and CPU. */
+export function iosCacheKeyPrefix({ platform, arch }: { platform: string; arch: string }): string {
+  return `doc-detective-ios-${platform}-${arch}-`;
+}
+
+/** A hash of the set of WebDriverAgent builds. */
+export function wdaSlotHash(keys: string[]): string {
+  return shortHash([...keys].sort());
+}
+
+type Stat = (file: string) => { size: number; mtimeMs: number };
+
+/**
+ * A hash of what the builds hold, from the `products.json` the CLI writes last
+ * in each build: its path, size, and modification time in whole seconds. Only
+ * that file, because the CLI touches the `last-used` stamp beside it on every
+ * run. `builds` counts the finished builds. With none, the hash is of an empty
+ * list.
+ */
+export function wdaFingerprint(root: string, keys: string[], stat: Stat = fs.statSync): { hash: string; builds: number } {
+  const lines = keys.flatMap((key) => {
+    try {
+      const { size, mtimeMs } = stat(path.join(iosCachePath(root), key, "products.json"));
+      return [`ios/wda/${key}/products.json ${size} ${Math.floor(mtimeMs / 1000)}`];
+    } catch {
+      // No finished build under this key.
+      return [];
+    }
+  });
+  return { hash: shortHash(lines.sort()), builds: lines.length };
+}
+
+/**
+ * True when this run restores and saves the WebDriverAgent build: the cache is
+ * on and available, the CLI comes from npm, the runner is macOS, and a spec
+ * asks for an iOS context.
+ */
+export function shouldCacheIos({
+  cacheOn,
+  version,
+  available,
+  platform,
+  roots,
+  scan = scanForIos,
+}: {
+  cacheOn: boolean;
+  version: string;
+  available: boolean;
+  platform: string;
+  roots: string[];
+  scan?: (roots: string[]) => boolean;
+}): boolean {
+  return cacheOn && Boolean(version) && available && platform === "darwin" && scan(roots);
+}
+
+/**
+ * What to restore the iOS entry by. No entry's key equals the primary key, so
+ * the cache takes the newest entry for the recorded set of builds, then the
+ * newest for the platform. Without a record of builds, only the latter.
+ */
+export function iosRestoreKeys(prefix: string, installedJson: string | undefined): { primaryKey: string; restoreKeys: string[] } {
+  const keys = wdaKeys(installedJson);
+  if (!keys) return { primaryKey: prefix, restoreKeys: [prefix] };
+  const slot = `${prefix}${wdaSlotHash(keys)}-`;
+  return { primaryKey: slot, restoreKeys: [slot, prefix] };
+}
+
+/**
+ * The key to save the iOS entry under: the prefix, the slot hash, and the
+ * fingerprint. Undefined when there's nothing to save: no recorded build, no
+ * finished build, or the same key the run restored.
+ */
+export function iosSaveKey({
+  prefix,
+  root,
+  installedJson,
+  restoredKey,
+  stat,
+}: {
+  prefix: string;
+  root: string;
+  installedJson: string | undefined;
+  restoredKey?: string;
+  stat?: Stat;
+}): string | undefined {
+  const keys = wdaKeys(installedJson);
+  if (!keys) return undefined;
+  const { hash, builds } = wdaFingerprint(root, keys, stat);
+  if (!builds) return undefined;
+  const key = `${prefix}${wdaSlotHash(keys)}-${hash}`;
+  return key === restoredKey ? undefined : key;
 }
 
 /**

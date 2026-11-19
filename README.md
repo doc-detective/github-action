@@ -100,11 +100,11 @@ Path to the input file or directory. Overrides the `input` field in the config f
 
 ### `cache` (default: `true`)
 
-Cache the `doc-detective` package that `npx` installs, and the runtime and browsers Doc Detective installs on first use, so later runs restore them from the [Actions cache](https://docs.github.com/actions/using-workflows/caching-dependencies-to-speed-up-workflows) instead of downloading them. The first run in a repository installs everything and saves it.
+Cache the `doc-detective` package that `npx` installs, and the runtime and browsers Doc Detective installs on first use, so later runs restore them from the [Actions cache](https://docs.github.com/actions/using-workflows/caching-dependencies-to-speed-up-workflows) instead of downloading them. The first run in a repository installs everything and saves it. On macOS runs that test iOS, the action also caches the WebDriverAgent build. See [Speed up iOS tests](#speed-up-ios-tests).
 
 Each run restores the newest cache for its OS, CPU architecture, and Node.js major version, preferring one saved by the same Doc Detective version. After the run, the action saves a new entry only if the run installed or updated something, such as a new Doc Detective version or a browser Doc Detective updated. Doc Detective 5.3.0 and later update outdated cached browsers. For earlier versions, the cache also rotates weekly, so cached browsers stay at most a week behind. While caching is on, the action resolves `version` to an exact version, like `5.2.1`, and runs that version.
 
-The action caches the `doc-detective` package in `npx`'s package folder, `_npx` in the npm cache, leaving out anything else your job ran with `npx`. It also caches the `runtime` and `browsers` folders and `installed.json` in Doc Detective's cache folder, without the Android SDK, the Java runtime, Android emulators, or WebDriverAgent builds. It finds that folder the way Doc Detective does: `DOC_DETECTIVE_CACHE_DIR` from the environment or a `.env` file in `working_directory`, then `cacheDir` in `DOC_DETECTIVE_CONFIG`, then `cacheDir` in your config file, then the default. It skips caching when `version` is empty. A cache miss or a failed restore or save logs a message, and the run continues.
+The action caches the `doc-detective` package in `npx`'s package folder, `_npx` in the npm cache, leaving out anything else your job ran with `npx`. It also caches the `runtime` and `browsers` folders and `installed.json` in Doc Detective's cache folder, without the Android SDK, the Java runtime, or Android emulators. WebDriverAgent builds, in the `ios/wda` folder, go in a cache entry of their own. The action finds the cache folder the way Doc Detective does: `DOC_DETECTIVE_CACHE_DIR` from the environment or a `.env` file in `working_directory`, then `cacheDir` in `DOC_DETECTIVE_CONFIG`, then `cacheDir` in your config file, then the default. It skips caching when `version` is empty. A cache miss or a failed restore or save logs a message, and the run continues.
 
 Set `cache` to `false` to install everything on every run.
 
@@ -126,7 +126,37 @@ Enable Android emulator support on Linux runners by granting KVM access (the emu
 
 ### Speed up iOS tests
 
-Doc Detective prebuilds and manages the WebDriverAgent (WDA) build itself. For fast iOS runs, persist the whole Doc Detective cache and prebuild before the action. That cache already holds the runtime and browsers, so turn off the action's [`cache`](#cache-default-true) to avoid storing them twice:
+An iOS test drives the simulator through WebDriverAgent, which has to be built for the runner's Xcode version. With Doc Detective 5.6.0 or later, the first iOS test on a runner builds it, and the action's [`cache`](#cache-default-true) saves that build. Later runs restore it instead of building it. On GitHub-hosted macOS runners, the build takes two to three minutes, and a restore takes a few seconds. The workflow needs no extra steps:
+
+```yaml
+jobs:
+  doc-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: doc-detective/github-action@v2
+```
+
+The action caches the build when all of these are true:
+
+- The job runs on macOS.
+- `cache` is on, and `version` isn't empty.
+- A spec or config in `input`, `config`, or `working_directory` sets `ios` as a `platform` or `platforms` value.
+
+The build has its own cache entry, about 70 MB, separate from the runtime and browsers. After the first save, the action saves the entry again only when a run builds WebDriverAgent, such as after an Xcode or driver update. The job log says what happened:
+
+- `Restored the WebDriverAgent build from the cache (<key>).`
+- `No cached WebDriverAgent build, so this run builds and caches it.`
+- `Cached the WebDriverAgent build (<key>).`
+
+A failed restore or save logs a warning, and the run continues.
+
+#### Earlier Doc Detective versions, or `cache: false`
+
+Doc Detective versions before 5.6.0 build WebDriverAgent into the cache folder only when you run `doc-detective install ios`. To keep that build between runs, cache the whole Doc Detective cache folder yourself, and build before the action. That folder already holds the runtime and browsers, so turn off the action's `cache` to avoid storing them twice:
 
 ```yaml
 jobs:
@@ -139,23 +169,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # Rotating key + restore-keys: an exact cache hit never re-uploads, so a
-      # static key would strand WDA products built for a NEW Xcode/driver
-      # toolchain. The run-scoped key always saves; restore-keys pulls the
-      # newest previous entry.
+      # A cache hit on an exact key never saves again, so the key changes on
+      # every run, and restore-keys picks the newest earlier entry.
       - uses: actions/cache@v4
         with:
           path: .dd-cache
           key: dd-cache-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             dd-cache-${{ runner.os }}-
-      - run: npx doc-detective install ios --yes
+      - run: npx doc-detective@5.5.0 install ios --yes
       - uses: doc-detective/github-action@v2
         with:
+          version: 5.5.0
           cache: false
 ```
 
-Without the prebuild, iOS tests still work — the first XCUITest session builds WebDriverAgent in-session (~10 min on a cold runner). The managed prebuild requires Doc Detective v4.28 or later.
+With Doc Detective 5.6.0 or later and `cache: false`, leave out the `install ios` step, because the first iOS test builds WebDriverAgent into the same folder.
+
+Without a cached build, iOS tests still work. Each run then builds WebDriverAgent during its first iOS test.
 
 ### `create_pr_on_change` (default: `false`)
 

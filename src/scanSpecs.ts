@@ -70,3 +70,34 @@ export function scanSpecs(
   };
   return roots.some((root) => walk(root, 0));
 }
+
+/**
+ * Matches `name` as a value of a `platform` or `platforms` key, in JSON or
+ * YAML: `"platforms": "ios"`, `"platforms": ["mac", "ios"]`, `platforms: ios`,
+ * `platforms: [mac, ios]`, and a block list with a `- ios` item. The name has
+ * to be the whole value, so `ios` doesn't match `kiosk` or `ios-simulator`.
+ */
+export function platformRe(name: string): RegExp {
+  const value = String.raw`["']?${name}["']?(?![\w-])`;
+  const item = String.raw`\r?\n[ \t]*-[ \t]*`;
+  return new RegExp(
+    String.raw`(?<![\w-])["']?platforms?["']?\s*:` +
+      // A scalar, or an item of an inline list.
+      String.raw`(?:\s*(?:\[[^\]]*?(?<![\w-]))?${value}` +
+      // An item of a block list.
+      String.raw`|[ \t]*(?:${item}["']?[\w-]+["']?[ \t]*)*?${item}${value})`,
+    "i"
+  );
+}
+
+export const IOS_PLATFORM_RE = platformRe("ios");
+
+/** True if the given text requests the `ios` target platform. */
+export function textRequestsIos(text: string): boolean {
+  return IOS_PLATFORM_RE.test(text);
+}
+
+/** True as soon as any scannable file under `roots` requests the `ios` platform. */
+export function scanForIos(roots: string[], deps: ScanDeps = realScanDeps, maxDepth = 6): boolean {
+  return scanSpecs(roots, textRequestsIos, deps, maxDepth);
+}

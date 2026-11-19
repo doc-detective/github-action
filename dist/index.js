@@ -177,14 +177,14 @@ var require_tunnel = __commonJS({
         self.sockets[self.sockets.indexOf(placeholder)] = socket;
         return cb(socket);
       }
-      function onError(cause) {
+      function onError(cause2) {
         connectReq.removeAllListeners();
         debug5(
           "tunneling socket could not be established, cause=%s\n",
-          cause.message,
-          cause.stack
+          cause2.message,
+          cause2.stack
         );
-        var error2 = new Error("tunneling socket could not be established, cause=" + cause.message);
+        var error2 = new Error("tunneling socket could not be established, cause=" + cause2.message);
         error2.code = "ECONNRESET";
         options.request.emit("error", error2);
         self.removeSocket(placeholder);
@@ -642,12 +642,12 @@ var require_errors = __commonJS({
     };
     var kSecureProxyConnectionError = /* @__PURE__ */ Symbol.for("undici.error.UND_ERR_PRX_TLS");
     var SecureProxyConnectionError = class extends UndiciError {
-      constructor(cause, message, options) {
-        super(message, { cause, ...options ?? {} });
+      constructor(cause2, message, options) {
+        super(message, { cause: cause2, ...options ?? {} });
         this.name = "SecureProxyConnectionError";
         this.message = message || "Secure Proxy Connection failed";
         this.code = "UND_ERR_PRX_TLS";
-        this.cause = cause;
+        this.cause = cause2;
       }
       static [Symbol.hasInstance](instance) {
         return instance && instance[kSecureProxyConnectionError] === true;
@@ -39993,9 +39993,26 @@ function scanSpecs(roots, matches, deps = realScanDeps, maxDepth = 6) {
   };
   return roots.some((root) => walk(root, 0));
 }
+function platformRe(name) {
+  const value = String.raw`["']?${name}["']?(?![\w-])`;
+  const item = String.raw`\r?\n[ \t]*-[ \t]*`;
+  return new RegExp(
+    String.raw`(?<![\w-])["']?platforms?["']?\s*:` + // A scalar, or an item of an inline list.
+    String.raw`(?:\s*(?:\[[^\]]*?(?<![\w-]))?${value}` + // An item of a block list.
+    String.raw`|[ \t]*(?:${item}["']?[\w-]+["']?[ \t]*)*?${item}${value})`,
+    "i"
+  );
+}
+var IOS_PLATFORM_RE = platformRe("ios");
+function textRequestsIos(text) {
+  return IOS_PLATFORM_RE.test(text);
+}
+function scanForIos(roots, deps = realScanDeps, maxDepth = 6) {
+  return scanSpecs(roots, textRequestsIos, deps, maxDepth);
+}
 
 // src/androidSetup.ts
-var ANDROID_PLATFORM_RE = /["']platforms?["']\s*:\s*(?:\[[^\]]*?)?["']android["']/i;
+var ANDROID_PLATFORM_RE = platformRe("android");
 function textRequestsAndroid(text) {
   return ANDROID_PLATFORM_RE.test(text);
 }
@@ -40167,20 +40184,81 @@ function versionTag(version3, now) {
   const refreshesBrowsers = !import_semver.default.valid(version3) || import_semver.default.gte(version3, "5.3.0");
   return { tag: refreshesBrowsers ? version3 : `${version3}-w${Math.floor(now / WEEK_MS)}`, refreshesBrowsers };
 }
+var shortHash = (lines) => import_crypto.default.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
 function cacheKey(prefix2, version3, installedJson) {
   let lines = [];
   try {
-    lines = installedVersions(JSON.parse(installedJson ?? "null")).sort();
+    lines = [
+      ...installedVersions(JSON.parse(installedJson ?? "null")),
+      ...(wdaKeys(installedJson) ?? []).map((key) => `/ios/wdaKeys@${key}`)
+    ].sort();
   } catch {
   }
-  const hash = import_crypto.default.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
-  return `${prefix2}${version3}-${hash}`;
+  return `${prefix2}${version3}-${shortHash(lines)}`;
 }
 function installedVersions(node, at = "") {
   if (!node || typeof node !== "object") return [];
   return Object.entries(node).flatMap(
     ([k, v]) => k === "installedVersion" && typeof v === "string" ? [`${at}@${v}`] : installedVersions(v, `${at}/${k}`)
   );
+}
+function wdaKeys(installedJson) {
+  try {
+    const keys = JSON.parse(installedJson ?? "null")?.ios?.wdaKeys;
+    return Array.isArray(keys) ? keys.filter((k) => typeof k === "string").sort() : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function iosCachePath(root) {
+  return import_path4.default.join(root, "ios", "wda");
+}
+function iosCacheKeyPrefix({ platform: platform2, arch: arch2 }) {
+  return `doc-detective-ios-${platform2}-${arch2}-`;
+}
+function wdaSlotHash(keys) {
+  return shortHash([...keys].sort());
+}
+function wdaFingerprint(root, keys, stat2 = import_fs8.default.statSync) {
+  const lines = keys.flatMap((key) => {
+    try {
+      const { size, mtimeMs } = stat2(import_path4.default.join(iosCachePath(root), key, "products.json"));
+      return [`ios/wda/${key}/products.json ${size} ${Math.floor(mtimeMs / 1e3)}`];
+    } catch {
+      return [];
+    }
+  });
+  return { hash: shortHash(lines.sort()), builds: lines.length };
+}
+function shouldCacheIos({
+  cacheOn,
+  version: version3,
+  available,
+  platform: platform2,
+  roots,
+  scan = scanForIos
+}) {
+  return cacheOn && Boolean(version3) && available && platform2 === "darwin" && scan(roots);
+}
+function iosRestoreKeys(prefix2, installedJson) {
+  const keys = wdaKeys(installedJson);
+  if (!keys) return { primaryKey: prefix2, restoreKeys: [prefix2] };
+  const slot = `${prefix2}${wdaSlotHash(keys)}-`;
+  return { primaryKey: slot, restoreKeys: [slot, prefix2] };
+}
+function iosSaveKey({
+  prefix: prefix2,
+  root,
+  installedJson,
+  restoredKey,
+  stat: stat2
+}) {
+  const keys = wdaKeys(installedJson);
+  if (!keys) return void 0;
+  const { hash, builds } = wdaFingerprint(root, keys, stat2);
+  if (!builds) return void 0;
+  const key = `${prefix2}${wdaSlotHash(keys)}-${hash}`;
+  return key === restoredKey ? void 0 : key;
 }
 function otherNpxDirs(npxRoot, version3) {
   let dirs = [];
@@ -81066,10 +81144,11 @@ async function main() {
     const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
     const androidInput = getInput("android");
     const scanRoots = [input, config, cwd].filter((p) => p && p.length > 0).map((p) => import_path5.default.resolve(cwd || ".", p));
+    const roots = scanRoots.length ? scanRoots : [import_path5.default.resolve(cwd || ".")];
     const androidDecision = shouldSetUpAndroid({
       androidInput,
       platform: import_os5.default.platform(),
-      roots: scanRoots.length ? scanRoots : [import_path5.default.resolve(cwd || ".")]
+      roots
     });
     info(
       `Android setup: ${androidDecision.setUp ? "enabled" : "skipped"} (${androidDecision.reason}).`
@@ -81091,7 +81170,9 @@ async function main() {
       const nodeWarning = node && nodeVersionWarning(node.stdout);
       if (nodeWarning) warning(nodeWarning);
     }
-    const runtime = getInput("cache").trim().toLowerCase() === "false" ? { version: version3 } : await restoreRuntimeCache(version3, cwd, config, node?.stdout ?? "");
+    const cacheOn = getInput("cache").trim().toLowerCase() !== "false";
+    const runtime = cacheOn ? await restoreRuntimeCache(version3, cwd, config, node?.stdout ?? "") : { version: version3 };
+    const ios = shouldCacheIos({ cacheOn, version: version3, available: isFeatureAvailable(), platform: import_os5.default.platform(), roots }) ? await restoreIosCache(resolveCacheRoot({ cwd, config })) : void 0;
     const outputPath = import_path5.default.resolve(
       process.env.RUNNER_TEMP || import_os5.default.tmpdir(),
       "doc-detective-output.json"
@@ -81114,6 +81195,7 @@ async function main() {
     });
     setOutput("results", results);
     await saveRuntimeCache(runtime.save);
+    await saveIosCache(ios);
     if (getInput("create_pr_on_change") == "true") {
       info("Checking for changed files.");
       const prPaths = listInput("pr_paths");
@@ -81248,6 +81330,41 @@ async function saveRuntimeCache(save) {
     }
   } catch (error2) {
     warning(`Couldn't cache the Doc Detective runtime. ${error2.message}`);
+  }
+}
+function readInstalled(root) {
+  try {
+    return import_fs10.default.readFileSync(import_path5.default.join(root, "installed.json"), "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function cause(error2) {
+  return String(error2?.message ?? error2).replace(/\.?\s*$/, ".");
+}
+async function restoreIosCache(root) {
+  try {
+    const prefix2 = iosCacheKeyPrefix({ platform: import_os5.default.platform(), arch: import_os5.default.arch() });
+    const { primaryKey, restoreKeys } = iosRestoreKeys(prefix2, readInstalled(root));
+    const restoredKey = await restoreCache([iosCachePath(root)], primaryKey, restoreKeys);
+    info(
+      restoredKey ? `Restored the WebDriverAgent build from the cache (${restoredKey}).` : `No cached WebDriverAgent build, so this run builds and caches it.`
+    );
+    return { root, prefix: prefix2, restoredKey };
+  } catch (error2) {
+    warning(`Couldn't restore the WebDriverAgent cache, so this run builds it. ${cause(error2)}`);
+    return void 0;
+  }
+}
+async function saveIosCache(ios) {
+  if (!ios) return;
+  try {
+    const key = iosSaveKey({ ...ios, installedJson: readInstalled(ios.root) });
+    if (key && await saveCache2([iosCachePath(ios.root)], key) !== -1) {
+      info(`Cached the WebDriverAgent build (${key}).`);
+    }
+  } catch (error2) {
+    warning(`Couldn't cache the WebDriverAgent build. ${cause(error2)}`);
   }
 }
 function listInput(name) {

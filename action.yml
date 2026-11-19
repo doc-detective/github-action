@@ -11,7 +11,7 @@ inputs:
     required: false
     default: "."
   cache:
-    description: 'Cache the doc-detective package, and the runtime and browsers it installs on first use, so later runs restore them instead of downloading them. On by default. Follows `DOC_DETECTIVE_CACHE_DIR` and a config `cacheDir`. The action saves a new cache entry only when the run installed or updated something. Set to "false" to install everything on every run. The action skips caching when `version` is empty.'
+    description: 'Cache the doc-detective package, and the runtime and browsers it installs on first use, so later runs restore them instead of downloading them. On macOS runs that test iOS, also cache the WebDriverAgent build. On by default. Follows `DOC_DETECTIVE_CACHE_DIR` and a config `cacheDir`. The action saves a new cache entry only when the run installed or updated something. Set to "false" to install everything on every run. The action skips caching when `version` is empty.'
     required: false
     default: "true"
   android:
