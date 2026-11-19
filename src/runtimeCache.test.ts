@@ -268,6 +268,9 @@ test("iosRestoreKeys prefers the recorded set of builds, then any entry for the 
   for (const json of [undefined, installedRecord(), "not json"]) {
     assert.deepEqual(iosRestoreKeys(prefix, json), { primaryKey: prefix, restoreKeys: [prefix] });
   }
+  // A slot with no builds is still a slot: its hash is of an empty list, and the platform prefix backs it up.
+  const empty = `${prefix}e3b0c44298fc-`;
+  assert.deepEqual(iosRestoreKeys(prefix, installedRecord({ wdaKeys: [] })), { primaryKey: empty, restoreKeys: [empty, prefix] });
 });
 
 test("iosSaveKey names the entry to save, or nothing when nothing changed", () => {
