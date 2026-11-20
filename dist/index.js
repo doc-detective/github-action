@@ -39716,7 +39716,7 @@ function nodeVersionWarning(version3) {
   const shown = version3.trim();
   const parsed = import_semver.default.coerce(shown);
   if (!parsed || import_semver.default.satisfies(parsed, CLI_NODE_RANGE)) return void 0;
-  return `Doc Detective 5.2.1 and later need Node.js 24 (24.22.1 or later) or Node.js 26.12.1 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
+  return `Doc Detective 5.2.1 and later need Node.js 24.22.1 or later on the 24 line, or Node.js 26.12.1 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\` or \`node-version: 26\`.`;
 }
 var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
 function capsBelowFive([, op = "", major, minor = "0", patch = "0"]) {

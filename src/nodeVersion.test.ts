@@ -5,7 +5,7 @@ import { canInstallCli5, nodeVersionWarning } from "./nodeVersion.ts";
 test("warns when the job's Node.js is outside the range Doc Detective 5.2.1 and later support", () => {
   assert.equal(
     nodeVersionWarning("v22.11.0\n"),
-    "Doc Detective 5.2.1 and later need Node.js 24 (24.22.1 or later) or Node.js 26.12.1 or later, but this job runs v22.11.0. Add `actions/setup-node` with `node-version: 24`."
+    "Doc Detective 5.2.1 and later need Node.js 24.22.1 or later on the 24 line, or Node.js 26.12.1 or later, but this job runs v22.11.0. Add `actions/setup-node` with `node-version: 24` or `node-version: 26`."
   );
   // Below 24.22.1, all of 25, and 26 before 26.12.1.
   for (const version of ["v24.15.0", "v24.22.0", "v25.0.0", "v25.9.1", "v26.0.0", "v26.12.0"]) {

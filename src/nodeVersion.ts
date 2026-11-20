@@ -1,10 +1,9 @@
 import semver from "semver";
 
 // `engines.node` of doc-detective 5.2.1 and later. 5.0.0 to 5.2.0 took any
-// Node.js from 24.15.0.
-// ponytail: one range for every CLI 5, so a pin to 5.0.0-5.2.0 warns on a
-// Node.js that pin supports. Read the installed package's `engines` if a
-// second range change makes that matter.
+// Node.js from 24.15.0, and the check uses this one range for every CLI 5. So
+// a `version` pinned to 5.0.0 through 5.2.0 gets a false warning on a Node.js
+// that pin supports, such as 24.15 through 24.22.0.
 const CLI_NODE_RANGE = "^24.22.1 || >=26.12.1";
 
 /**
@@ -17,7 +16,7 @@ export function nodeVersionWarning(version: string): string | undefined {
   const shown = version.trim();
   const parsed = semver.coerce(shown);
   if (!parsed || semver.satisfies(parsed, CLI_NODE_RANGE)) return undefined;
-  return `Doc Detective 5.2.1 and later need Node.js 24 (24.22.1 or later) or Node.js 26.12.1 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
+  return `Doc Detective 5.2.1 and later need Node.js 24.22.1 or later on the 24 line, or Node.js 26.12.1 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\` or \`node-version: 26\`.`;
 }
 
 const COMPARATOR =
