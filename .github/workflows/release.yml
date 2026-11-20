@@ -56,6 +56,10 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Unset is the normal, locked state: scripts/verify-major-release.mjs
+          # fails a major release unless a maintainer sets this repository
+          # variable to true (adrs/01001-guard-major-releases.md).
+          ALLOW_MAJOR_RELEASE: ${{ vars.ALLOW_MAJOR_RELEASE }}
         run: npx semantic-release
 
       # Workflows reference this action by floating tag, so point those at each
