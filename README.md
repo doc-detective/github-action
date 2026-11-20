@@ -566,7 +566,8 @@ JSON-formatted comparison with the earlier run: the run compared against (`previ
 ```yaml
 - uses: doc-detective/github-action@v2
   id: doc-detective
-- run: echo "New failures: ${{ fromJSON(steps.doc-detective.outputs.comparison).summary.new }}"
+- run: |
+    echo "New failures: ${{ fromJSON(steps.doc-detective.outputs.comparison).summary.new }}"
   if: steps.doc-detective.outputs.comparison != ''
 ```
 

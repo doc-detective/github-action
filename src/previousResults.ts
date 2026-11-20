@@ -58,7 +58,8 @@ export function resultsKeyPrefix({
 }
 
 export function resultsSaveKey(prefix: string, env: Env): string {
-  return `${prefix}${env.GITHUB_RUN_ID ?? ""}-${env.GITHUB_RUN_ATTEMPT ?? ""}`;
+  // GITHUB_ACTION is the step's ID, unique per invocation in a job; caches are immutable.
+  return `${prefix}${env.GITHUB_RUN_ID ?? ""}-${env.GITHUB_RUN_ATTEMPT ?? ""}-${env.GITHUB_ACTION ?? ""}`;
 }
 
 /** Where the previous results live, the same path at save and restore. */

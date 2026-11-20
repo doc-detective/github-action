@@ -33,8 +33,13 @@ test("resultsKeyPrefix uses the base branch on pull requests", () => {
   assert.match(prefix, /-main-$/);
 });
 
-test("resultsSaveKey adds the run ID and attempt", () => {
-  assert.equal(resultsSaveKey("p-", { GITHUB_RUN_ID: "7", GITHUB_RUN_ATTEMPT: "2" }), "p-7-2");
+test("resultsSaveKey adds the run ID, attempt, and step, so two invocations in one job don't collide", () => {
+  const env = { GITHUB_RUN_ID: "7", GITHUB_RUN_ATTEMPT: "2" };
+  assert.equal(resultsSaveKey("p-", { ...env, GITHUB_ACTION: "dd" }), "p-7-2-dd");
+  assert.notEqual(
+    resultsSaveKey("p-", { ...env, GITHUB_ACTION: "__doc-detective_github-action" }),
+    resultsSaveKey("p-", { ...env, GITHUB_ACTION: "__doc-detective_github-action_2" })
+  );
 });
 
 test("parseFailOn accepts any and new, and rejects the rest", () => {

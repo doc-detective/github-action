@@ -40942,7 +40942,7 @@ function resultsKeyPrefix({
   return `doc-detective-results-${platform2}-${env.GITHUB_JOB ?? ""}-${hash}-${prBase(env)}-`;
 }
 function resultsSaveKey(prefix2, env) {
-  return `${prefix2}${env.GITHUB_RUN_ID ?? ""}-${env.GITHUB_RUN_ATTEMPT ?? ""}`;
+  return `${prefix2}${env.GITHUB_RUN_ID ?? ""}-${env.GITHUB_RUN_ATTEMPT ?? ""}-${env.GITHUB_ACTION ?? ""}`;
 }
 function previousResultsPath(runnerTemp) {
   return import_path5.default.join(runnerTemp, "doc-detective-previous", "testResults.json");
