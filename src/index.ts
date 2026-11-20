@@ -221,7 +221,8 @@ async function main(): Promise<void> {
     }
 
     const failedSpecs = results?.summary?.specs?.fail ?? 0;
-    if (exitCode === 0 && failedSpecs > 0 && compare && failOn === "new") {
+    // Only when a comparison ran and found nothing new; `exitOnFail: false` also exits 0.
+    if (exitCode === 0 && failedSpecs > 0 && failOn === "new" && results?.comparison?.summary?.new === 0) {
       core.info(`${failedSpecs} spec(s) failed, but every failure was already failing, so this job passes. \`fail_on\` is \`new\`.`);
     } else if (exitCode === 0 && failedSpecs > 0) {
       core.warning(

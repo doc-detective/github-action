@@ -14,7 +14,7 @@ type Cache = {
   saveCache: (paths: string[], key: string) => Promise<number>;
 };
 
-/** An error's message, without a trailing period. */
+/** An error's message, without a trailing period: callers end the sentence. (index.ts's `cause` adds one instead.) */
 const cause = (error: unknown) => String((error as Error)?.message ?? error).replace(/\.?\s*$/, "");
 
 /** `fail_on`: `any` (the default) or `new`. */
