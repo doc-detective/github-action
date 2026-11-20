@@ -30,6 +30,17 @@ import {
   otherNpxDirs,
 } from "./runtimeCache.ts";
 import { scanRoots } from "./scanSpecs.ts";
+import {
+  comparisonArgs,
+  compareSupportWarnings,
+  parseCompareTo,
+  parseFailOn,
+  previousResultsPath,
+  restorePreviousResults,
+  resultsKeyPrefix,
+  resultsSaveKey,
+  saveResults,
+} from "./previousResults.ts";
 import * as cache from "@actions/cache";
 
 const meta = { dist_interface: "github-actions" };
@@ -61,6 +72,8 @@ async function main(): Promise<void> {
     const io = { getInput: core.getInput, warning: core.warning };
     const issueMentions = getAliasedInput("issue_mentions", "integrations", io);
     const issuePrompt = getAliasedInput("issue_prompt", "prompt", io) || DEFAULT_ISSUE_PROMPT;
+    const failOn = parseFailOn(core.getInput("fail_on"));
+    const compareTo = parseCompareTo(core.getInput("compare_to"), failOn);
 
     // Android emulator support: on Linux, grant KVM access so the emulator can
     // accelerate. Driven by the `android` input ("auto" | "true" | "false");
@@ -105,11 +118,27 @@ async function main(): Promise<void> {
       ? await restoreIosCache(resolveCacheRoot({ cwd, config }))
       : undefined;
 
-    const outputPath = path.resolve(
-      process.env.RUNNER_TEMP || os.tmpdir(),
-      "doc-detective-output.json"
-    );
-    const args = buildCliArgs({ version: runtime.version, config, input, outputPath });
+    const runnerTemp = process.env.RUNNER_TEMP || os.tmpdir();
+    const outputPath = path.resolve(runnerTemp, "doc-detective-output.json");
+
+    // Compare with the previous results, unless `version` is too old to.
+    const compareWarnings = compareSupportWarnings(runtime.version, failOn);
+    for (const message of compareWarnings) core.warning(message);
+    const compare = compareWarnings.length === 0;
+    const previous = {
+      cache,
+      file: previousResultsPath(runnerTemp),
+      prefix: resultsKeyPrefix({ platform: os.platform(), config, input, cwd, env: process.env }),
+      warning: core.warning,
+    };
+    const cacheResults = compareTo !== "false" && cache.isFeatureAvailable();
+    const restored =
+      compare && compareTo === "previous" && cacheResults ? await restorePreviousResults(previous) : undefined;
+    if (restored) core.info("Comparing with the previous results from the cache.");
+    const args = [
+      ...buildCliArgs({ version: runtime.version, config, input, outputPath }),
+      ...(compare ? comparisonArgs({ compareTo, failOn, restored }) : []),
+    ];
 
     // Git runs in working_directory, like Doc Detective. The run folder and
     // reports land under the config's outputDir, so keep them out of git.
@@ -135,6 +164,15 @@ async function main(): Promise<void> {
       cwd,
     });
     core.setOutput("results", results);
+    core.setOutput("comparison", results?.comparison ? JSON.stringify(results.comparison) : "");
+    if (cacheResults) {
+      await saveResults({
+        ...previous,
+        output: outputPath,
+        key: resultsSaveKey(previous.prefix, process.env),
+        event: process.env.GITHUB_EVENT_NAME ?? "",
+      });
+    }
     await saveRuntimeCache(runtime.save);
     await saveIosCache(ios);
 
@@ -183,7 +221,9 @@ async function main(): Promise<void> {
     }
 
     const failedSpecs = results?.summary?.specs?.fail ?? 0;
-    if (exitCode === 0 && failedSpecs > 0) {
+    if (exitCode === 0 && failedSpecs > 0 && compare && failOn === "new") {
+      core.info(`${failedSpecs} spec(s) failed, but every failure was already failing, so this job passes. \`fail_on\` is \`new\`.`);
+    } else if (exitCode === 0 && failedSpecs > 0) {
       core.warning(
         `Doc Detective exited 0 although ${failedSpecs} spec(s) failed, so this job passes. Either your config sets exitOnFail: false, or the version input runs a CLI older than 5.`
       );
