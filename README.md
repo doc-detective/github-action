@@ -341,6 +341,43 @@ Unlike the CLI's `exitOnFail: false`, this never turns exit `2` (nothing tested)
     exit_on_fail: false
 ```
 
+### `compare_to` (default: `previous`)
+
+What to compare this run's results with. Doc Detective marks each failure `[new]` or `[already failing]` and lists the tests that are fixed, in the results, the `comparison` output, and the `$SUMMARY` of any issue the action files.
+
+| Value | Compares with |
+|---|---|
+| `previous` | The last results of this job, restored from the Actions cache |
+| A path | A results JSON file or a run folder, relative to `working_directory` |
+| `false` | Nothing. Comparison is off |
+
+With `previous`, the action caches each run's results under a key for the OS, the job, the `config`, `input`, and `working_directory` inputs, and the branch. On `pull_request` events, the branch is the base branch, so a pull request compares with the last run on the branch it merges into. Runs on `pull_request` events don't save their results, because GitHub scopes their cache entries to the pull request. The first run of a job has nothing to compare with, and neither does a run whose cache entry GitHub evicted (after 7 days without use, or when the repository's cache passes its size limit). Matrix legs with identical inputs on the same OS share a key, so each compares with whichever of them saved last.
+
+Needs Doc Detective 5.7.0 or later. When `version` resolves to an older version, the action skips the comparison and logs a warning.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    compare_to: previous
+```
+
+### `fail_on` (default: `any`)
+
+Which failures fail the run.
+
+| Value | Fails the run when |
+|---|---|
+| `any` | Any test fails |
+| `new` | A test fails that wasn't already failing in the compared run. With nothing to compare with, every failure counts |
+
+`new` needs a comparison, so setting it with `compare_to: false` fails the action. `exit_on_fail: false` still keeps the job green whatever this is set to. Needs Doc Detective 5.7.0 or later. When `version` resolves to an older version, the action ignores `fail_on: new` and logs a warning.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  with:
+    fail_on: new
+```
+
 ### `create_issue_on_fail` (default: `false`)
 
 File a GitHub issue if one or more tests fails.
@@ -520,6 +557,18 @@ JSON-formatted results of the command. This can be used in subsequent steps in t
 - uses: doc-detective/github-action@v2
   id: doc-detective
 - run: echo "${{ steps.doc-detective.outputs.results }}"
+```
+
+### `comparison`
+
+JSON-formatted comparison with the earlier run: the run compared against (`previous`, with its `runId`, `startedAt`, `docDetectiveVersion`, and `path`) and the count of `new`, `existing` (already failing), and `fixed` failures (`summary`). Empty when the run wasn't compared.
+
+```yaml
+- uses: doc-detective/github-action@v2
+  id: doc-detective
+- run: |
+    echo "New failures: ${{ fromJSON(steps.doc-detective.outputs.comparison).summary.new }}"
+  if: steps.doc-detective.outputs.comparison != ''
 ```
 
 ### `pull_request_url`

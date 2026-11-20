@@ -52,6 +52,55 @@ jobs:
           echo "Expected the Doc Detective step to fail because a spec in the failing fixture failed."
           exit 1
 
+  compare-runs:
+    runs-on: ubuntu-latest
+    name: Compare with an earlier run
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Doc Detective
+        uses: ./
+        id: first
+        continue-on-error: true
+        with:
+          config: ./artifacts/.doc-detective.json
+          input: ./artifacts/doc-content-inline-tests-fail.md
+
+      # The action deletes its output file before each run, so keep a copy.
+      - name: Keep the first run's results
+        run: cp "$RUNNER_TEMP/doc-detective-output.json" "$RUNNER_TEMP/first-results.json"
+
+      - name: Run Doc Detective again, comparing with the first run
+        uses: ./
+        id: second
+        continue-on-error: true
+        with:
+          config: ./artifacts/.doc-detective.json
+          input: ./artifacts/doc-content-inline-tests-fail.md
+          compare_to: ${{ runner.temp }}/first-results.json
+
+      - name: Assert the failures were already failing
+        if: steps.second.outputs.comparison == '' || fromJSON(steps.second.outputs.comparison).summary.existing < 1
+        run: |
+          echo "Expected the second run to mark its failures as already failing."
+          exit 1
+
+      - name: Run Doc Detective again, failing only on new failures
+        uses: ./
+        id: fail-on-new
+        continue-on-error: true
+        with:
+          config: ./artifacts/.doc-detective.json
+          input: ./artifacts/doc-content-inline-tests-fail.md
+          compare_to: ${{ runner.temp }}/first-results.json
+          fail_on: new
+
+      - name: Assert fail_on new passes when every failure was already failing
+        if: steps.fail-on-new.outcome != 'success'
+        run: |
+          echo "Expected the step to pass because every failure was already failing."
+          exit 1
+
   fail-tests-with-issue-mentions:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

@@ -63,6 +63,14 @@ inputs:
     description: Fail the job if one or more tests fails. Default is "true". If "false", a failing test leaves the job green. Whatever this is set to, the job fails when nothing valid was tested, Doc Detective couldn't proceed, or it didn't write results. The results, issue, and pull request steps run first whenever Doc Detective writes results.
     required: false
     default: "true"
+  compare_to:
+    description: 'What to compare this run''s results with, so failures get marked new or already failing and fixed tests get listed. "previous" (default) restores the last results of this job, with the same `config`, `input`, and `working_directory` on the same OS, from the Actions cache. On `pull_request` events, that''s the last results on the base branch. A path to a results JSON file or a run folder, relative to `working_directory`, compares with those results instead. "false" turns comparison off. Needs Doc Detective 5.7.0 or later.'
+    required: false
+    default: previous
+  fail_on:
+    description: 'Which failures fail the run. "any" (default) fails on every failure. "new" fails only on failures that weren''t already failing in the compared run; with nothing to compare with, every failure counts. Needs a comparison, so it can''t be "new" when `compare_to` is "false". Needs Doc Detective 5.7.0 or later.'
+    required: false
+    default: any
   create_issue_on_fail:
     description: File a GitHub issue if one or more tests fails. If an open issue has the same `issue_title` and the first of `issue_labels`, the action replaces that issue's body instead of opening another. Default is "false".
     required: false
@@ -117,6 +125,8 @@ inputs:
 outputs:
   results:
     description: JSON-formatted results of the command.
+  comparison:
+    description: JSON-formatted comparison with the earlier run, with the run compared against and counts of `new`, `existing`, and `fixed` failures. Empty when the run wasn't compared.
   issue_url:
     description: URL of the created or updated GitHub issue. Only set if `create_issue_on_fail` is "true" and a test failed.
   pull_request_url:
