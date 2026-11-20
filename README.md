@@ -104,7 +104,7 @@ Cache the `doc-detective` package that `npx` installs, and the runtime and brows
 
 Each run restores the newest cache for its OS, CPU architecture, and Node.js major version, preferring one saved by the same Doc Detective version. After the run, the action saves a new entry only if the run installed or updated something, such as a new Doc Detective version or a browser Doc Detective updated. Doc Detective 5.3.0 and later update outdated cached browsers. For earlier versions, the cache also rotates weekly, so cached browsers stay at most a week behind. While caching is on, the action resolves `version` to an exact version, like `5.2.1`, and runs that version.
 
-The action caches the `doc-detective` package in `npx`'s package folder, `_npx` in the npm cache, leaving out anything else your job ran with `npx`. It also caches the `runtime`, `browsers`, and `chromedriver-mobile` folders and `installed.json` in Doc Detective's cache folder, without the Android SDK, the Java runtime, or Android emulators. WebDriverAgent builds, in the `ios/wda` folder, go in a cache entry of their own. The action finds the cache folder the way Doc Detective does: `DOC_DETECTIVE_CACHE_DIR` from the environment or a `.env` file in `working_directory`, then `cacheDir` in `DOC_DETECTIVE_CONFIG`, then `cacheDir` in your config file, then the default. It skips caching when `version` is empty. A cache miss or a failed restore or save logs a message, and the run continues.
+The action caches the `doc-detective` package in `npx`'s package folder, `_npx` in the npm cache, leaving out anything else your job ran with `npx`. It also caches the `runtime`, `browsers`, and `chromedriver-mobile` folders and `installed.json` in Doc Detective's cache folder, without the Android SDK, the Java runtime, or Android emulators. WebDriverAgent builds, in the `ios/wda` folder, go in a cache entry of their own. The action finds the cache folder the way Doc Detective does: `DOC_DETECTIVE_CACHE_DIR` from the environment or a `.env` file in `working_directory`, then `cacheDir` in `DOC_DETECTIVE_CONFIG`, then `cacheDir` in your config file, then the default. It doesn't read a `cacheDir` from your user-level config or from a config at a URL. If `cacheDir` is set only there, also set `DOC_DETECTIVE_CACHE_DIR` to that folder, so the action caches the folder Doc Detective uses. It skips caching when `version` is empty. A cache miss or a failed restore or save logs a message, and the run continues.
 
 Set `cache` to `false` to install everything on every run.
 
@@ -116,7 +116,7 @@ Set `cache` to `false` to install everything on every run.
 
 ### `android` (default: `auto`)
 
-Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present; `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
+Enable Android emulator support on Linux runners by granting KVM access (the emulator needs hardware acceleration). `auto` scans your specs and only sets up KVM when an `android` platform is present, looking in [the same files as the iOS check](#speed-up-ios-tests); `true` always sets it up; `false` never does. No effect on macOS/Windows runners. Doc Detective bootstraps the SDK, emulator, system image, AVD, and driver itself at test time.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -145,6 +145,8 @@ The action caches the build when all of these are true:
 - The job runs on macOS.
 - `cache` is on, and `version` isn't empty.
 - A spec or config in `input`, `config`, or `working_directory` sets `ios` as a `platform` or `platforms` value.
+
+The action looks for that value in JSON, YAML, Markdown, and MDX files, up to six folders below each of `input`, `config`, and `working_directory`. It skips subfolders named `node_modules`, `.git`, and `.github`, unless `input`, `config`, or `working_directory` points straight into one. It also skips symbolic links inside those folders. `android: auto` looks in the same files. For specs that sit deeper, in a skipped folder, or behind a symbolic link, point `input` at them, or set `android: true` for Android. `input` replaces the `input` in your config file, so Doc Detective then tests only what `input` names.
 
 The build has its own cache entry, about 70 MB, separate from the runtime and browsers. After the first save, the action saves the entry again only when a run builds WebDriverAgent, such as after an Xcode or driver update. The job log says what happened:
 
