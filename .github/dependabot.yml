@@ -9,4 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
-    target-branch: "rc"
+    # commitlint checks every pull request's commits, Dependabot's included
+    # (adrs/01000-release-on-merge.md). This makes the subject
+    # `build(deps): bump ...` or `build(deps-dev): bump ...`, which passes and
+    # cuts no release. A bump that changes dist/index.js still needs
+    # `npm run build` committed to its pull request before CI passes.
+    commit-message:
+      prefix: "build"
+      include: "scope"
