@@ -2,16 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { canInstallCli5, nodeVersionWarning } from "./nodeVersion.ts";
 
-test("warns when the job's Node.js is older than 24.15", () => {
+test("warns when the job's Node.js is outside the range Doc Detective 5.2.1 and later support", () => {
   assert.equal(
     nodeVersionWarning("v22.11.0\n"),
-    "Doc Detective 5 needs Node.js 24.15 or later, but this job runs v22.11.0. Add `actions/setup-node` with `node-version: 24`."
+    "Doc Detective 5.2.1 and later need Node.js 24.22.1 or later on the 24 line, or Node.js 26.12.1 or later, but this job runs v22.11.0. Add `actions/setup-node` with `node-version: 24` or `node-version: 26`."
   );
-  assert.match(nodeVersionWarning("v24.14.1") ?? "", /runs v24\.14\.1\./);
+  // Below 24.22.1, all of 25, and 26 before 26.12.1.
+  for (const version of ["v24.15.0", "v24.22.0", "v25.0.0", "v25.9.1", "v26.0.0", "v26.12.0"]) {
+    assert.ok(nodeVersionWarning(version)?.includes(`runs ${version}.`), version);
+  }
 });
 
-test("stays quiet on 24.15 or later", () => {
-  for (const version of ["v24.15.0", "v24.15.0\n", "v24.20.1", "v25.0.0", "v26.1.2"]) {
+test("stays quiet on a supported Node.js", () => {
+  for (const version of ["v24.22.1", "v24.22.1\n", "v24.30.0", "v26.12.1", "v26.13.1", "v27.0.0", "v28.1.0"]) {
     assert.equal(nodeVersionWarning(version), undefined, version);
   }
 });
