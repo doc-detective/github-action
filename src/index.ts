@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     }
 
     // npx runs Doc Detective on the job's Node.js, not the action's. Only CLI 5
-    // needs 24.15, so the check skips a version that stays on 4.
+    // has this Node.js range, so the check skips a version that stays on 4.
     const node = await getExecOutput("node", ["--version"], {
       cwd,
       silent: true,

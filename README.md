@@ -21,7 +21,7 @@ jobs:
       - uses: doc-detective/github-action@v2
 ```
 
-Doc Detective 5 needs Node.js 24.15 or later, and `npx` runs it on the job's Node.js, so set that up with `actions/setup-node`. When `version` is `latest`, or a version or range that can install 5, and the job's Node.js is older, the action logs a warning and runs anyway.
+Doc Detective 5.2.1 and later need Node.js 24, at 24.22.1 or later, or Node.js 26.12.1 or later. They don't support Node.js 25 or Node.js 26.0 through 26.12.0. `npx` runs Doc Detective on the job's Node.js, so set that up with `actions/setup-node`. When `version` is `latest`, or a version or range that can install 5, and the job's Node.js is outside that range, the action logs a warning and runs anyway.
 
 The action outputs the results of the command as a JSON-formatted string that you can use this in subsequent steps in the same job. See [`results`](#results).
 
@@ -29,7 +29,7 @@ The action outputs the results of the command as a JSON-formatted string that yo
 
 ## Upgrade from v1
 
-`@v2` runs Doc Detective 5, which needs Node.js 24.15 or later. Add `actions/setup-node` with `node-version: 24` before the action, as in [Usage](#usage). `@v2` also makes these breaking changes:
+`@v2` runs Doc Detective 5, which needs Node.js 24, at 24.22.1 or later, or Node.js 26.12.1 or later. Add `actions/setup-node` with `node-version: 24` before the action, as in [Usage](#usage). `@v2` also makes these breaking changes:
 
 - `exit_on_fail` defaults to `true`, so a failing test now fails the job. Set it to `false` to keep the old behavior.
 - `version` defaults to `5`.

@@ -39710,13 +39710,13 @@ ${missing.join("\n")}
 }
 
 // src/nodeVersion.ts
+var import_semver = __toESM(require_semver2());
+var CLI_NODE_RANGE = "^24.22.1 || >=26.12.1";
 function nodeVersionWarning(version3) {
   const shown = version3.trim();
-  const match3 = shown.match(/^v?(\d+)\.(\d+)/);
-  if (!match3) return void 0;
-  const [major, minor] = [Number(match3[1]), Number(match3[2])];
-  if (major > 24 || major === 24 && minor >= 15) return void 0;
-  return `Doc Detective 5 needs Node.js 24.15 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
+  const parsed = import_semver.default.coerce(shown);
+  if (!parsed || import_semver.default.satisfies(parsed, CLI_NODE_RANGE)) return void 0;
+  return `Doc Detective 5.2.1 and later need Node.js 24 (24.22.1 or later) or Node.js 26.12.1 or later, but this job runs ${shown}. Add \`actions/setup-node\` with \`node-version: 24\`.`;
 }
 var COMPARATOR = /^(<=|>=|<|>|=|\^|~>?)?v?(\d+|x|\*)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?(?:-[\w.-]+)?(?:\+[\w.-]+)?$/i;
 function capsBelowFive([, op = "", major, minor = "0", patch = "0"]) {
@@ -40115,12 +40115,12 @@ var import_fs8 = __toESM(require("fs"));
 var import_os4 = __toESM(require("os"));
 var import_path4 = __toESM(require("path"));
 var import_util = require("util");
-var import_semver = __toESM(require_semver2());
+var import_semver2 = __toESM(require_semver2());
 var import_yaml = __toESM(require_dist());
 function exactVersion(npmViewJson) {
   try {
     const parsed = JSON.parse(npmViewJson);
-    const version3 = Array.isArray(parsed) ? import_semver.default.rsort(parsed.filter((v) => import_semver.default.valid(v)))[0] : parsed;
+    const version3 = Array.isArray(parsed) ? import_semver2.default.rsort(parsed.filter((v) => import_semver2.default.valid(v)))[0] : parsed;
     return typeof version3 === "string" && version3 ? version3 : void 0;
   } catch {
     return void 0;
@@ -40187,7 +40187,7 @@ function cacheKeyPrefix({
 }
 var WEEK_MS = 7 * 24 * 60 * 60 * 1e3;
 function versionTag(version3, now) {
-  const refreshesBrowsers = !import_semver.default.valid(version3) || import_semver.default.gte(version3, "5.3.0");
+  const refreshesBrowsers = !import_semver2.default.valid(version3) || import_semver2.default.gte(version3, "5.3.0");
   return { tag: refreshesBrowsers ? version3 : `${version3}-w${Math.floor(now / WEEK_MS)}`, refreshesBrowsers };
 }
 var shortHash = (lines) => import_crypto.default.createHash("sha256").update(lines.join("\n")).digest("hex").slice(0, 12);
@@ -42949,7 +42949,7 @@ function create(patterns, options) {
 var crypto3 = __toESM(require("crypto"), 1);
 var fs10 = __toESM(require("fs"), 1);
 var path13 = __toESM(require("path"), 1);
-var semver2 = __toESM(require_semver2(), 1);
+var semver3 = __toESM(require_semver2(), 1);
 var util = __toESM(require("util"), 1);
 
 // node_modules/@actions/cache/lib/internal/constants.js
@@ -43116,7 +43116,7 @@ function getVersion(app_1) {
 function getCompressionMethod() {
   return __awaiter11(this, void 0, void 0, function* () {
     const versionOutput = yield getVersion("zstd", ["--quiet"]);
-    const version3 = semver2.clean(versionOutput);
+    const version3 = semver3.clean(versionOutput);
     debug(`zstd version: ${version3}`);
     if (versionOutput === "") {
       return CompressionMethod.Gzip;
