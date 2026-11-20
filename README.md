@@ -146,7 +146,7 @@ The action caches the build when all of these are true:
 - `cache` is on, and `version` isn't empty.
 - A spec or config in `input`, `config`, or `working_directory` sets `ios` as a `platform` or `platforms` value.
 
-The action looks for that value in JSON, YAML, Markdown, and MDX files, up to six folders below each of `input`, `config`, and `working_directory`. It skips subfolders named `node_modules`, `.git`, and `.github`, unless `input`, `config`, or `working_directory` points straight into one. `android: auto` looks in the same files. For specs that sit deeper or in a skipped folder, point `input` at their folder, or set `android: true` for Android.
+The action looks for that value in JSON, YAML, Markdown, and MDX files, up to six folders below each of `input`, `config`, and `working_directory`. It skips subfolders named `node_modules`, `.git`, and `.github`, unless `input`, `config`, or `working_directory` points straight into one. It also skips symbolic links inside those folders. `android: auto` looks in the same files. For specs that sit deeper, in a skipped folder, or behind a symbolic link, point `input` at them, or set `android: true` for Android. `input` replaces the `input` in your config file, so Doc Detective then tests only what `input` names.
 
 The build has its own cache entry, about 70 MB, separate from the runtime and browsers. After the first save, the action saves the entry again only when a run builds WebDriverAgent, such as after an Xcode or driver update. The job log says what happened:
 
