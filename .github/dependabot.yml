@@ -17,3 +17,9 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
+    # The action runs on Node 24 (`runs.using: node24` in action.yml). Type
+    # definitions for a newer Node would let code call APIs the runtime lacks,
+    # so @types/node stays on the runtime's major.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
