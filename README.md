@@ -533,7 +533,7 @@ The action writes the results file, which sets the [`results`](#results) output,
 
 Doc Detective writes the rest under the `outputDir` in your config, which defaults to the working directory. That's the run folder, `.doc-detective/runs/<runId>/`, with the run's summary and automatic screenshots, and reports such as `junit.xml` and `doc-detective-summary.md`. A `screenshot` step saves where the step says, so it compares against the image in your repository, and an updated image reaches the `create_pr_on_change` pull request.
 
-To keep run artifacts out of `git status` and pull requests, the action adds these patterns to the checkout's `.git/info/exclude`, which git reads but never commits: `.doc-detective/`, `junit.xml`, `doc-detective-summary.md`, and `testResults-*`. Outside a git checkout, it skips this step.
+To keep run artifacts out of `git status` and pull requests, the action adds these patterns to the checkout's `.git/info/exclude`, which git reads but never commits: `.doc-detective/`, `junit.xml`, `cucumber.json`, `doc-detective-summary.md`, and `testResults-*`. The patterns cover only untracked files. A report you already commit to your repository still shows as changed, and `create_pr_on_change` commits the new version. Outside a git checkout, the action skips this step.
 
 To keep the run folder after the job, upload it in a later step:
 

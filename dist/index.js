@@ -40304,7 +40304,7 @@ async function runCli({
 // src/git.ts
 var import_fs5 = __toESM(require("fs"));
 var import_path = __toESM(require("path"));
-var RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "doc-detective-summary.md", "testResults-*"];
+var RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "cucumber.json", "doc-detective-summary.md", "testResults-*"];
 function makeGit(getExecOutput2, cwd) {
   return async (args) => {
     const { exitCode, stdout, stderr } = await getExecOutput2("git", args, {
