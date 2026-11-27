@@ -38,7 +38,7 @@ test("excludeRunArtifacts adds the run artifacts to the file git names", async (
   assert.equal(await excludeRunArtifacts(git, cwd), true);
   assert.equal(
     fs.readFileSync(path.join(cwd, ".git", "info", "exclude"), "utf8"),
-    "# Doc Detective run artifacts\n.doc-detective/\njunit.xml\ndoc-detective-summary.md\ntestResults-*\n"
+    "# Doc Detective run artifacts\n.doc-detective/\njunit.xml\ncucumber.json\ndoc-detective-summary.md\ntestResults-*\n"
   );
 });
 
@@ -51,7 +51,7 @@ test("excludeRunArtifacts keeps existing lines and adds each pattern once", asyn
   await excludeRunArtifacts(git, cwd);
   assert.equal(
     fs.readFileSync(file, "utf8"),
-    "# mine\r\njunit.xml\n# Doc Detective run artifacts\n.doc-detective/\ndoc-detective-summary.md\ntestResults-*\n"
+    "# mine\r\njunit.xml\n# Doc Detective run artifacts\n.doc-detective/\ncucumber.json\ndoc-detective-summary.md\ntestResults-*\n"
   );
 });
 

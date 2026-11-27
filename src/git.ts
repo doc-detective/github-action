@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 /** What CLI 5 writes under `outputDir`: the run folder and its reports. */
-const RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "doc-detective-summary.md", "testResults-*"];
+const RUN_ARTIFACTS = [".doc-detective/", "junit.xml", "cucumber.json", "doc-detective-summary.md", "testResults-*"];
 
 type GetExecOutput = (
   command: string,
