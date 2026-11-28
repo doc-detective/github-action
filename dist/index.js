@@ -40915,7 +40915,7 @@ var import_crypto2 = __toESM(require("crypto"));
 var import_fs9 = __toESM(require("fs"));
 var import_path5 = __toESM(require("path"));
 var import_semver3 = __toESM(require_semver2());
-var MIN_COMPARE_VERSION = "5.7.0";
+var MIN_COMPARE_VERSION = "5.9.0";
 var cause = (error2) => String(error2?.message ?? error2).replace(/\.?\s*$/, "");
 function parseFailOn(value) {
   const v = value.trim().toLowerCase() || "any";

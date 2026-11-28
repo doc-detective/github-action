@@ -73,13 +73,13 @@ test("comparisonArgs for each compare_to and fail_on value", () => {
 
 test("compareSupportWarnings warns only for an exact version below the minimum", () => {
   assert.deepEqual(compareSupportWarnings(MIN_COMPARE_VERSION, "new"), []);
-  assert.deepEqual(compareSupportWarnings("5.7.0-run-comparison.1", "any"), []);
+  assert.deepEqual(compareSupportWarnings("5.9.0-run-comparison.1", "any"), []);
   assert.deepEqual(compareSupportWarnings("6.0.0", "any"), []);
   // Not exact: a range, a tag, or a linked CLI. Assume support.
   for (const v of ["5", "latest", ""]) assert.deepEqual(compareSupportWarnings(v, "new"), [], v);
   const old = compareSupportWarnings("5.6.0", "any");
   assert.equal(old.length, 1);
-  assert.match(old[0], /^Couldn't compare with the previous run: Doc Detective 5\.6\.0 doesn't support `compare_to`\. Set `version` to 5\.7\.0 or later\.$/);
+  assert.match(old[0], /^Couldn't compare with the previous run: Doc Detective 5\.6\.0 doesn't support `compare_to`\. Set `version` to 5.9.0 or later\.$/);
   assert.equal(compareSupportWarnings("5.6.0", "new").length, 2);
 });
 

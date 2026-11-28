@@ -6,7 +6,7 @@ import { isExactVersion } from "./runtimeCache.ts";
 import { prBase } from "./pullRequest.ts";
 
 /** The first Doc Detective version with `--compare-to` and `--fail-on`. */
-export const MIN_COMPARE_VERSION = "5.7.0";
+export const MIN_COMPARE_VERSION = "5.9.0";
 
 type Env = Record<string, string | undefined>;
 type Cache = {
@@ -74,7 +74,7 @@ export function previousResultsPath(runnerTemp: string): string {
  * `cache` on, index.ts has already resolved a range or tag to an exact version.
  */
 export function compareSupportWarnings(version: string, failOn: "any" | "new"): string[] {
-  // coerce drops a prerelease tag, so 5.7.0-rc.1 counts as 5.7.0.
+  // coerce drops a prerelease tag, so 5.9.0-rc.1 counts as 5.9.0.
   if (!isExactVersion(version) || !semver.lt(semver.coerce(version)!, MIN_COMPARE_VERSION)) return [];
   return [
     `Couldn't compare with the previous run: Doc Detective ${version} doesn't support \`compare_to\`. Set \`version\` to ${MIN_COMPARE_VERSION} or later.`,

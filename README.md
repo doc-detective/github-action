@@ -353,7 +353,7 @@ What to compare this run's results with. Doc Detective marks each failure `[new]
 
 With `previous`, the action caches each run's results under a key for the OS, the job, the `config`, `input`, and `working_directory` inputs, and the branch. On `pull_request` events, the branch is the base branch, so a pull request compares with the last run on the branch it merges into. Runs on `pull_request` events don't save their results, because GitHub scopes their cache entries to the pull request. The first run of a job has nothing to compare with, and neither does a run whose cache entry GitHub evicted (after 7 days without use, or when the repository's cache passes its size limit). Matrix legs with identical inputs on the same OS share a key, so each compares with whichever of them saved last.
 
-Needs Doc Detective 5.7.0 or later. When `version` resolves to an older version, the action skips the comparison and logs a warning.
+Needs Doc Detective 5.9.0 or later. When `version` resolves to an older version, the action skips the comparison and logs a warning.
 
 ```yaml
 - uses: doc-detective/github-action@v2
@@ -370,7 +370,7 @@ Which failures fail the run.
 | `any` | Any test fails |
 | `new` | A test fails that wasn't already failing in the compared run. With nothing to compare with, every failure counts |
 
-`new` needs a comparison, so setting it with `compare_to: false` fails the action. `exit_on_fail: false` still keeps the job green whatever this is set to. Needs Doc Detective 5.7.0 or later. When `version` resolves to an older version, the action ignores `fail_on: new` and logs a warning.
+`new` needs a comparison, so setting it with `compare_to: false` fails the action. `exit_on_fail: false` still keeps the job green whatever this is set to. Needs Doc Detective 5.9.0 or later. When `version` resolves to an older version, the action ignores `fail_on: new` and logs a warning.
 
 ```yaml
 - uses: doc-detective/github-action@v2
